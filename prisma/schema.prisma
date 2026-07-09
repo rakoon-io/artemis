@@ -1,0 +1,167 @@
+// Rakoon Tracker — schéma de données (canonique).
+// Voir .ai/architecture.md#modèle-de-données-canonique
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  REPORTER
+}
+
+enum TicketType {
+  BUG
+  FEATURE
+  TASK
+  CHORE
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum SprintState {
+  PLANNED
+  ACTIVE
+  COMPLETED
+}
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  name         String?
+  passwordHash String?
+  role         Role         @default(REPORTER)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  reported     Ticket[]     @relation("reporter")
+  assigned     Ticket[]     @relation("assignee")
+  comments     Comment[]
+  attachments  Attachment[]
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  key         String   @unique // ex : "RKN"
+  name        String
+  description String?
+  ticketSeq   Int      @default(0) // séquence pour générer les clés RKN-<n>
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  columns     Column[]
+  tickets     Ticket[]
+  sprints     Sprint[]
+  labels      Label[]
+}
+
+model Column {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  order     Int
+  wipLimit  Int?
+  tickets   Ticket[]
+
+  @@index([projectId])
+}
+
+model Ticket {
+  id          String          @id @default(cuid())
+  projectId   String
+  project     Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  number      Int // numéro séquentiel par projet
+  key         String // "RKN-123" (dénormalisé pour affichage / recherche)
+  title       String
+  description String?
+  type        TicketType      @default(TASK)
+  priority    Priority        @default(MEDIUM)
+  columnId    String
+  column      Column          @relation(fields: [columnId], references: [id])
+  rank        String // ordre dans la colonne (lexorank)
+  reporterId  String
+  reporter    User            @relation("reporter", fields: [reporterId], references: [id])
+  assigneeId  String?
+  assignee    User?           @relation("assignee", fields: [assigneeId], references: [id])
+  sprintId    String?
+  sprint      Sprint?         @relation(fields: [sprintId], references: [id])
+  labels      LabelOnTicket[]
+  attachments Attachment[]
+  comments    Comment[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@unique([projectId, number])
+  @@index([projectId, columnId])
+  @@index([sprintId])
+}
+
+model Sprint {
+  id        String      @id @default(cuid())
+  projectId String
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  goal      String?
+  state     SprintState @default(PLANNED)
+  startDate DateTime?
+  endDate   DateTime?
+  createdAt DateTime    @default(now())
+  tickets   Ticket[]
+
+  @@index([projectId])
+}
+
+model Label {
+  id        String          @id @default(cuid())
+  projectId String
+  project   Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  color     String // hex, ex : "#7C3AED"
+  tickets   LabelOnTicket[]
+
+  @@unique([projectId, name])
+}
+
+model LabelOnTicket {
+  ticketId String
+  labelId  String
+  ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  label    Label  @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@id([ticketId, labelId])
+}
+
+model Attachment {
+  id           String   @id @default(cuid())
+  ticketId     String
+  ticket       Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  filename     String
+  contentType  String
+  size         Int
+  storageKey   String
+  uploadedById String
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime @default(now())
+
+  @@index([ticketId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([ticketId])
+}

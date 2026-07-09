@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+.env
+.env.*
+!.env.example
+.ai
+*.md
+coverage
+test-results
+playwright-report
+.vscode
+.idea
+Dockerfile
+.dockerignore

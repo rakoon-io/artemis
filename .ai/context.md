@@ -9,15 +9,30 @@
 
 ## 📍 État courant (au 2026-07-09)
 
-- Projet **initialisé selon la méthode AIDD** (documentation d'abord, code ensuite).
-- **Memory Bank** (`.ai/`) et **docs racine** créés et cohérents entre eux.
-- **Dépôt GitHub** : **`rakoon-io/rakoon-tracker`** (privé), commit initial de la documentation poussé.
-- **Aucun code applicatif** pour l'instant — `src/`, `prisma/`… restent à générer.
+- **Application v1 implémentée et vérifiée** (Next.js 16 / App Router / TypeScript strict, **npm**).
+- Fonctionnalités livrées :
+  - **Auth + RBAC** (Admin / Rapporteur), policies imposées côté serveur ;
+  - **Projets** et **Kanban** (dnd-kit, drag & drop souris **et** clavier, ordre via `rank`) ;
+  - **Tickets** avec **création rapide « paste »** (image / log / texte) et **pièces jointes S3** ;
+  - **Vue liste** + filtres ; **Sprints / lots** ; **paramètres** (colonnes + labels) ;
+  - **Thème clair / sombre**.
+- **Qualité vérifiée** : `typecheck`, `lint`, **build** de production, **9 tests unitaires Vitest**,
+  **migration Prisma initiale + seed**, **smoke test** runtime — tous OK.
+- **Outillage** : `Dockerfile` multi-stage (npm) + `.dockerignore` à la racine, **seed** Prisma
+  (comptes de démo : `admin@rakoon.io` / `***MOT-DE-PASSE-RETIRE***`, `rapporteur@rakoon.io` / `***MOT-DE-PASSE-RETIRE***`).
+- **Dépôt GitHub** : **`rakoon-io/rakoon-tracker`** (privé).
 - **Déploiement** : convention **Dokploy / Traefik** sur **`apps.rakoon.io`** documentée
   ([`../DEPLOY.md`](../DEPLOY.md), [ADR-0005](./decisions/0005-deploiement-dokploy-ovh.md)) —
-  **exécutable seulement après le scaffolding** (pas de code à déployer aujourd'hui).
+  **pas encore réalisé** (bloqué sur l'accès serveur / Dokploy).
 
 ## 🆕 Changements récents
+
+**Implémentation de la v1 (2026-07-09)** — développement complet de l'application Next.js (**npm**) :
+auth + RBAC, projets, Kanban dnd-kit, tickets + création paste-first + pièces jointes S3, vue liste +
+filtres, sprints / lots, paramètres (colonnes + labels), thème clair/sombre. Ajout de la **migration
+Prisma initiale**, du **seed** (comptes de démo), des **tests unitaires Vitest**, du `Dockerfile`
+(npm) + `.dockerignore`. Documentation (`README`, `AGENTS`, `DEPLOY`, Memory Bank) **synchronisée**
+avec cette réalité (gestionnaire de paquets **npm** confirmé partout).
 
 Documentation créée / mise à jour lors de l'initialisation :
 
@@ -41,18 +56,20 @@ Documentation créée / mise à jour lors de l'initialisation :
 ## 🔜 Prochaines étapes
 
 1. ✅ **Documentation validée → commit initial + dépôt `rakoon-io/rakoon-tracker`** (fait).
-2. **Scaffolding Next.js** : `create-next-app` (TypeScript) + Tailwind CSS + shadcn/ui + Prisma +
-   Auth.js + dnd-kit + Zod + Vitest + Playwright ; ajout du **`Dockerfile` + `.dockerignore`** (cf. DEPLOY.md).
-3. **Schéma Prisma + première migration** (entités : User, Project, Column, Ticket, Sprint, Label,
-   LabelOnTicket, Attachment, Comment).
-4. **Auth + RBAC** : Auth.js + **policies serveur** (Admin / Rapporteur).
-5. **CRUD tickets + création rapide « paste »** (pièce jointe collée : image / log / texte).
-6. **Kanban** (dnd-kit) : drag & drop souris **et** clavier, ordre persistant via `rank` (lexorank).
-7. **Sprints / lots** : backlog, planification, itérations.
-8. **Vue liste** : filtres, tri, recherche.
-9. **Personnalisation** : colonnes du workflow, labels, thème clair/sombre.
-10. **Tests e2e** (Playwright) **+ CI** (`typecheck` + `lint` + `test`).
-11. **Premier déploiement** sur `tracker.apps.rakoon.io` (voir [`../DEPLOY.md`](../DEPLOY.md)).
+2. ✅ **Scaffolding Next.js** (TypeScript + Tailwind CSS + shadcn/ui + Prisma + Auth.js + dnd-kit +
+   Zod + Vitest) ; **`Dockerfile` + `.dockerignore`** à la racine (fait).
+3. ✅ **Schéma Prisma + première migration** (User, Project, Column, Ticket, Sprint, Label,
+   LabelOnTicket, Attachment, Comment) **+ seed** (fait).
+4. ✅ **Auth + RBAC** : Auth.js + **policies serveur** (Admin / Rapporteur) (fait).
+5. ✅ **CRUD tickets + création rapide « paste »** (pièce jointe collée : image / log / texte) (fait).
+6. ✅ **Kanban** (dnd-kit) : drag & drop souris **et** clavier, ordre persistant via `rank` (fait).
+7. ✅ **Sprints / lots** : backlog, planification, itérations (fait).
+8. ✅ **Vue liste** : filtres, tri, recherche (fait).
+9. ✅ **Personnalisation** : colonnes du workflow, labels, thème clair/sombre (fait).
+10. **Premier déploiement** sur `tracker.apps.rakoon.io` — *à faire*, **bloqué sur l'accès serveur /
+    Dokploy** (voir [`../DEPLOY.md`](../DEPLOY.md)).
+11. **Polissage** : **tests e2e Playwright** + **CI** (`typecheck` + `lint` + `test`) ; notifications
+    (hors v1).
 
 ## 🧭 Décisions actées
 

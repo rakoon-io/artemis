@@ -4,11 +4,13 @@
 
 ## 📌 Statut
 
-> 🚧 **En cours d'initialisation (méthode AIDD) — documentation d'abord, code applicatif à venir.**
+> ✅ **Application v1 implémentée et vérifiée.**
 >
-> Le dépôt ne contient pour l'instant que la **documentation** (Memory Bank, spec, guides). Le code
-> Next.js (`src/`, `prisma/`…) sera généré lors de la phase de scaffolding. Les commandes de
-> lancement ci-dessous sont donc une **cible** et ne sont **pas encore fonctionnelles**.
+> Le code applicatif est en place : **Next.js 16** (App Router), **Prisma / PostgreSQL**, **Auth.js**
+> (RBAC Admin / Rapporteur), **Kanban** (dnd-kit), **création paste-first** et vues **liste**,
+> **sprints / lots** et **paramètres**. Les commandes de démarrage ci-dessous sont fonctionnelles.
+> Reste à faire : le **premier déploiement** sur `tracker.apps.rakoon.io` (voir
+> [`.ai/context.md`](./.ai/context.md)).
 
 ## ✨ Fonctionnalités (v1)
 
@@ -60,27 +62,36 @@ Le **Memory Bank** (`.ai/`) est la source de vérité documentaire qui **pilote 
 code** ; [`AGENTS.md`](./AGENTS.md) est le garde-fou à lire avant toute modification, qui renvoie
 vers ce Memory Bank et impose le workflow.
 
-> ℹ️ Le code applicatif **n'existe pas encore** : la structure cible du code (`src/`, `prisma/`…)
-> est décrite dans
-> [`.ai/architecture.md`](./.ai/architecture.md#structure-des-dossiers-cible).
+> ℹ️ Le code applicatif (`src/`, `prisma/`…) est **désormais en place** ; sa structure est décrite
+> dans [`.ai/architecture.md`](./.ai/architecture.md#structure-des-dossiers-cible).
 
 ## ▶️ Démarrage rapide
 
-> ⚠️ **Commandes cible — à venir.** Elles ne fonctionneront **qu'après le scaffolding** du projet
-> Next.js (aucun code applicatif présent pour l'instant). Gestionnaire de paquets : **pnpm**.
+> Gestionnaire de paquets : **npm** (`package-lock.json`), aligné sur les autres applis Rakoon.
 
 ```bash
-# Prérequis : Node.js LTS + pnpm + une base PostgreSQL (ou Docker)
-pnpm install                 # installer les dépendances
+# Prérequis : Node.js LTS + npm + une base PostgreSQL (ou Docker)
+npm install                  # installer les dépendances
 cp .env.example .env         # configurer les variables d'environnement
-pnpm prisma migrate dev      # créer / mettre à jour le schéma de base
-pnpm dev                     # démarrer le serveur de développement
-
-# Qualité
-pnpm typecheck               # tsc --noEmit
-pnpm lint                    # ESLint
-pnpm test                    # Vitest (unit) + Playwright (e2e)
+npx prisma migrate dev       # créer / mettre à jour le schéma de base
+npm run db:seed              # jeu de données de démo (comptes ci-dessous)
+npm run dev                  # démarrer le serveur (http://localhost:3000)
 ```
+
+**Comptes de démo** (créés par le seed) :
+
+- **Admin** — `admin@rakoon.io` / `***MOT-DE-PASSE-RETIRE***`
+- **Rapporteur** — `rapporteur@rakoon.io` / `***MOT-DE-PASSE-RETIRE***`
+
+```bash
+# Qualité
+npm run typecheck            # tsc --noEmit
+npm run lint                 # ESLint
+npm test                     # Vitest (unit)
+```
+
+**Qualité vérifiée** (v1) : `typecheck`, `lint`, `build` de production, **tests** unitaires (Vitest),
+**migration** Prisma, **seed** et **smoke test** runtime — tous OK.
 
 ## 🔄 Méthode AIDD
 

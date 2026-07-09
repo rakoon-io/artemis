@@ -63,8 +63,8 @@ Ce choix privilégie la **cohésion**, la **type-safety de bout en bout** et une
 
 ## Structure des dossiers (cible)
 
-> ℹ️ Le code applicatif **n'existe pas encore** (le projet démarre par sa documentation). L'arbre
-> ci-dessous est la **cible** qui sera générée lors de la phase de scaffolding.
+> ℹ️ Cette structure est **désormais en place** (`src/`, `prisma/`… existent à la racine) ; l'arbre
+> ci-dessous en donne la carte de référence.
 
 ```
 rakoon-tracker/
@@ -102,8 +102,9 @@ rakoon-tracker/
 
 ## Modèle de données (canonique)
 
-Pseudo-schéma **Prisma** servant de référence ; le `schema.prisma` réel sera généré à la phase de
-scaffolding (relations inverses à compléter alors).
+Extrait du modèle **Prisma** servant de référence ; le fichier réel
+[`prisma/schema.prisma`](../prisma/schema.prisma) fait foi (relations inverses, index et `onDelete`
+complets).
 
 ```prisma
 enum Role        { ADMIN REPORTER }
@@ -128,6 +129,7 @@ model Project {
   key         String    @unique              // ex : "RKN"
   name        String
   description String?
+  ticketSeq   Int       @default(0)          // séquence pour générer les clés RKN-<n>
   createdAt   DateTime  @default(now())
   columns     Column[]
   tickets     Ticket[]
@@ -149,7 +151,8 @@ model Ticket {
   id          String       @id @default(cuid())
   projectId   String
   project     Project      @relation(fields: [projectId], references: [id])
-  key         String                          // ex : "RKN-123"
+  number      Int                             // séquentiel par projet (via Project.ticketSeq)
+  key         String                          // dénormalisé, ex : "RKN-123"
   title       String
   description String?
   type        TicketType   @default(TASK)
@@ -168,7 +171,7 @@ model Ticket {
   comments    Comment[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
-  @@unique([projectId, key])
+  @@unique([projectId, number])
 }
 
 model Sprint {                                // « lot » / itération agile
@@ -223,10 +226,10 @@ model Comment {
 }
 ```
 
-> ℹ️ **Notes de modélisation (v1).** `Attachment.uploadedById` est un scalaire pour l'instant
-> (relation vers `User` à compléter au scaffolding). **Aucune appartenance par projet**
-> (`ProjectMember`) n'est modélisée en v1 : la portée de visibilité (« les tickets de ses projets »)
-> reste une **question ouverte** (voir [`context.md`](./context.md)) — organisation unique en v1.
+> ℹ️ **Notes de modélisation (v1).** La relation `Attachment.uploadedBy → User` est en place dans le
+> schéma réel. **Aucune appartenance par projet** (`ProjectMember`) n'est modélisée en v1 : la portée
+> de visibilité (« les tickets de ses projets ») reste une **question ouverte** (voir
+> [`context.md`](./context.md)) — organisation unique en v1.
 
 ## Patterns clés
 
@@ -242,7 +245,8 @@ model Comment {
   puis enregistre l'`Attachment`. Voir [`decisions/0004-pieces-jointes-paste-first.md`](./decisions/0004-pieces-jointes-paste-first.md).
 - **Ordre Kanban** : chaque ticket porte un `rank` lexicographique (**lexorank**) permettant de
   réordonner une carte sans renuméroter toute la colonne.
-- **Clé de ticket** : séquence par projet (`RKN-1`, `RKN-2`, …), unique par `(projectId, key)`.
+- **Clé de ticket** : numéro **séquentiel par projet** (`Project.ticketSeq` → `Ticket.number`), avec
+  une clé lisible **dénormalisée** `key` (`RKN-1`, `RKN-2`, …) ; unicité garantie par `(projectId, number)`.
 - **Workflow personnalisable** : les statuts sont des **`Column` en base** (par projet), pas des
   valeurs codées en dur. Voir [`decisions/0002-workflow-kanban-personnalisable.md`](./decisions/0002-workflow-kanban-personnalisable.md).
 
@@ -256,12 +260,15 @@ model Comment {
 - **Branches** : trunk-based, branches de feature courtes.
 - **Env** : variables validées via Zod dans `lib/env.ts` ; **jamais de secret en dur**.
 - **TypeScript strict** : pas de `any` implicite (voir [`rules.md`](./rules.md)).
+- **Gestionnaire de paquets** : **npm** (`package-lock.json`), aligné sur les autres applis Rakoon.
 
 ## Tests & qualité
 
 - **Unit** (Vitest) : services, policies, validators.
 - **E2E** (Playwright) : parcours création de ticket, Kanban (drag & drop), sprint.
 - **Typecheck** : `tsc --noEmit`. **Lint** : ESLint. **Format** : Prettier.
+- **Build** : `npm run build` force `NODE_ENV=production` via **`cross-env`** — évite un souci de
+  prerender React quand l'environnement ambiant vaut `development`.
 - **CI** (future) : `typecheck` + `lint` + `test` sur chaque PR.
 
 ## Évolutions futures (hors v1)

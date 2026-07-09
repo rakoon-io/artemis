@@ -4,9 +4,9 @@
 > **Traefik** sur le wildcard **`*.apps.rakoon.io`**. Décision tracée dans
 > [`ADR-0005`](./.ai/decisions/0005-deploiement-dokploy-ovh.md).
 >
-> ⚠️ **Prérequis bloquant : l'application doit d'abord être scaffoldée.** Le dépôt ne contient
-> aujourd'hui que la **documentation** ; le `Dockerfile` ci-dessous a besoin de `package.json`,
-> `app/`, `prisma/`… **Le déploiement suit donc l'implémentation** (voir
+> ℹ️ **L'application v1 est implémentée** (Next.js, **npm**) : `package.json` + `package-lock.json`,
+> `src/`, `prisma/` (schéma + migration) et un **`Dockerfile` multi-stage** sont à la racine. Le
+> déploiement reste à réaliser — bloqué sur l'**accès serveur / Dokploy** (voir
 > [`.ai/context.md`](./.ai/context.md)).
 
 Vue produit → [`README.md`](./README.md) · architecture & modèle de données →
@@ -34,9 +34,8 @@ Internet ──HTTPS──> Traefik (dokploy-traefik, :80/:443)
 Traefik Dokploy avec resolver ACME `letsencrypt`, DNS wildcard `*.apps.rakoon.io` → IP du serveur,
 accès SSH root/sudo.
 
-**Application (à produire au scaffolding)** : projet Next.js (App Router, `next start`),
-`package.json` + `pnpm-lock.yaml`, `prisma/schema.prisma` + migrations, `Dockerfile` + `.dockerignore`
-à la racine.
+**Application (présente à la racine)** : projet Next.js (App Router, `next start`),
+`package.json` + `package-lock.json`, `prisma/schema.prisma` + migrations, `Dockerfile` + `.dockerignore`.
 
 ## 3. Variables d'environnement
 
@@ -55,50 +54,19 @@ accès SSH root/sudo.
 | `S3_SECRET_ACCESS_KEY` | ✅ | Clé secrète du stockage objet |
 | `S3_REGION` | ✅ | Région du bucket (`us-east-1` par défaut, même avec MinIO) |
 
-## 4. Dockerfile (multi-stage) — à ajouter à la racine au scaffolding
+## 4. Dockerfile (multi-stage)
 
-```dockerfile
-# ---- Builder ----
-FROM node:20-bookworm AS builder
-WORKDIR /app
-ENV NEXT_TELEMETRY_DISABLED=1 HUSKY=0
-RUN corepack enable
-COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
-COPY . .
-RUN pnpm prisma generate
-# placeholders build-time (surchargés au runtime)
-ENV DATABASE_URL="postgresql://placeholder:placeholder@db:5432/placeholder?schema=public"
-ENV AUTH_SECRET="build-placeholder-secret-override-at-runtime"
-ENV AUTH_TRUST_HOST=true
-RUN pnpm build
+Le **`Dockerfile` multi-stage (npm) est à la racine du dépôt** — inutile de le recopier ici.
 
-# ---- Runner ----
-FROM node:20-bookworm-slim AS runner
-WORKDIR /app
-ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000
-RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
-RUN corepack enable
-COPY --from=builder /app/package.json /app/pnpm-lock.yaml ./
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/prisma ./prisma
-EXPOSE 3000
-CMD ["pnpm","start","-H","0.0.0.0","-p","3000"]
-```
+En résumé :
 
-`.dockerignore` :
-```
-node_modules
-.next
-.git
-.env*
-.ai
-*.md
-coverage
-```
+- **Builder** (`node:20-bookworm`) : `npm ci` → `npx prisma generate` → build en `NODE_ENV=production`
+  (`npm run build`, avec des placeholders `DATABASE_URL` / `AUTH_SECRET` surchargés au runtime).
+- **Runner** (`node:20-bookworm-slim`) : ne copie que `.next`, `node_modules`, `public` et `prisma`,
+  expose le **port 3000** et démarre `npm run start`.
+
+Un `.dockerignore` (à la racine) exclut `node_modules`, `.next`, `.git`, `.env*`, `.ai`, `*.md`,
+`coverage`.
 
 ## 5. Déploiement direct (Docker + Traefik) — exécuté sur le serveur en `sudo`
 
@@ -146,7 +114,7 @@ S3_REGION=us-east-1
 ### 5.5 — Migrations Prisma
 ```bash
 docker run --rm --network dokploy-network --env-file rtr.env \
-  rakoon-tracker:latest pnpm prisma migrate deploy
+  rakoon-tracker:latest npx prisma migrate deploy
 ```
 
 ### 5.6 — Lancement du conteneur applicatif
@@ -182,8 +150,13 @@ http:
 Traefik obtient alors automatiquement le certificat Let's Encrypt (HTTP-01).
 
 ### 5.8 — Compte admin initial
-Selon l'implémentation : **script de seed Prisma** *ou* endpoint d'inscription (le premier compte
-créé devient `ADMIN`). À figer au scaffolding.
+Un **script de seed** (`npm run db:seed`, ou `npx prisma db seed`) crée les comptes de démo (Admin +
+Rapporteur). En production, l'exécuter une fois via un conteneur jetable (comme en 5.5) **puis
+changer les mots de passe** :
+```bash
+docker run --rm --network dokploy-network --env-file rtr.env \
+  rakoon-tracker:latest npm run db:seed
+```
 
 ## 6. Mise à jour / redéploiement
 ```bash
