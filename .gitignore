@@ -1,0 +1,51 @@
+# Dépendances
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/releases
+
+# Build Next.js
+/.next/
+/out/
+/build
+/dist
+next-env.d.ts
+*.tsbuildinfo
+
+# Tests / couverture
+/coverage
+/test-results
+/playwright-report
+/.playwright
+
+# Variables d'environnement & secrets (NE JAMAIS COMMITTER)
+.env
+.env.*
+!.env.example
+*.env
+!example.env
+
+# Prisma (garder schéma & migrations ; ignorer les bases locales)
+*.db
+*.db-journal
+prisma/*.db
+
+# Docker
+docker-build.log
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea
+.vscode/*
+!.vscode/extensions.json
+*.pem
