@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -28,7 +29,14 @@ export default async function AppLayout({
             href="/projects"
             className="flex items-center gap-2 font-semibold transition-opacity hover:opacity-80"
           >
-            <span aria-hidden>🦝</span>
+            <Image
+              src="/rakoon-mark.png"
+              alt="Rakoon"
+              width={22}
+              height={22}
+              className="dark:invert"
+              priority
+            />
             <span>Rakoon Tracker</span>
           </Link>
           <div className="flex-1" />
