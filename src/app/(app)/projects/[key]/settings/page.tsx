@@ -7,6 +7,8 @@ import {
   getLabels,
   getMembers,
   getProjectByKey,
+  getTicketPriorities,
+  getTicketTypes,
 } from "@/server/queries";
 import {
   Card,
@@ -18,7 +20,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ColumnManager } from "@/components/settings/column-manager";
 import { LabelManager } from "@/components/settings/label-manager";
+import { PriorityManager } from "@/components/settings/priority-manager";
 import { ProjectSettingsForm } from "@/components/settings/project-settings-form";
+import { TypeManager } from "@/components/settings/type-manager";
 import { UserManager } from "@/components/settings/user-manager";
 
 /**
@@ -53,10 +57,12 @@ export default async function SettingsPage({
   const project = await getProjectByKey(key);
   if (!project) notFound();
 
-  const [{ columns }, labels, members] = await Promise.all([
+  const [{ columns }, labels, members, types, priorities] = await Promise.all([
     getBoardData(project.id),
     getLabels(project.id),
     getMembers(),
+    getTicketTypes(project.id),
+    getTicketPriorities(project.id),
   ]);
 
   const columnSummaries = columns.map((column) => ({
@@ -84,6 +90,8 @@ export default async function SettingsPage({
           <TabsTrigger value="project">Projet</TabsTrigger>
           <TabsTrigger value="columns">Colonnes</TabsTrigger>
           <TabsTrigger value="labels">Labels</TabsTrigger>
+          <TabsTrigger value="types">Types</TabsTrigger>
+          <TabsTrigger value="priorities">Priorités</TabsTrigger>
           <TabsTrigger value="users">Utilisateurs</TabsTrigger>
         </TabsList>
 
@@ -101,6 +109,7 @@ export default async function SettingsPage({
                   id: project.id,
                   name: project.name,
                   description: project.description,
+                  accentColor: project.accentColor,
                 }}
               />
             </CardContent>
@@ -133,6 +142,39 @@ export default async function SettingsPage({
             </CardHeader>
             <CardContent>
               <LabelManager labels={labels} projectId={project.id} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="types" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Types de ticket</CardTitle>
+              <CardDescription>
+                Définissez les types de ticket (nom + couleur), réordonnez-les ou
+                supprimez ceux qui ne servent plus.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <TypeManager types={types} projectId={project.id} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="priorities" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Priorités</CardTitle>
+              <CardDescription>
+                Définissez les priorités (nom + couleur), réordonnez-les ou
+                supprimez celles qui ne servent plus.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PriorityManager
+                priorities={priorities}
+                projectId={project.id}
+              />
             </CardContent>
           </Card>
         </TabsContent>

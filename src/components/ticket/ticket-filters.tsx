@@ -15,11 +15,11 @@ import {
 } from "@/components/ui/select";
 import {
   ALL,
-  PRIORITY_OPTIONS,
-  TICKET_TYPE_OPTIONS,
   type LabelOption,
   type Member,
+  type PriorityOption,
   type SprintOption,
+  type TicketTypeOption,
 } from "./ticket-fields";
 
 /**
@@ -31,10 +31,14 @@ export function TicketFilters({
   members,
   sprints,
   labels,
+  types,
+  priorities,
 }: {
   members: Member[];
   sprints: SprintOption[];
   labels: LabelOption[];
+  types: TicketTypeOption[];
+  priorities: PriorityOption[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -66,8 +70,8 @@ export function TicketFilters({
     router.push(pathname);
   }
 
-  const currentType = searchParams.get("type") ?? ALL;
-  const currentPriority = searchParams.get("priority") ?? ALL;
+  const currentType = searchParams.get("typeId") ?? ALL;
+  const currentPriority = searchParams.get("priorityId") ?? ALL;
   const currentAssignee = searchParams.get("assigneeId") ?? ALL;
   const currentSprint = searchParams.get("sprintId") ?? ALL;
   const currentLabel = searchParams.get("labelId") ?? ALL;
@@ -97,15 +101,22 @@ export function TicketFilters({
 
       <div className="space-y-1.5">
         <Label htmlFor="filter-type">Type</Label>
-        <Select value={currentType} onValueChange={(v) => setParam("type", v)}>
+        <Select value={currentType} onValueChange={(v) => setParam("typeId", v)}>
           <SelectTrigger id="filter-type" className="w-40" aria-label="Filtrer par type">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={ALL}>Tous les types</SelectItem>
-            {TICKET_TYPE_OPTIONS.map((o) => (
-              <SelectItem key={o.value} value={o.value}>
-                {o.label}
+            {types.map((o) => (
+              <SelectItem key={o.id} value={o.id}>
+                <span className="flex items-center gap-2">
+                  <span
+                    className="size-2 shrink-0 rounded-full"
+                    style={{ backgroundColor: o.color }}
+                    aria-hidden
+                  />
+                  {o.name}
+                </span>
               </SelectItem>
             ))}
           </SelectContent>
@@ -116,16 +127,23 @@ export function TicketFilters({
         <Label htmlFor="filter-priority">Priorité</Label>
         <Select
           value={currentPriority}
-          onValueChange={(v) => setParam("priority", v)}
+          onValueChange={(v) => setParam("priorityId", v)}
         >
           <SelectTrigger id="filter-priority" className="w-40" aria-label="Filtrer par priorité">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={ALL}>Toutes priorités</SelectItem>
-            {PRIORITY_OPTIONS.map((o) => (
-              <SelectItem key={o.value} value={o.value}>
-                {o.label}
+            {priorities.map((o) => (
+              <SelectItem key={o.id} value={o.id}>
+                <span className="flex items-center gap-2">
+                  <span
+                    className="size-2 shrink-0 rounded-full"
+                    style={{ backgroundColor: o.color }}
+                    aria-hidden
+                  />
+                  {o.name}
+                </span>
               </SelectItem>
             ))}
           </SelectContent>

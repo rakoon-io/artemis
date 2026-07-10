@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { isAdmin } from "@/lib/policies";
@@ -21,7 +21,17 @@ export default async function ProjectLayout({
   const admin = isAdmin(session?.user);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div
+      className="flex flex-col gap-6"
+      style={
+        project.accentColor
+          ? ({
+              ["--primary"]: project.accentColor,
+              ["--ring"]: project.accentColor,
+            } as CSSProperties)
+          : undefined
+      }
+    >
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-3">
           <Badge variant="secondary">{project.key}</Badge>

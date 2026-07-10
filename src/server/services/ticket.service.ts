@@ -1,18 +1,19 @@
 import { prisma } from "@/lib/db";
 import { rankAfter } from "@/lib/rank";
-import { Prisma, type TicketType, type Priority } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 /**
  * Service Ticket — accès données pur (autorisation dans les actions).
  * Génération de clé et rang initial faits en transaction.
+ * Chaque lecture renvoie `type`/`priority` en `{ id, name, color }` (badges UI).
  */
 
 export interface CreateTicketServiceInput {
   projectId: string;
   title: string;
   description?: string | null;
-  type: TicketType;
-  priority: Priority;
+  typeId?: string;
+  priorityId?: string;
   assigneeId?: string | null;
   sprintId?: string | null;
   labelIds?: string[];
@@ -43,6 +44,28 @@ export function createTicket(input: CreateTicketServiceInput, reporterId: string
       orderBy: { rank: "desc" },
     });
     const rank = rankAfter(last?.rank ?? null);
+
+    // Type & priorité : à défaut d'id fourni, on prend le 1er du projet (order min).
+    let typeId = input.typeId;
+    if (!typeId) {
+      const firstType = await tx.ticketType.findFirst({
+        where: { projectId: input.projectId },
+        orderBy: { order: "asc" },
+        select: { id: true },
+      });
+      if (!firstType) throw new Error("Le projet ne possède aucun type de ticket.");
+      typeId = firstType.id;
+    }
+    let priorityId = input.priorityId;
+    if (!priorityId) {
+      const firstPriority = await tx.ticketPriority.findFirst({
+        where: { projectId: input.projectId },
+        orderBy: { order: "asc" },
+        select: { id: true },
+      });
+      if (!firstPriority) throw new Error("Le projet ne possède aucune priorité.");
+      priorityId = firstPriority.id;
+    }
 
     // M3 — cohérence projet : sprint, assigné et labels doivent être valides pour ce projet.
     let sprintId = input.sprintId ?? null;
@@ -81,8 +104,8 @@ export function createTicket(input: CreateTicketServiceInput, reporterId: string
         key,
         title: input.title,
         description: input.description ?? null,
-        type: input.type,
-        priority: input.priority,
+        typeId,
+        priorityId,
         columnId: column.id,
         rank,
         reporterId,
@@ -97,6 +120,8 @@ export function createTicket(input: CreateTicketServiceInput, reporterId: string
         column: true,
         assignee: true,
         labels: { include: { label: true } },
+        type: { select: { id: true, name: true, color: true } },
+        priority: { select: { id: true, name: true, color: true } },
       },
     });
   });
@@ -105,8 +130,8 @@ export function createTicket(input: CreateTicketServiceInput, reporterId: string
 export interface TicketFilters {
   assigneeId?: string;
   labelId?: string;
-  type?: TicketType;
-  priority?: Priority;
+  typeId?: string;
+  priorityId?: string;
   sprintId?: string;
   columnId?: string;
   q?: string;
@@ -128,8 +153,8 @@ export async function listTickets(projectId: string, filters: TicketFilters = {}
   const where: Prisma.TicketWhereInput = {
     projectId,
     ...(filters.assigneeId ? { assigneeId: filters.assigneeId } : {}),
-    ...(filters.type ? { type: filters.type } : {}),
-    ...(filters.priority ? { priority: filters.priority } : {}),
+    ...(filters.typeId ? { typeId: filters.typeId } : {}),
+    ...(filters.priorityId ? { priorityId: filters.priorityId } : {}),
     ...(filters.sprintId ? { sprintId: filters.sprintId } : {}),
     ...(filters.columnId ? { columnId: filters.columnId } : {}),
     ...(filters.labelId ? { labels: { some: { labelId: filters.labelId } } } : {}),
@@ -153,6 +178,8 @@ export async function listTickets(projectId: string, filters: TicketFilters = {}
         column: true,
         assignee: true,
         labels: { include: { label: true } },
+        type: { select: { id: true, name: true, color: true } },
+        priority: { select: { id: true, name: true, color: true } },
       },
     }),
     prisma.ticket.count({ where }),
@@ -169,6 +196,8 @@ export function listBoardTickets(projectId: string) {
     include: {
       assignee: true,
       labels: { include: { label: true } },
+      type: { select: { id: true, name: true, color: true } },
+      priority: { select: { id: true, name: true, color: true } },
     },
   });
 }
@@ -182,6 +211,8 @@ export function getTicketById(id: string) {
       reporter: true,
       assignee: true,
       sprint: true,
+      type: { select: { id: true, name: true, color: true } },
+      priority: { select: { id: true, name: true, color: true } },
       labels: { include: { label: true } },
       attachments: { orderBy: { createdAt: "asc" } },
       comments: { include: { author: true }, orderBy: { createdAt: "asc" } },
@@ -207,8 +238,8 @@ export interface UpdateTicketServiceInput {
   id: string;
   title?: string;
   description?: string | null;
-  type?: TicketType;
-  priority?: Priority;
+  typeId?: string;
+  priorityId?: string;
   assigneeId?: string | null;
   sprintId?: string | null;
   labelIds?: string[];
@@ -268,8 +299,8 @@ export function updateTicket(input: UpdateTicketServiceInput) {
       data: {
         ...(rest.title !== undefined ? { title: rest.title } : {}),
         ...(rest.description !== undefined ? { description: rest.description } : {}),
-        ...(rest.type !== undefined ? { type: rest.type } : {}),
-        ...(rest.priority !== undefined ? { priority: rest.priority } : {}),
+        ...(rest.typeId !== undefined ? { typeId: rest.typeId } : {}),
+        ...(rest.priorityId !== undefined ? { priorityId: rest.priorityId } : {}),
         ...(assigneeId !== undefined ? { assigneeId } : {}),
         ...(sprintId !== undefined ? { sprintId } : {}),
       },
@@ -277,6 +308,8 @@ export function updateTicket(input: UpdateTicketServiceInput) {
         column: true,
         assignee: true,
         labels: { include: { label: true } },
+        type: { select: { id: true, name: true, color: true } },
+        priority: { select: { id: true, name: true, color: true } },
       },
     });
   });
@@ -306,6 +339,8 @@ export function moveTicket(ticketId: string, columnId: string, rank: string) {
       column: true,
       assignee: true,
       labels: { include: { label: true } },
+      type: { select: { id: true, name: true, color: true } },
+      priority: { select: { id: true, name: true, color: true } },
     },
   });
 }

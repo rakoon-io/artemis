@@ -1,5 +1,3 @@
-import { TicketType, Priority } from "@prisma/client";
-import { Badge } from "@/components/ui/badge";
 import type {
   getMembers,
   getSprints,
@@ -21,62 +19,51 @@ export type LabelOption = Awaited<ReturnType<typeof getLabels>>[number];
 export type TicketRow = Awaited<ReturnType<typeof getTicketsList>>["items"][number];
 export type TicketDetail = NonNullable<Awaited<ReturnType<typeof getTicketDetail>>>;
 
+/**
+ * Type / priorité de ticket : désormais des données configurables par projet
+ * (plus des enums). Alimentés par `getTicketTypes` / `getTicketPriorities`.
+ */
+export type TicketTypeOption = {
+  id: string;
+  name: string;
+  color: string;
+  order?: number;
+};
+export type PriorityOption = {
+  id: string;
+  name: string;
+  color: string;
+  order?: number;
+};
+
 // Valeurs sentinelles pour les <Select> (Radix interdit la valeur "").
 export const NO_ASSIGNEE = "__none__";
 export const NO_SPRINT = "__backlog__";
 export const ALL = "__all__";
 
-export const TICKET_TYPE_OPTIONS: { value: TicketType; label: string }[] = [
-  { value: TicketType.BUG, label: "Bug" },
-  { value: TicketType.FEATURE, label: "Fonctionnalité" },
-  { value: TicketType.TASK, label: "Tâche" },
-  { value: TicketType.CHORE, label: "Tâche technique" },
-];
-
-export const PRIORITY_OPTIONS: { value: Priority; label: string }[] = [
-  { value: Priority.LOW, label: "Basse" },
-  { value: Priority.MEDIUM, label: "Moyenne" },
-  { value: Priority.HIGH, label: "Haute" },
-  { value: Priority.URGENT, label: "Urgente" },
-];
-
-const TYPE_LABEL: Record<TicketType, string> = {
-  BUG: "Bug",
-  FEATURE: "Fonctionnalité",
-  TASK: "Tâche",
-  CHORE: "Tâche technique",
-};
-
-const PRIORITY_LABEL: Record<Priority, string> = {
-  LOW: "Basse",
-  MEDIUM: "Moyenne",
-  HIGH: "Haute",
-  URGENT: "Urgente",
-};
-
-type BadgeVariant = "default" | "secondary" | "outline" | "destructive";
-
-const PRIORITY_VARIANT: Record<Priority, BadgeVariant> = {
-  LOW: "outline",
-  MEDIUM: "secondary",
-  HIGH: "default",
-  URGENT: "destructive",
-};
-
-export function typeLabel(type: TicketType): string {
-  return TYPE_LABEL[type];
-}
-
-export function priorityLabel(priority: Priority): string {
-  return PRIORITY_LABEL[priority];
-}
-
-export function TypeBadge({ type }: { type: TicketType }) {
-  return <Badge variant="outline">{TYPE_LABEL[type]}</Badge>;
-}
-
-export function PriorityBadge({ priority }: { priority: Priority }) {
-  return <Badge variant={PRIORITY_VARIANT[priority]}>{PRIORITY_LABEL[priority]}</Badge>;
+/**
+ * Badge à teinte de couleur (pastille + nom), utilisé pour le type ET la
+ * priorité d'un ticket. La couleur (hex arbitraire, propre au projet) est
+ * appliquée en ligne : pastille pleine + bordure/fond teintés ; le texte reste
+ * en `foreground` pour garantir le contraste en thème clair comme sombre.
+ */
+export function ColorBadge({ name, color }: { name: string; color: string }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium"
+      style={{
+        borderColor: `color-mix(in srgb, ${color} 40%, transparent)`,
+        backgroundColor: `color-mix(in srgb, ${color} 12%, transparent)`,
+      }}
+    >
+      <span
+        className="size-2 shrink-0 rounded-full"
+        style={{ backgroundColor: color }}
+        aria-hidden
+      />
+      {name}
+    </span>
+  );
 }
 
 /** Puce de label colorée (pastille + nom). */

@@ -1,14 +1,22 @@
-import {
-  PrismaClient,
-  Role,
-  TicketType,
-  Priority,
-  SprintState,
-} from "@prisma/client";
+import { PrismaClient, Role, SprintState } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { generateNKeysBetween } from "fractional-indexing";
 
 const prisma = new PrismaClient();
+
+// Jeux par défaut — alignés sur project.service.ts (order = index dans le tableau).
+const DEFAULT_TICKET_TYPES = [
+  { name: "Bug", color: "#EF4444" },
+  { name: "Fonctionnalité", color: "#6366F1" },
+  { name: "Tâche", color: "#0EA5E9" },
+  { name: "Corvée", color: "#64748B" },
+];
+const DEFAULT_TICKET_PRIORITIES = [
+  { name: "Basse", color: "#94A3B8" },
+  { name: "Moyenne", color: "#0EA5E9" },
+  { name: "Haute", color: "#F59E0B" },
+  { name: "Urgente", color: "#EF4444" },
+];
 
 async function main() {
   // --- Utilisateurs ---
@@ -53,6 +61,12 @@ async function main() {
           { name: "urgent", color: "#F59E0B" },
         ],
       },
+      ticketTypes: {
+        create: DEFAULT_TICKET_TYPES.map((t, order) => ({ ...t, order })),
+      },
+      ticketPriorities: {
+        create: DEFAULT_TICKET_PRIORITIES.map((p, order) => ({ ...p, order })),
+      },
       sprints: {
         create: [
           {
@@ -65,30 +79,39 @@ async function main() {
         ],
       },
     },
-    include: { columns: true, labels: true, sprints: true },
+    include: {
+      columns: true,
+      labels: true,
+      sprints: true,
+      ticketTypes: true,
+      ticketPriorities: true,
+    },
   });
 
   const col = (name: string) => project.columns.find((c) => c.name === name)!;
   const label = (name: string) => project.labels.find((l) => l.name === name)!;
+  const type = (name: string) => project.ticketTypes.find((t) => t.name === name)!;
+  const priority = (name: string) =>
+    project.ticketPriorities.find((p) => p.name === name)!;
   const sprint = project.sprints[0];
 
   const samples: Array<{
     title: string;
-    type: TicketType;
-    priority: Priority;
+    type: string;
+    priority: string;
     column: string;
     labels?: string[];
     assignee?: string;
     inSprint?: boolean;
   }> = [
-    { title: "Coller une image du presse-papier à la création", type: TicketType.FEATURE, priority: Priority.HIGH, column: "En cours", labels: ["feature"], assignee: admin.id, inSprint: true },
-    { title: "Le drag & drop clavier ne fonctionne pas sur Firefox", type: TicketType.BUG, priority: Priority.URGENT, column: "À faire", labels: ["bug", "urgent"], inSprint: true },
-    { title: "Ajouter la limite de WIP par colonne", type: TicketType.FEATURE, priority: Priority.MEDIUM, column: "Backlog", labels: ["feature"] },
-    { title: "Migrer le schéma Prisma en production", type: TicketType.CHORE, priority: Priority.MEDIUM, column: "En revue", assignee: admin.id, inSprint: true },
-    { title: "Filtrer la vue liste par sprint", type: TicketType.FEATURE, priority: Priority.LOW, column: "Backlog" },
-    { title: "Erreur 500 à la suppression d'une colonne pleine", type: TicketType.BUG, priority: Priority.HIGH, column: "À faire", labels: ["bug"] },
-    { title: "Configurer MinIO pour les pièces jointes", type: TicketType.CHORE, priority: Priority.MEDIUM, column: "Terminé", assignee: admin.id },
-    { title: "Thème sombre : contraste insuffisant sur les badges", type: TicketType.BUG, priority: Priority.LOW, column: "En cours", labels: ["bug"] },
+    { title: "Coller une image du presse-papier à la création", type: "Fonctionnalité", priority: "Haute", column: "En cours", labels: ["feature"], assignee: admin.id, inSprint: true },
+    { title: "Le drag & drop clavier ne fonctionne pas sur Firefox", type: "Bug", priority: "Urgente", column: "À faire", labels: ["bug", "urgent"], inSprint: true },
+    { title: "Ajouter la limite de WIP par colonne", type: "Fonctionnalité", priority: "Moyenne", column: "Backlog", labels: ["feature"] },
+    { title: "Migrer le schéma Prisma en production", type: "Corvée", priority: "Moyenne", column: "En revue", assignee: admin.id, inSprint: true },
+    { title: "Filtrer la vue liste par sprint", type: "Tâche", priority: "Basse", column: "Backlog" },
+    { title: "Erreur 500 à la suppression d'une colonne pleine", type: "Bug", priority: "Haute", column: "À faire", labels: ["bug"] },
+    { title: "Configurer MinIO pour les pièces jointes", type: "Corvée", priority: "Moyenne", column: "Terminé", assignee: admin.id },
+    { title: "Thème sombre : contraste insuffisant sur les badges", type: "Bug", priority: "Basse", column: "En cours", labels: ["bug"] },
   ];
 
   // Rangs par colonne
@@ -109,8 +132,8 @@ async function main() {
         number,
         key: `RKN-${number}`,
         title: s.title,
-        type: s.type,
-        priority: s.priority,
+        typeId: type(s.type).id,
+        priorityId: priority(s.priority).id,
         columnId: col(s.column).id,
         rank: ranks.get(s.column)![i],
         reporterId: reporter.id,
