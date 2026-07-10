@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 import type { z } from "zod";
 import { assert, isAdmin } from "@/lib/policies";
-import { createProjectSchema } from "@/lib/validators";
-import { createProject } from "@/server/services/project.service";
+import { createProjectSchema, updateProjectSchema } from "@/lib/validators";
+import { createProject, updateProject } from "@/server/services/project.service";
 import { withUser } from "./helpers";
 import type { ActionResult } from "./types";
 
@@ -18,5 +18,22 @@ export async function createProjectAction(
     const project = await createProject(data);
     revalidatePath("/projects");
     return { ok: true, data: { id: project.id, key: project.key } };
+  });
+}
+
+/** Met à jour le nom / la description d'un projet. Réservé à l'Admin. */
+export async function updateProjectAction(
+  input: z.input<typeof updateProjectSchema>,
+): Promise<ActionResult<{ id: string }>> {
+  return withUser<{ id: string }>(async (user) => {
+    assert(isAdmin(user), "Réservé aux administrateurs.");
+    const data = updateProjectSchema.parse(input);
+    const project = await updateProject(data.id, {
+      name: data.name,
+      description: data.description,
+    });
+    // Le renommage impacte la liste et les pages du projet (board, settings…).
+    revalidatePath("/projects", "layout");
+    return { ok: true, data: { id: project.id } };
   });
 }

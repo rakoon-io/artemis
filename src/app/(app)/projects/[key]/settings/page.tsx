@@ -2,7 +2,12 @@ import { notFound } from "next/navigation";
 
 import { auth } from "@/auth";
 import { isAdmin } from "@/lib/policies";
-import { getBoardData, getLabels, getProjectByKey } from "@/server/queries";
+import {
+  getBoardData,
+  getLabels,
+  getMembers,
+  getProjectByKey,
+} from "@/server/queries";
 import {
   Card,
   CardContent,
@@ -13,6 +18,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ColumnManager } from "@/components/settings/column-manager";
 import { LabelManager } from "@/components/settings/label-manager";
+import { ProjectSettingsForm } from "@/components/settings/project-settings-form";
+import { UserManager } from "@/components/settings/user-manager";
 
 /**
  * Paramètres du projet (RSC) : personnalisation du workflow (colonnes) et des
@@ -27,7 +34,7 @@ export default async function SettingsPage({
   const { key } = await params;
   const session = await auth();
 
-  if (!isAdmin(session?.user)) {
+  if (!session?.user || !isAdmin(session.user)) {
     return (
       <div className="mx-auto max-w-2xl p-6">
         <Card>
@@ -46,9 +53,10 @@ export default async function SettingsPage({
   const project = await getProjectByKey(key);
   if (!project) notFound();
 
-  const [{ columns }, labels] = await Promise.all([
+  const [{ columns }, labels, members] = await Promise.all([
     getBoardData(project.id),
     getLabels(project.id),
+    getMembers(),
   ]);
 
   const columnSummaries = columns.map((column) => ({
@@ -66,16 +74,38 @@ export default async function SettingsPage({
           {project.name} — Paramètres
         </h1>
         <p className="text-sm text-muted-foreground">
-          Personnalisez le workflow (colonnes du tableau) et les labels du
-          projet.
+          Éditez le projet, personnalisez le workflow (colonnes, labels) et gérez
+          les utilisateurs.
         </p>
       </div>
 
-      <Tabs defaultValue="columns">
+      <Tabs defaultValue="project">
         <TabsList>
+          <TabsTrigger value="project">Projet</TabsTrigger>
           <TabsTrigger value="columns">Colonnes</TabsTrigger>
           <TabsTrigger value="labels">Labels</TabsTrigger>
+          <TabsTrigger value="users">Utilisateurs</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="project" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Projet</CardTitle>
+              <CardDescription>
+                Modifiez le nom et la description du projet.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ProjectSettingsForm
+                project={{
+                  id: project.id,
+                  name: project.name,
+                  description: project.description,
+                }}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="columns" className="mt-4">
           <Card>
@@ -103,6 +133,21 @@ export default async function SettingsPage({
             </CardHeader>
             <CardContent>
               <LabelManager labels={labels} projectId={project.id} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="users" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Utilisateurs &amp; rôles</CardTitle>
+              <CardDescription>
+                Ajoutez des comptes, changez les rôles (Administrateur /
+                Rapporteur) ou supprimez des utilisateurs.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <UserManager users={members} currentUserId={session.user.id} />
             </CardContent>
           </Card>
         </TabsContent>
