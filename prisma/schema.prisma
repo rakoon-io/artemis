@@ -14,20 +14,6 @@ enum Role {
   REPORTER
 }
 
-enum TicketType {
-  BUG
-  FEATURE
-  TASK
-  CHORE
-}
-
-enum Priority {
-  LOW
-  MEDIUM
-  HIGH
-  URGENT
-}
-
 enum SprintState {
   PLANNED
   ACTIVE
@@ -49,17 +35,20 @@ model User {
 }
 
 model Project {
-  id          String   @id @default(cuid())
-  key         String   @unique // ex : "RKN"
-  name        String
-  description String?
-  ticketSeq   Int      @default(0) // séquence pour générer les clés RKN-<n>
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  columns     Column[]
-  tickets     Ticket[]
-  sprints     Sprint[]
-  labels      Label[]
+  id               String           @id @default(cuid())
+  key              String           @unique // ex : "RKN"
+  name             String
+  description      String?
+  accentColor      String? // couleur d'accent personnalisée (hex), null = charte par défaut
+  ticketSeq        Int              @default(0) // séquence pour générer les clés RKN-<n>
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  columns          Column[]
+  tickets          Ticket[]
+  sprints          Sprint[]
+  labels           Label[]
+  ticketTypes      TicketType[]
+  ticketPriorities TicketPriority[]
 }
 
 model Column {
@@ -74,6 +63,34 @@ model Column {
   @@index([projectId])
 }
 
+// Type de ticket — configurable par projet (voir ADR-0002 : personnalisation).
+model TicketType {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  color     String // hex, ex : "#6366F1"
+  order     Int
+  tickets   Ticket[]
+
+  @@unique([projectId, name])
+  @@index([projectId])
+}
+
+// Priorité de ticket — configurable par projet.
+model TicketPriority {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  color     String // hex
+  order     Int
+  tickets   Ticket[]
+
+  @@unique([projectId, name])
+  @@index([projectId])
+}
+
 model Ticket {
   id          String          @id @default(cuid())
   projectId   String
@@ -82,8 +99,10 @@ model Ticket {
   key         String // "RKN-123" (dénormalisé pour affichage / recherche)
   title       String
   description String?
-  type        TicketType      @default(TASK)
-  priority    Priority        @default(MEDIUM)
+  typeId      String
+  type        TicketType      @relation(fields: [typeId], references: [id])
+  priorityId  String
+  priority    TicketPriority  @relation(fields: [priorityId], references: [id])
   columnId    String
   column      Column          @relation(fields: [columnId], references: [id])
   rank        String // ordre dans la colonne (lexorank)
@@ -102,6 +121,8 @@ model Ticket {
   @@unique([projectId, number])
   @@index([projectId, columnId])
   @@index([sprintId])
+  @@index([typeId])
+  @@index([priorityId])
 }
 
 model Sprint {

@@ -31,6 +31,7 @@ export async function updateProjectAction(
     const project = await updateProject(data.id, {
       name: data.name,
       description: data.description,
+      accentColor: data.accentColor,
     });
     // Le renommage impacte la liste et les pages du projet (board, settings…).
     revalidatePath("/projects", "layout");

@@ -17,7 +17,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { Priority, type Role, TicketType } from "@prisma/client";
+import type { Role } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -33,8 +33,9 @@ import { rankBetween } from "@/lib/rank";
 import { moveTicketAction } from "@/server/actions/board.actions";
 import { createTicketAction } from "@/server/actions/ticket.actions";
 import type { getBoardData } from "@/server/queries";
+import type { PriorityOption, TicketTypeOption } from "@/components/ticket/ticket-fields";
 import { BoardColumn } from "./board-column";
-import { PRIORITY_META, TYPE_META, TicketCardView } from "./ticket-card";
+import { TicketCardView } from "./ticket-card";
 
 // ─── Types dérivés du retour serveur (aucun `any`) ─────────────────────────────
 type BoardData = Awaited<ReturnType<typeof getBoardData>>;
@@ -46,24 +47,12 @@ type Member = { id: string; name: string | null; email: string };
 
 type Filters = {
   assigneeId?: string;
-  type?: TicketType;
-  priority?: Priority;
+  typeId?: string;
+  priorityId?: string;
   labelId?: string;
 };
 
 const UNASSIGNED = "__unassigned__";
-const TYPE_ORDER: TicketType[] = [
-  TicketType.BUG,
-  TicketType.FEATURE,
-  TicketType.TASK,
-  TicketType.CHORE,
-];
-const PRIORITY_ORDER: Priority[] = [
-  Priority.URGENT,
-  Priority.HIGH,
-  Priority.MEDIUM,
-  Priority.LOW,
-];
 
 function makeMatcher(filters: Filters) {
   return (ticket: BoardTicket): boolean => {
@@ -74,8 +63,10 @@ function makeMatcher(filters: Filters) {
         return false;
       }
     }
-    if (filters.type && ticket.type !== filters.type) return false;
-    if (filters.priority && ticket.priority !== filters.priority) return false;
+    if (filters.typeId && ticket.type.id !== filters.typeId) return false;
+    if (filters.priorityId && ticket.priority.id !== filters.priorityId) {
+      return false;
+    }
     if (filters.labelId && !ticket.labels.some((l) => l.labelId === filters.labelId)) {
       return false;
     }
@@ -100,6 +91,8 @@ export function KanbanBoard({
   projectKey,
   currentUser,
   members,
+  types,
+  priorities,
   className,
 }: {
   columns: BoardColumnData[];
@@ -107,6 +100,8 @@ export function KanbanBoard({
   projectKey: string;
   currentUser: CurrentUser;
   members: Member[];
+  types: TicketTypeOption[];
+  priorities: PriorityOption[];
   className?: string;
 }) {
   const router = useRouter();
@@ -162,7 +157,10 @@ export function KanbanBoard({
   );
 
   const hasFilters =
-    !!filters.assigneeId || !!filters.type || !!filters.priority || !!filters.labelId;
+    !!filters.assigneeId ||
+    !!filters.typeId ||
+    !!filters.priorityId ||
+    !!filters.labelId;
 
   const announcements: Announcements = useMemo(() => {
     const label = (id: string | number) => {
@@ -299,20 +297,25 @@ export function KanbanBoard({
             options={assigneeOptions}
             onChange={(value) => setFilters((f) => ({ ...f, assigneeId: value }))}
           />
-          <FilterMenu<TicketType>
+          <FilterMenu
             label="Type"
-            value={filters.type}
-            options={TYPE_ORDER.map((t) => ({ value: t, label: TYPE_META[t].label }))}
-            onChange={(value) => setFilters((f) => ({ ...f, type: value }))}
-          />
-          <FilterMenu<Priority>
-            label="Priorité"
-            value={filters.priority}
-            options={PRIORITY_ORDER.map((p) => ({
-              value: p,
-              label: PRIORITY_META[p].label,
+            value={filters.typeId}
+            options={types.map((t) => ({
+              value: t.id,
+              label: t.name,
+              color: t.color,
             }))}
-            onChange={(value) => setFilters((f) => ({ ...f, priority: value }))}
+            onChange={(value) => setFilters((f) => ({ ...f, typeId: value }))}
+          />
+          <FilterMenu
+            label="Priorité"
+            value={filters.priorityId}
+            options={priorities.map((p) => ({
+              value: p.id,
+              label: p.name,
+              color: p.color,
+            }))}
+            onChange={(value) => setFilters((f) => ({ ...f, priorityId: value }))}
           />
           <FilterMenu
             label="Label"

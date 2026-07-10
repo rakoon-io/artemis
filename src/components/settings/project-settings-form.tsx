@@ -11,16 +11,29 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 export interface ProjectSettingsFormProps {
-  project: { id: string; name: string; description: string | null };
+  project: {
+    id: string;
+    name: string;
+    description: string | null;
+    accentColor: string | null;
+  };
 }
 
+/** Couleur d'accent par défaut (charte Rakoon, bordeaux) affichée quand aucune
+ *  couleur personnalisée n'est définie. */
+const DEFAULT_ACCENT = "#800020";
+
 /**
- * Édition du projet (Admin) : nom + description. La mutation passe par la Server
- * Action `updateProjectAction` (autorisation imposée côté serveur).
+ * Édition du projet (Admin) : nom + description + couleur d'accent. La mutation
+ * passe par la Server Action `updateProjectAction` (autorisation imposée côté
+ * serveur). `accentColor === null` réinitialise la couleur à la charte.
  */
 export function ProjectSettingsForm({ project }: ProjectSettingsFormProps) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
+  const [accentColor, setAccentColor] = useState<string | null>(
+    project.accentColor,
+  );
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -37,6 +50,7 @@ export function ProjectSettingsForm({ project }: ProjectSettingsFormProps) {
       id: project.id,
       name,
       description: description || null,
+      accentColor,
     });
     setSubmitting(false);
     if (!res.ok) {
@@ -69,6 +83,35 @@ export function ProjectSettingsForm({ project }: ProjectSettingsFormProps) {
           rows={4}
           placeholder="Description du projet (optionnel)"
         />
+      </div>
+      <div className="grid gap-2">
+        <Label htmlFor="project-accent">Couleur d&apos;accent</Label>
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            id="project-accent"
+            type="color"
+            value={accentColor ?? DEFAULT_ACCENT}
+            onChange={(event) => setAccentColor(event.target.value)}
+            className="h-9 w-12 cursor-pointer rounded-md border border-input bg-transparent p-1"
+            aria-label="Couleur d'accent du projet"
+          />
+          <span className="font-mono text-xs uppercase text-muted-foreground">
+            {accentColor ?? `${DEFAULT_ACCENT} (par défaut)`}
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={accentColor === null}
+            onClick={() => setAccentColor(null)}
+          >
+            Réinitialiser
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Personnalise la couleur principale des boutons et surbrillances du
+          projet. « Réinitialiser » rétablit la charte Rakoon.
+        </p>
       </div>
       <div>
         <Button type="submit" disabled={submitting}>

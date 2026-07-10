@@ -3,9 +3,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { cn, formatDate, initials } from "@/lib/utils";
 import {
+  ColorBadge,
   LabelChip,
-  PriorityBadge,
-  TypeBadge,
   type SprintOption,
   type TicketRow,
 } from "./ticket-fields";
@@ -80,10 +79,13 @@ export function TicketTable({
                 </Link>
               </td>
               <td className="px-3 py-2">
-                <TypeBadge type={ticket.type} />
+                <ColorBadge name={ticket.type.name} color={ticket.type.color} />
               </td>
               <td className="px-3 py-2">
-                <PriorityBadge priority={ticket.priority} />
+                <ColorBadge
+                  name={ticket.priority.name}
+                  color={ticket.priority.color}
+                />
               </td>
               <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">
                 {ticket.column.name}

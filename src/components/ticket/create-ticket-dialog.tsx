@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { FileText, Loader2, Paperclip, Plus, X } from "lucide-react";
-import { Priority, TicketType } from "@prisma/client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,11 +33,11 @@ import {
   formatBytes,
   NO_ASSIGNEE,
   NO_SPRINT,
-  PRIORITY_OPTIONS,
-  TICKET_TYPE_OPTIONS,
   type LabelOption,
   type Member,
+  type PriorityOption,
   type SprintOption,
+  type TicketTypeOption,
 } from "./ticket-fields";
 
 type PendingKind = "image" | "file" | "text";
@@ -77,18 +76,22 @@ export function CreateTicketDialog({
   members,
   sprints,
   labels,
+  types,
+  priorities,
 }: {
   projectId: string;
   members: Member[];
   sprints: SprintOption[];
   labels: LabelOption[];
+  types: TicketTypeOption[];
+  priorities: PriorityOption[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [type, setType] = useState<TicketType>(TicketType.TASK);
-  const [priority, setPriority] = useState<Priority>(Priority.MEDIUM);
+  const [typeId, setTypeId] = useState<string>(types[0]?.id ?? "");
+  const [priorityId, setPriorityId] = useState<string>(priorities[0]?.id ?? "");
   const [assigneeId, setAssigneeId] = useState<string>(NO_ASSIGNEE);
   const [sprintId, setSprintId] = useState<string>(NO_SPRINT);
   const [labelIds, setLabelIds] = useState<string[]>([]);
@@ -228,8 +231,8 @@ export function CreateTicketDialog({
     }
     setTitle("");
     setDescription("");
-    setType(TicketType.TASK);
-    setPriority(Priority.MEDIUM);
+    setTypeId(types[0]?.id ?? "");
+    setPriorityId(priorities[0]?.id ?? "");
     setAssigneeId(NO_ASSIGNEE);
     setSprintId(NO_SPRINT);
     setLabelIds([]);
@@ -317,8 +320,8 @@ export function CreateTicketDialog({
       projectId,
       title: trimmed,
       description: description.trim() ? description.trim() : undefined,
-      type,
-      priority,
+      typeId: typeId || undefined,
+      priorityId: priorityId || undefined,
       assigneeId: assigneeId === NO_ASSIGNEE ? null : assigneeId,
       sprintId: sprintId === NO_SPRINT ? null : sprintId,
       labelIds,
@@ -392,17 +395,21 @@ export function CreateTicketDialog({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="ticket-type">Type</Label>
-              <Select
-                value={type}
-                onValueChange={(v) => setType(v as TicketType)}
-              >
+              <Select value={typeId} onValueChange={setTypeId}>
                 <SelectTrigger id="ticket-type" aria-label="Type">
-                  <SelectValue />
+                  <SelectValue placeholder="Sélectionner…" />
                 </SelectTrigger>
                 <SelectContent>
-                  {TICKET_TYPE_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
+                  {types.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>
+                      <span className="flex items-center gap-2">
+                        <span
+                          className="size-2 shrink-0 rounded-full"
+                          style={{ backgroundColor: o.color }}
+                          aria-hidden
+                        />
+                        {o.name}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -411,17 +418,21 @@ export function CreateTicketDialog({
 
             <div className="space-y-1.5">
               <Label htmlFor="ticket-priority">Priorité</Label>
-              <Select
-                value={priority}
-                onValueChange={(v) => setPriority(v as Priority)}
-              >
+              <Select value={priorityId} onValueChange={setPriorityId}>
                 <SelectTrigger id="ticket-priority" aria-label="Priorité">
-                  <SelectValue />
+                  <SelectValue placeholder="Sélectionner…" />
                 </SelectTrigger>
                 <SelectContent>
-                  {PRIORITY_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
+                  {priorities.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>
+                      <span className="flex items-center gap-2">
+                        <span
+                          className="size-2 shrink-0 rounded-full"
+                          style={{ backgroundColor: o.color }}
+                          aria-hidden
+                        />
+                        {o.name}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>

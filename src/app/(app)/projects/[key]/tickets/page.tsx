@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Priority, TicketType } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import {
   getLabels,
   getMembers,
   getProjectByKey,
   getSprints,
+  getTicketPriorities,
   getTicketsList,
+  getTicketTypes,
 } from "@/server/queries";
 import { CreateTicketDialog } from "@/components/ticket/create-ticket-dialog";
 import { TicketFilters } from "@/components/ticket/ticket-filters";
@@ -19,17 +20,6 @@ type SearchParams = { [key: string]: string | string[] | undefined };
 function one(value: string | string[] | undefined): string | undefined {
   const v = Array.isArray(value) ? value[0] : value;
   return v && v.length > 0 ? v : undefined;
-}
-
-/** Coerce une chaîne vers un membre d'enum, sinon `undefined`. */
-function toEnum<T extends Record<string, string>>(
-  enumObj: T,
-  value: string | undefined,
-): T[keyof T] | undefined {
-  if (value && (Object.values(enumObj) as string[]).includes(value)) {
-    return value as T[keyof T];
-  }
-  return undefined;
 }
 
 export default async function TicketsListPage({
@@ -49,28 +39,30 @@ export default async function TicketsListPage({
   const assigneeId = one(sp.assigneeId);
   const labelId = one(sp.labelId);
   const sprintId = one(sp.sprintId);
-  const type = toEnum(TicketType, one(sp.type));
-  const priority = toEnum(Priority, one(sp.priority));
+  const typeId = one(sp.typeId);
+  const priorityId = one(sp.priorityId);
   const page = Math.max(1, Number(one(sp.page)) || 1);
 
-  const [list, sprints, labels, members] = await Promise.all([
+  const [list, sprints, labels, members, types, priorities] = await Promise.all([
     getTicketsList(project.id, {
       q,
       assigneeId,
       labelId,
       sprintId,
-      type,
-      priority,
+      typeId,
+      priorityId,
       page,
     }),
     getSprints(project.id),
     getLabels(project.id),
     getMembers(),
+    getTicketTypes(project.id),
+    getTicketPriorities(project.id),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(list.total / list.pageSize));
   const hasFilters = Boolean(
-    q || assigneeId || labelId || sprintId || type || priority,
+    q || assigneeId || labelId || sprintId || typeId || priorityId,
   );
 
   // Conserve les filtres actifs dans les liens de pagination.
@@ -79,8 +71,8 @@ export default async function TicketsListPage({
     assigneeId,
     labelId,
     sprintId,
-    type,
-    priority,
+    typeId,
+    priorityId,
   };
   function pageHref(target: number): string {
     const params = new URLSearchParams();
@@ -109,10 +101,18 @@ export default async function TicketsListPage({
           members={members}
           sprints={sprints}
           labels={labels}
+          types={types}
+          priorities={priorities}
         />
       </div>
 
-      <TicketFilters members={members} sprints={sprints} labels={labels} />
+      <TicketFilters
+        members={members}
+        sprints={sprints}
+        labels={labels}
+        types={types}
+        priorities={priorities}
+      />
 
       <TicketTable
         items={list.items}

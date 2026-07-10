@@ -19,12 +19,13 @@ import {
   getMembers,
   getSprints,
   getTicketDetail,
+  getTicketPriorities,
+  getTicketTypes,
 } from "@/server/queries";
 import {
+  ColorBadge,
   formatBytes,
   LabelChip,
-  PriorityBadge,
-  TypeBadge,
 } from "@/components/ticket/ticket-fields";
 import { CommentForm } from "@/components/ticket/comment-form";
 import { CommentList } from "@/components/ticket/comment-list";
@@ -52,15 +53,19 @@ export default async function TicketDetailPage({
         members: Awaited<ReturnType<typeof getMembers>>;
         sprints: Awaited<ReturnType<typeof getSprints>>;
         labels: Awaited<ReturnType<typeof getLabels>>;
+        types: Awaited<ReturnType<typeof getTicketTypes>>;
+        priorities: Awaited<ReturnType<typeof getTicketPriorities>>;
       }
     | null = null;
   if (canEdit) {
-    const [members, sprints, labels] = await Promise.all([
+    const [members, sprints, labels, types, priorities] = await Promise.all([
       getMembers(),
       getSprints(ticket.projectId),
       getLabels(ticket.projectId),
+      getTicketTypes(ticket.projectId),
+      getTicketPriorities(ticket.projectId),
     ]);
-    editData = { members, sprints, labels };
+    editData = { members, sprints, labels, types, priorities };
   }
 
   return (
@@ -79,8 +84,11 @@ export default async function TicketDetailPage({
             {ticket.title}
           </h1>
           <div className="flex flex-wrap items-center gap-2">
-            <TypeBadge type={ticket.type} />
-            <PriorityBadge priority={ticket.priority} />
+            <ColorBadge name={ticket.type.name} color={ticket.type.color} />
+            <ColorBadge
+              name={ticket.priority.name}
+              color={ticket.priority.color}
+            />
             <Badge variant="secondary">{ticket.column.name}</Badge>
           </div>
         </div>
@@ -92,8 +100,8 @@ export default async function TicketDetailPage({
                   id: ticket.id,
                   title: ticket.title,
                   description: ticket.description,
-                  type: ticket.type,
-                  priority: ticket.priority,
+                  typeId: ticket.type.id,
+                  priorityId: ticket.priority.id,
                   assigneeId: ticket.assigneeId,
                   sprintId: ticket.sprintId,
                   labelIds: ticket.labels.map((l) => l.labelId),
@@ -101,6 +109,8 @@ export default async function TicketDetailPage({
                 members={editData.members}
                 sprints={editData.sprints}
                 labels={editData.labels}
+                types={editData.types}
+                priorities={editData.priorities}
               />
             )}
             {canDelete && (

@@ -1,7 +1,10 @@
 import { z } from "zod";
-import { TicketType, Priority, Role } from "@prisma/client";
+import { Role } from "@prisma/client";
 
 /** Schémas Zod partagés client/serveur — validation à chaque frontière (voir .ai/rules.md). */
+
+/** Couleur hexadécimale #RRGGBB — partagée par labels, types et priorités. */
+const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/, "Couleur hexadécimale (#RRGGBB)");
 
 export const credentialsSchema = z.object({
   email: z.string().email(),
@@ -26,6 +29,7 @@ export const updateProjectSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1, "Nom requis").max(80),
   description: z.string().max(500).optional().nullable(),
+  accentColor: hex.nullable().optional(),
 });
 
 export const adminCreateUserSchema = z.object({
@@ -44,8 +48,8 @@ export const createTicketSchema = z.object({
   projectId: z.string().min(1),
   title: z.string().min(1, "Titre requis").max(200),
   description: z.string().max(20000).optional().nullable(),
-  type: z.nativeEnum(TicketType).default(TicketType.TASK),
-  priority: z.nativeEnum(Priority).default(Priority.MEDIUM),
+  typeId: z.string().min(1).optional(),
+  priorityId: z.string().min(1).optional(),
   assigneeId: z.string().optional().nullable(),
   sprintId: z.string().optional().nullable(),
   labelIds: z.array(z.string()).optional().default([]),
@@ -55,8 +59,8 @@ export const updateTicketSchema = z.object({
   id: z.string().min(1),
   title: z.string().min(1).max(200).optional(),
   description: z.string().max(20000).optional().nullable(),
-  type: z.nativeEnum(TicketType).optional(),
-  priority: z.nativeEnum(Priority).optional(),
+  typeId: z.string().min(1).optional(),
+  priorityId: z.string().min(1).optional(),
   assigneeId: z.string().optional().nullable(),
   sprintId: z.string().optional().nullable(),
   labelIds: z.array(z.string()).optional(),
@@ -108,6 +112,42 @@ export const createLabelSchema = z.object({
   projectId: z.string().min(1),
   name: z.string().min(1).max(30),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Couleur hexadécimale (#RRGGBB)"),
+});
+
+// --- Types de tickets (configurables par projet) ---
+export const createTicketTypeSchema = z.object({
+  projectId: z.string().min(1),
+  name: z.string().min(1).max(40),
+  color: hex,
+});
+
+export const updateTicketTypeSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1).max(40).optional(),
+  color: hex.optional(),
+});
+
+export const reorderTicketTypesSchema = z.object({
+  projectId: z.string().min(1),
+  orderedIds: z.array(z.string()).min(1),
+});
+
+// --- Priorités de tickets (configurables par projet) ---
+export const createTicketPrioritySchema = z.object({
+  projectId: z.string().min(1),
+  name: z.string().min(1).max(40),
+  color: hex,
+});
+
+export const updateTicketPrioritySchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1).max(40).optional(),
+  color: hex.optional(),
+});
+
+export const reorderTicketPrioritiesSchema = z.object({
+  projectId: z.string().min(1),
+  orderedIds: z.array(z.string()).min(1),
 });
 
 export const createCommentSchema = z.object({

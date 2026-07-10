@@ -2,7 +2,13 @@ import { notFound } from "next/navigation";
 import { Role } from "@prisma/client";
 
 import { auth } from "@/auth";
-import { getBoardData, getMembers, getProjectByKey } from "@/server/queries";
+import {
+  getBoardData,
+  getMembers,
+  getProjectByKey,
+  getTicketPriorities,
+  getTicketTypes,
+} from "@/server/queries";
 import { KanbanBoard, type CurrentUser } from "@/components/board/kanban-board";
 
 /**
@@ -18,9 +24,11 @@ export default async function BoardPage({
   const project = await getProjectByKey(key);
   if (!project) notFound();
 
-  const [{ columns }, members, session] = await Promise.all([
+  const [{ columns }, members, types, priorities, session] = await Promise.all([
     getBoardData(project.id),
     getMembers(),
+    getTicketTypes(project.id),
+    getTicketPriorities(project.id),
     auth(),
   ]);
 
@@ -43,6 +51,8 @@ export default async function BoardPage({
         projectKey={project.key}
         currentUser={currentUser}
         members={members}
+        types={types}
+        priorities={priorities}
       />
     </div>
   );

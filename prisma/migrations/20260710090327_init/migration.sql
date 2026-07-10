@@ -2,12 +2,6 @@
 CREATE TYPE "Role" AS ENUM ('ADMIN', 'REPORTER');
 
 -- CreateEnum
-CREATE TYPE "TicketType" AS ENUM ('BUG', 'FEATURE', 'TASK', 'CHORE');
-
--- CreateEnum
-CREATE TYPE "Priority" AS ENUM ('LOW', 'MEDIUM', 'HIGH', 'URGENT');
-
--- CreateEnum
 CREATE TYPE "SprintState" AS ENUM ('PLANNED', 'ACTIVE', 'COMPLETED');
 
 -- CreateTable
@@ -29,6 +23,7 @@ CREATE TABLE "Project" (
     "key" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
+    "accentColor" TEXT,
     "ticketSeq" INTEGER NOT NULL DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -48,6 +43,28 @@ CREATE TABLE "Column" (
 );
 
 -- CreateTable
+CREATE TABLE "TicketType" (
+    "id" TEXT NOT NULL,
+    "projectId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "color" TEXT NOT NULL,
+    "order" INTEGER NOT NULL,
+
+    CONSTRAINT "TicketType_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "TicketPriority" (
+    "id" TEXT NOT NULL,
+    "projectId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "color" TEXT NOT NULL,
+    "order" INTEGER NOT NULL,
+
+    CONSTRAINT "TicketPriority_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Ticket" (
     "id" TEXT NOT NULL,
     "projectId" TEXT NOT NULL,
@@ -55,8 +72,8 @@ CREATE TABLE "Ticket" (
     "key" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "description" TEXT,
-    "type" "TicketType" NOT NULL DEFAULT 'TASK',
-    "priority" "Priority" NOT NULL DEFAULT 'MEDIUM',
+    "typeId" TEXT NOT NULL,
+    "priorityId" TEXT NOT NULL,
     "columnId" TEXT NOT NULL,
     "rank" TEXT NOT NULL,
     "reporterId" TEXT NOT NULL,
@@ -135,10 +152,28 @@ CREATE UNIQUE INDEX "Project_key_key" ON "Project"("key");
 CREATE INDEX "Column_projectId_idx" ON "Column"("projectId");
 
 -- CreateIndex
+CREATE INDEX "TicketType_projectId_idx" ON "TicketType"("projectId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "TicketType_projectId_name_key" ON "TicketType"("projectId", "name");
+
+-- CreateIndex
+CREATE INDEX "TicketPriority_projectId_idx" ON "TicketPriority"("projectId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "TicketPriority_projectId_name_key" ON "TicketPriority"("projectId", "name");
+
+-- CreateIndex
 CREATE INDEX "Ticket_projectId_columnId_idx" ON "Ticket"("projectId", "columnId");
 
 -- CreateIndex
 CREATE INDEX "Ticket_sprintId_idx" ON "Ticket"("sprintId");
+
+-- CreateIndex
+CREATE INDEX "Ticket_typeId_idx" ON "Ticket"("typeId");
+
+-- CreateIndex
+CREATE INDEX "Ticket_priorityId_idx" ON "Ticket"("priorityId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Ticket_projectId_number_key" ON "Ticket"("projectId", "number");
@@ -159,7 +194,19 @@ CREATE INDEX "Comment_ticketId_idx" ON "Comment"("ticketId");
 ALTER TABLE "Column" ADD CONSTRAINT "Column_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "TicketType" ADD CONSTRAINT "TicketType_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TicketPriority" ADD CONSTRAINT "TicketPriority_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Ticket" ADD CONSTRAINT "Ticket_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Ticket" ADD CONSTRAINT "Ticket_typeId_fkey" FOREIGN KEY ("typeId") REFERENCES "TicketType"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Ticket" ADD CONSTRAINT "Ticket_priorityId_fkey" FOREIGN KEY ("priorityId") REFERENCES "TicketPriority"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Ticket" ADD CONSTRAINT "Ticket_columnId_fkey" FOREIGN KEY ("columnId") REFERENCES "Column"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

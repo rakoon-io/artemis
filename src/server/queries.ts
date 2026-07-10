@@ -3,6 +3,8 @@ import * as labelService from "./services/label.service";
 import * as projectService from "./services/project.service";
 import * as sprintService from "./services/sprint.service";
 import * as ticketService from "./services/ticket.service";
+import * as ticketPriorityService from "./services/ticketpriority.service";
+import * as ticketTypeService from "./services/tickettype.service";
 import * as userService from "./services/user.service";
 import type { TicketFilters } from "./services/ticket.service";
 
@@ -47,6 +49,16 @@ export function getSprints(projectId: string) {
 
 export function getLabels(projectId: string) {
   return labelService.listLabels(projectId);
+}
+
+/** Types de tickets du projet, ordonnés (badges + configuration). */
+export function getTicketTypes(projectId: string) {
+  return ticketTypeService.listTicketTypes(projectId);
+}
+
+/** Priorités de tickets du projet, ordonnées (badges + configuration). */
+export function getTicketPriorities(projectId: string) {
+  return ticketPriorityService.listTicketPriorities(projectId);
 }
 
 export function getMembers() {
