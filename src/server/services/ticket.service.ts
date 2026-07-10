@@ -44,7 +44,36 @@ export function createTicket(input: CreateTicketServiceInput, reporterId: string
     });
     const rank = rankAfter(last?.rank ?? null);
 
-    const labelIds = input.labelIds ?? [];
+    // M3 — cohérence projet : sprint, assigné et labels doivent être valides pour ce projet.
+    let sprintId = input.sprintId ?? null;
+    if (sprintId) {
+      const sprint = await tx.sprint.findFirst({
+        where: { id: sprintId, projectId: input.projectId },
+        select: { id: true },
+      });
+      if (!sprint) sprintId = null;
+    }
+
+    let assigneeId = input.assigneeId ?? null;
+    if (assigneeId) {
+      const exists = await tx.user.findUnique({
+        where: { id: assigneeId },
+        select: { id: true },
+      });
+      if (!exists) assigneeId = null;
+    }
+
+    const requestedLabelIds = input.labelIds ?? [];
+    const labelIds =
+      requestedLabelIds.length > 0
+        ? (
+            await tx.label.findMany({
+              where: { id: { in: requestedLabelIds }, projectId: input.projectId },
+              select: { id: true },
+            })
+          ).map((l) => l.id)
+        : [];
+
     return tx.ticket.create({
       data: {
         projectId: input.projectId,
@@ -57,8 +86,8 @@ export function createTicket(input: CreateTicketServiceInput, reporterId: string
         columnId: column.id,
         rank,
         reporterId,
-        assigneeId: input.assigneeId ?? null,
-        sprintId: input.sprintId ?? null,
+        assigneeId,
+        sprintId,
         labels:
           labelIds.length > 0
             ? { create: labelIds.map((labelId) => ({ labelId })) }
@@ -188,14 +217,52 @@ export interface UpdateTicketServiceInput {
 export function updateTicket(input: UpdateTicketServiceInput) {
   const { id, labelIds, ...rest } = input;
   return prisma.$transaction(async (tx) => {
+    const ticket = await tx.ticket.findUnique({
+      where: { id },
+      select: { projectId: true },
+    });
+    if (!ticket) throw new Error("Ticket introuvable.");
+    const { projectId } = ticket;
+
+    // M3 — cohérence projet : on n'applique sprint/assigné/labels que s'ils sont valides.
+    // Un sprint hors projet ou un assigné inexistant est ignoré (valeur non appliquée) ;
+    // `null` reste appliqué (désassignation / retrait de sprint volontaires).
+    let sprintId = rest.sprintId;
+    if (sprintId) {
+      const sprint = await tx.sprint.findFirst({
+        where: { id: sprintId, projectId },
+        select: { id: true },
+      });
+      if (!sprint) sprintId = undefined;
+    }
+
+    let assigneeId = rest.assigneeId;
+    if (assigneeId) {
+      const exists = await tx.user.findUnique({
+        where: { id: assigneeId },
+        select: { id: true },
+      });
+      if (!exists) assigneeId = undefined;
+    }
+
     if (labelIds !== undefined) {
+      const validLabelIds =
+        labelIds.length > 0
+          ? (
+              await tx.label.findMany({
+                where: { id: { in: labelIds }, projectId },
+                select: { id: true },
+              })
+            ).map((l) => l.id)
+          : [];
       await tx.labelOnTicket.deleteMany({ where: { ticketId: id } });
-      if (labelIds.length > 0) {
+      if (validLabelIds.length > 0) {
         await tx.labelOnTicket.createMany({
-          data: labelIds.map((labelId) => ({ ticketId: id, labelId })),
+          data: validLabelIds.map((labelId) => ({ ticketId: id, labelId })),
         });
       }
     }
+
     return tx.ticket.update({
       where: { id },
       data: {
@@ -203,8 +270,8 @@ export function updateTicket(input: UpdateTicketServiceInput) {
         ...(rest.description !== undefined ? { description: rest.description } : {}),
         ...(rest.type !== undefined ? { type: rest.type } : {}),
         ...(rest.priority !== undefined ? { priority: rest.priority } : {}),
-        ...(rest.assigneeId !== undefined ? { assigneeId: rest.assigneeId } : {}),
-        ...(rest.sprintId !== undefined ? { sprintId: rest.sprintId } : {}),
+        ...(assigneeId !== undefined ? { assigneeId } : {}),
+        ...(sprintId !== undefined ? { sprintId } : {}),
       },
       include: {
         column: true,
