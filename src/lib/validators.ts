@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { TicketType, Priority } from "@prisma/client";
+import { TicketType, Priority, Role } from "@prisma/client";
 
 /** Schémas Zod partagés client/serveur — validation à chaque frontière (voir .ai/rules.md). */
 
@@ -20,6 +20,24 @@ export const createProjectSchema = z.object({
     .string()
     .regex(/^[A-Z]{2,6}$/, "2 à 6 lettres majuscules (ex : RKN)"),
   description: z.string().max(500).optional(),
+});
+
+export const updateProjectSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1, "Nom requis").max(80),
+  description: z.string().max(500).optional().nullable(),
+});
+
+export const adminCreateUserSchema = z.object({
+  name: z.string().min(1, "Nom requis").max(80),
+  email: z.string().email("E-mail invalide"),
+  password: z.string().min(8, "8 caractères minimum").max(200),
+  role: z.nativeEnum(Role),
+});
+
+export const updateUserRoleSchema = z.object({
+  userId: z.string().min(1),
+  role: z.nativeEnum(Role),
 });
 
 export const createTicketSchema = z.object({

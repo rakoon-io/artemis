@@ -45,3 +45,19 @@ export function createProject(input: CreateProjectServiceInput) {
     include: { columns: { orderBy: { order: "asc" } } },
   });
 }
+
+export interface UpdateProjectServiceInput {
+  name: string;
+  description?: string | null;
+}
+
+/** Met à jour le nom / la description d'un projet (aucune autorisation ici). */
+export function updateProject(id: string, data: UpdateProjectServiceInput) {
+  return prisma.project.update({
+    where: { id },
+    data: {
+      name: data.name,
+      description: data.description ?? null,
+    },
+  });
+}
