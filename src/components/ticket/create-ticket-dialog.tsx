@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { FileText, Loader2, Plus, X } from "lucide-react";
+import { FileText, Loader2, Paperclip, Plus, X } from "lucide-react";
 import { Priority, TicketType } from "@prisma/client";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,7 +41,7 @@ import {
   type SprintOption,
 } from "./ticket-fields";
 
-type PendingKind = "image" | "text";
+type PendingKind = "image" | "file" | "text";
 interface PendingAttachment {
   id: string;
   file: File;
@@ -94,6 +95,8 @@ export function CreateTicketDialog({
   const [pending, setPending] = useState<PendingAttachment[]>([]);
   const [pastedText, setPastedText] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Révoque les object URLs des aperçus au démontage (via ref sur l'état courant).
   const pendingRef = useRef<PendingAttachment[]>([]);
@@ -120,6 +123,45 @@ export function CreateTicketDialog({
       ...prev,
       { id: crypto.randomUUID(), file: named, kind: "image", previewUrl },
     ]);
+  }
+
+  /** Ajoute un fichier quelconque (image → aperçu ; sinon → document). */
+  function addFile(file: File) {
+    if (file.type.startsWith("image/")) {
+      addImage(file);
+      return;
+    }
+    setPending((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), file, kind: "file" },
+    ]);
+  }
+
+  function addFiles(files: File[] | FileList) {
+    const arr = Array.from(files);
+    if (arr.length === 0) return;
+    arr.forEach(addFile);
+    toast.success(
+      arr.length > 1
+        ? `${arr.length} pièces jointes ajoutées.`
+        : "Pièce jointe ajoutée.",
+    );
+  }
+
+  function handleDrop(event: React.DragEvent) {
+    event.preventDefault();
+    setDragging(false);
+    if (event.dataTransfer.files.length > 0) addFiles(event.dataTransfer.files);
+  }
+
+  function handleDragOver(event: React.DragEvent) {
+    event.preventDefault();
+    if (!dragging) setDragging(true);
+  }
+
+  function handleDragLeave(event: React.DragEvent) {
+    event.preventDefault();
+    setDragging(false);
   }
 
   function attachTextAsFile(text: string) {
@@ -431,16 +473,50 @@ export function CreateTicketDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="ticket-paste">Zone de collage</Label>
-            <Textarea
-              id="ticket-paste"
-              value=""
-              onChange={() => {}}
-              onPaste={handleZonePaste}
-              placeholder="Cliquez ici puis collez (Ctrl/Cmd + V) une image, un log ou du texte."
-              aria-label="Zone de collage de pièces jointes"
-              className="min-h-14 border-dashed text-muted-foreground"
-            />
+            <Label htmlFor="ticket-paste">Pièces jointes</Label>
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={cn(
+                "rounded-md border border-dashed p-3 transition-colors",
+                dragging && "border-primary bg-primary/5",
+              )}
+            >
+              <Textarea
+                id="ticket-paste"
+                value=""
+                onChange={() => {}}
+                onPaste={handleZonePaste}
+                placeholder="Collez (Ctrl/Cmd + V) une image, un log ou du texte…"
+                aria-label="Zone de collage de pièces jointes"
+                className="min-h-12 resize-none border-0 bg-transparent p-0 text-muted-foreground shadow-none focus-visible:ring-0"
+              />
+              <div className="mt-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                <span>…ou glissez-déposez vos documents ici.</span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Paperclip />
+                  Parcourir…
+                </Button>
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="sr-only"
+                aria-hidden
+                tabIndex={-1}
+                onChange={(e) => {
+                  if (e.target.files) addFiles(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+            </div>
           </div>
 
           {pastedText && (
