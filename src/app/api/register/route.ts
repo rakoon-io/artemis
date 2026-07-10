@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { Prisma, Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { env } from "@/lib/env";
 import { registerSchema } from "@/lib/validators";
 
 /**
@@ -32,6 +33,21 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   const { name, email, password } = parsed.data;
 
+  // C1 — Inscription restreinte à une liste blanche de domaines (si configurée).
+  // Variable absente ⇒ comportement inchangé (dev).
+  const allowedDomains = env.ALLOWED_EMAIL_DOMAINS?.split(",")
+    .map((d) => d.trim().toLowerCase())
+    .filter(Boolean);
+  if (allowedDomains && allowedDomains.length > 0) {
+    const domain = email.split("@")[1]?.toLowerCase() ?? "";
+    if (!allowedDomains.includes(domain)) {
+      return NextResponse.json(
+        { ok: false, error: "Inscription non autorisée pour ce domaine." },
+        { status: 403 },
+      );
+    }
+  }
+
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
     return NextResponse.json(
@@ -40,7 +56,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
   }
 
-  const passwordHash = await bcrypt.hash(password, 10);
+  const passwordHash = await bcrypt.hash(password, 12);
   const isFirstUser = (await prisma.user.count()) === 0;
   const role = isFirstUser ? Role.ADMIN : Role.REPORTER;
 

@@ -19,7 +19,7 @@ async function main() {
       email: "admin@rakoon.io",
       name: "Admin Rakoon",
       role: Role.ADMIN,
-      passwordHash: await bcrypt.hash("admin1234", 10),
+      passwordHash: await bcrypt.hash("admin1234", 12),
     },
   });
   const reporter = await prisma.user.upsert({
@@ -29,7 +29,7 @@ async function main() {
       email: "rapporteur@rakoon.io",
       name: "Rémy Rapporteur",
       role: Role.REPORTER,
-      passwordHash: await bcrypt.hash("rapporteur1234", 10),
+      passwordHash: await bcrypt.hash("rapporteur1234", 12),
     },
   });
 
