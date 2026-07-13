@@ -4,12 +4,22 @@ import { Prisma, Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { registerSchema } from "@/lib/validators";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 /**
  * Inscription (POST) : valide, refuse un e-mail déjà pris (409), hache le mot de
  * passe. Le tout premier utilisateur créé devient ADMIN, les suivants REPORTER.
  */
 export async function POST(request: Request): Promise<NextResponse> {
+  // M1 — limitation de débit par IP (anti abus / création de comptes en masse).
+  const rl = rateLimit(`register:${clientIp(request.headers)}`, 10, 10 * 60 * 1000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { ok: false, error: "Trop de tentatives. Réessayez plus tard." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },
+    );
+  }
+
   let body: unknown;
   try {
     body = await request.json();
