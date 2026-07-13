@@ -20,6 +20,7 @@ pas : si la direction change, on ajoute un **nouvel** ADR qui la remplace (statu
 | ADR-0003 | RBAC à deux rôles (Admin / Rapporteur), extensible | Acceptée | [0003](./0003-rbac-admin-rapporteur.md) |
 | ADR-0004 | Pièces jointes « paste-first » (presse-papier → S3) | Acceptée | [0004](./0004-pieces-jointes-paste-first.md) |
 | ADR-0005 | Déploiement Dokploy (Docker) sur OVH / `apps.rakoon.io` | Acceptée | [0005](./0005-deploiement-dokploy-ovh.md) |
+| ADR-0006 | Types & priorités de tickets configurables par projet (tables) | Acceptée | [0006](./0006-types-priorites-configurables.md) |
 
 ## 🧭 Conventions
 
