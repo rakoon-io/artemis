@@ -108,9 +108,9 @@ complets).
 
 ```prisma
 enum Role        { ADMIN REPORTER }
-enum TicketType  { BUG FEATURE TASK CHORE }
-enum Priority    { LOW MEDIUM HIGH URGENT }
 enum SprintState { PLANNED ACTIVE COMPLETED }
+// Types & priorités de tickets ne sont PLUS des enums : ce sont des tables
+// par projet (modèles TicketType / TicketPriority ci-dessous).
 
 model User {
   id           String    @id @default(cuid())
@@ -125,16 +125,19 @@ model User {
 }
 
 model Project {
-  id          String    @id @default(cuid())
-  key         String    @unique              // ex : "RKN"
-  name        String
-  description String?
-  ticketSeq   Int       @default(0)          // séquence pour générer les clés RKN-<n>
-  createdAt   DateTime  @default(now())
-  columns     Column[]
-  tickets     Ticket[]
-  sprints     Sprint[]
-  labels      Label[]
+  id               String           @id @default(cuid())
+  key              String           @unique         // ex : "RKN"
+  name             String
+  description      String?
+  accentColor      String?                          // couleur d'accent perso (hex), null = charte par défaut
+  ticketSeq        Int              @default(0)      // séquence pour générer les clés RKN-<n>
+  createdAt        DateTime         @default(now())
+  columns          Column[]
+  tickets          Ticket[]
+  sprints          Sprint[]
+  labels           Label[]
+  ticketTypes      TicketType[]
+  ticketPriorities TicketPriority[]
 }
 
 model Column {                               // colonne Kanban = statut configurable
@@ -147,6 +150,28 @@ model Column {                               // colonne Kanban = statut configur
   tickets   Ticket[]
 }
 
+model TicketType {                           // type de ticket — configurable par projet
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id])
+  name      String                           // ex : "Bug", "Fonctionnalité", "Tâche"…
+  color     String                           // hex, ex : "#6366F1"
+  order     Int                              // position d'affichage
+  tickets   Ticket[]
+  @@unique([projectId, name])
+}
+
+model TicketPriority {                        // priorité de ticket — configurable par projet
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id])
+  name      String                           // ex : "Basse", "Moyenne", "Haute", "Urgente"
+  color     String                           // hex
+  order     Int
+  tickets   Ticket[]
+  @@unique([projectId, name])
+}
+
 model Ticket {
   id          String       @id @default(cuid())
   projectId   String
@@ -155,8 +180,10 @@ model Ticket {
   key         String                          // dénormalisé, ex : "RKN-123"
   title       String
   description String?
-  type        TicketType   @default(TASK)
-  priority    Priority     @default(MEDIUM)
+  typeId      String
+  type        TicketType     @relation(fields: [typeId], references: [id])
+  priorityId  String
+  priority    TicketPriority @relation(fields: [priorityId], references: [id])
   columnId    String
   column      Column       @relation(fields: [columnId], references: [id])
   rank        String                          // ordre dans la colonne (lexorank)
@@ -227,9 +254,10 @@ model Comment {
 ```
 
 > ℹ️ **Notes de modélisation (v1).** La relation `Attachment.uploadedBy → User` est en place dans le
-> schéma réel. **Aucune appartenance par projet** (`ProjectMember`) n'est modélisée en v1 : la portée
-> de visibilité (« les tickets de ses projets ») reste une **question ouverte** (voir
-> [`context.md`](./context.md)) — organisation unique en v1.
+> schéma réel. **Aucune appartenance par projet** (`ProjectMember`) n'est modélisée en v1 : la
+> visibilité est **à l'échelle de l'organisation** (organisation unique, inscription restreinte par
+> domaine — cf. correctif de sécurité **C1**), `ProjectMember` restant une **évolution future** (voir
+> [`context.md`](./context.md)).
 
 ## Patterns clés
 
@@ -249,6 +277,10 @@ model Comment {
   une clé lisible **dénormalisée** `key` (`RKN-1`, `RKN-2`, …) ; unicité garantie par `(projectId, number)`.
 - **Workflow personnalisable** : les statuts sont des **`Column` en base** (par projet), pas des
   valeurs codées en dur. Voir [`decisions/0002-workflow-kanban-personnalisable.md`](./decisions/0002-workflow-kanban-personnalisable.md).
+- **Personnalisation par projet** : **types, priorités, colonnes, labels et couleur d'accent** sont
+  **configurables par projet** (données en base, pas de valeurs codées en dur) ; les jeux par défaut
+  sont posés au **seed** et gérés ensuite via les **Paramètres** (Admin). Voir
+  [`decisions/0006-types-priorites-configurables.md`](./decisions/0006-types-priorites-configurables.md).
 
 ## Conventions
 

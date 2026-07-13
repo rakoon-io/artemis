@@ -7,15 +7,22 @@
 
 ---
 
-## 📍 État courant (au 2026-07-09)
+## 📍 État courant (au 2026-07-13)
 
 - **Application v1 implémentée et vérifiée** (Next.js 16 / App Router / TypeScript strict, **npm**).
 - Fonctionnalités livrées :
   - **Auth + RBAC** (Admin / Rapporteur), policies imposées côté serveur ;
   - **Projets** et **Kanban** (dnd-kit, drag & drop souris **et** clavier, ordre via `rank`) ;
-  - **Tickets** avec **création rapide « paste »** (image / log / texte) et **pièces jointes S3** ;
-  - **Vue liste** + filtres ; **Sprints / lots** ; **paramètres** (colonnes + labels) ;
+  - **Tickets** avec **création rapide « paste »** (image / log / texte), **glisser-déposer de
+    documents** (tous types) et **pièces jointes S3** ;
+  - **Vue liste** + filtres ; **Sprints / lots** ;
+  - **Paramètres (Admin)** : colonnes, labels, **types & priorités** de tickets, **couleur d'accent**,
+    **réglages du projet** (nom / description) et **gestion des utilisateurs & rôles** ;
   - **Thème clair / sombre**.
+- **Sécurité durcie (audit)** : inscription restreinte par domaine (`ALLOWED_EMAIL_DOMAINS`),
+  autorisations pièces jointes + **clé S3 liée au ticket**, **échec au démarrage** si secrets manquants
+  en prod, **en-têtes de sécurité**, **bcrypt 12**, cohérence projet, **rate-limiting** login /
+  inscription.
 - **Qualité vérifiée** : `typecheck`, `lint`, **build** de production, **9 tests unitaires Vitest**,
   **migration Prisma initiale + seed**, **smoke test** runtime — tous OK.
 - **Outillage** : `Dockerfile` multi-stage (npm) + `.dockerignore` à la racine, **seed** Prisma
@@ -23,7 +30,7 @@
 - **Dépôt GitHub** : **`rakoon-io/rakoon-tracker`** (privé).
 - **Déploiement** : convention **Dokploy / Traefik** sur **`apps.rakoon.io`** documentée
   ([`../DEPLOY.md`](../DEPLOY.md), [ADR-0005](./decisions/0005-deploiement-dokploy-ovh.md)) —
-  **pas encore réalisé** (bloqué sur l'accès serveur / Dokploy).
+  **pas encore réalisé** : accès SSH serveur confirmé (`rakoon-apps`), déploiement **reporté à la demande**.
 
 ## 🆕 Changements récents
 
@@ -86,7 +93,7 @@ Rappel synthétique (détail dans [`decisions/`](./decisions/)) :
 | Question | Statut |
 |----------|--------|
 | **Sous-domaine** de déploiement : `tracker.apps.rakoon.io` proposé — à valider. | ⏳ à confirmer |
-| **Accès serveur/Dokploy** pour le déploiement (SSH ou token API Dokploy) — qui/comment ? | ⏳ à confirmer |
+| **Accès serveur/Dokploy** — accès SSH confirmé (`rakoon-apps`) ; déploiement **reporté à la demande**. | ✅ |
 | **Provider OAuth** éventuel, en complément de l'e-mail/mot de passe ? | ⏳ à trancher |
 | **Appartenance aux projets** : table `ProjectMember` explicite ou visibilité à l'échelle de l'organisation en v1 ? | ⏳ à trancher |
 
