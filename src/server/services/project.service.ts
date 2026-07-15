@@ -19,7 +19,7 @@ export const DEFAULT_TICKET_TYPES = [
   { name: "Bug", color: "#EF4444" },
   { name: "Fonctionnalité", color: "#6366F1" },
   { name: "Tâche", color: "#0EA5E9" },
-  { name: "Corvée", color: "#64748B" },
+  { name: "Maintenance", color: "#64748B" },
 ] as const;
 
 /** Priorités de tickets créées par défaut à la naissance d'un projet (order 0..3). */

@@ -9,7 +9,7 @@ const DEFAULT_TICKET_TYPES = [
   { name: "Bug", color: "#EF4444" },
   { name: "Fonctionnalité", color: "#6366F1" },
   { name: "Tâche", color: "#0EA5E9" },
-  { name: "Corvée", color: "#64748B" },
+  { name: "Maintenance", color: "#64748B" },
 ];
 const DEFAULT_TICKET_PRIORITIES = [
   { name: "Basse", color: "#94A3B8" },
@@ -107,10 +107,10 @@ async function main() {
     { title: "Coller une image du presse-papier à la création", type: "Fonctionnalité", priority: "Haute", column: "En cours", labels: ["feature"], assignee: admin.id, inSprint: true },
     { title: "Le drag & drop clavier ne fonctionne pas sur Firefox", type: "Bug", priority: "Urgente", column: "À faire", labels: ["bug", "urgent"], inSprint: true },
     { title: "Ajouter la limite de WIP par colonne", type: "Fonctionnalité", priority: "Moyenne", column: "Backlog", labels: ["feature"] },
-    { title: "Migrer le schéma Prisma en production", type: "Corvée", priority: "Moyenne", column: "En revue", assignee: admin.id, inSprint: true },
+    { title: "Migrer le schéma Prisma en production", type: "Maintenance", priority: "Moyenne", column: "En revue", assignee: admin.id, inSprint: true },
     { title: "Filtrer la vue liste par sprint", type: "Tâche", priority: "Basse", column: "Backlog" },
     { title: "Erreur 500 à la suppression d'une colonne pleine", type: "Bug", priority: "Haute", column: "À faire", labels: ["bug"] },
-    { title: "Configurer MinIO pour les pièces jointes", type: "Corvée", priority: "Moyenne", column: "Terminé", assignee: admin.id },
+    { title: "Configurer MinIO pour les pièces jointes", type: "Maintenance", priority: "Moyenne", column: "Terminé", assignee: admin.id },
     { title: "Thème sombre : contraste insuffisant sur les badges", type: "Bug", priority: "Basse", column: "En cours", labels: ["bug"] },
   ];
 
