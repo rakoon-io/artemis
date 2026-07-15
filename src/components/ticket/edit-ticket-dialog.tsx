@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { updateTicketAction } from "@/server/actions/ticket.actions";
+import { AttachmentField, usePendingAttachments } from "./attachment-field";
 import { LabelMultiSelect } from "./label-multi-select";
 import {
   NO_ASSIGNEE,
@@ -65,6 +66,7 @@ export function EditTicketDialog({
   priorities: PriorityOption[];
 }) {
   const router = useRouter();
+  const attachments = usePendingAttachments();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState(ticket.title);
   const [description, setDescription] = useState(ticket.description ?? "");
@@ -80,6 +82,7 @@ export function EditTicketDialog({
   const [submitting, setSubmitting] = useState(false);
 
   function reset() {
+    attachments.clear();
     setTitle(ticket.title);
     setDescription(ticket.description ?? "");
     setTypeId(ticket.typeId);
@@ -113,11 +116,15 @@ export function EditTicketDialog({
       sprintId: sprintId === NO_SPRINT ? null : sprintId,
       labelIds,
     });
-    setSubmitting(false);
     if (!result.ok) {
+      setSubmitting(false);
       toast.error(result.error);
       return;
     }
+    // PJ collées/déposées pendant l'édition → téléversées sur le ticket existant.
+    if (attachments.hasPending) await attachments.uploadAll(ticket.id);
+    attachments.clear();
+    setSubmitting(false);
     toast.success("Ticket mis à jour.");
     router.refresh();
     setOpen(false);
@@ -158,6 +165,8 @@ export function EditTicketDialog({
               id="edit-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              onPaste={(e) => attachments.pasteImages(e)}
+              placeholder="Coller une image ici l'ajoute en pièce jointe."
               rows={4}
             />
           </div>
@@ -252,6 +261,14 @@ export function EditTicketDialog({
               onChange={setLabelIds}
             />
           </div>
+
+          <AttachmentField
+            attachments={attachments}
+            id="edit-paste"
+            onInsertText={(text) =>
+              setDescription((prev) => (prev ? `${prev}\n${text}` : text))
+            }
+          />
 
           <DialogFooter>
             <DialogClose asChild>
