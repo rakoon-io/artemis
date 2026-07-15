@@ -68,8 +68,8 @@ function collectImages(data: DataTransfer): File[] {
 /**
  * Création rapide « paste-first » ⭐ — le titre suffit ; on peut coller une image
  * (aperçu + PJ en attente) ou un log/texte (PJ .txt ou insertion en description).
- * À la soumission, chaque PJ est presignée puis téléversée en S3 ; si le stockage
- * n'est pas configuré (501), le ticket est créé quand même sans pièce jointe.
+ * À la soumission, les PJ sont téléversées **en parallèle** (S3 ou disque local selon
+ * la configuration) ; un échec d'envoi n'empêche pas la création du ticket.
  */
 export function CreateTicketDialog({
   projectId,
@@ -246,56 +246,57 @@ export function CreateTicketDialog({
     if (!next) resetForm();
   }
 
-  /** Téléverse les PJ en attente ; s'arrête proprement si le stockage manque (501). */
-  async function uploadPending(ticketId: string) {
-    for (const item of pending) {
-      const contentType = item.file.type || "application/octet-stream";
-      let presignRes: Response;
-      try {
-        presignRes = await fetch("/api/attachments/presign", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ticketId,
-            filename: item.file.name,
-            contentType,
-            size: item.file.size,
-          }),
-        });
-      } catch {
-        toast.error(`Envoi de « ${item.file.name} » impossible.`);
-        continue;
-      }
+  /**
+   * Téléverse une pièce jointe : presign → PUT → (S3 : `confirm` ; local : déjà
+   * enregistré par la route d'upload). Les erreurs sont signalées sans interrompre
+   * les autres envois.
+   */
+  async function uploadOne(ticketId: string, item: PendingAttachment): Promise<void> {
+    const contentType = item.file.type || "application/octet-stream";
+    let presignRes: Response;
+    try {
+      presignRes = await fetch("/api/attachments/presign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ticketId,
+          filename: item.file.name,
+          contentType,
+          size: item.file.size,
+        }),
+      });
+    } catch {
+      toast.error(`Envoi de « ${item.file.name} » impossible.`);
+      return;
+    }
+    if (!presignRes.ok) {
+      toast.error(`Échec de préparation de « ${item.file.name} ».`);
+      return;
+    }
 
-      if (presignRes.status === 501) {
-        toast.info("Stockage non configuré : ticket créé sans pièce jointe.");
+    const { url, storageKey, mode } = (await presignRes.json()) as {
+      url: string;
+      storageKey: string;
+      mode: "s3" | "local";
+    };
+
+    try {
+      const put = await fetch(url, {
+        method: "PUT",
+        headers: { "Content-Type": contentType },
+        body: item.file,
+      });
+      if (!put.ok) {
+        toast.error(`Échec de l'envoi de « ${item.file.name} ».`);
         return;
       }
-      if (!presignRes.ok) {
-        toast.error(`Échec de préparation de « ${item.file.name} ».`);
-        continue;
-      }
+    } catch {
+      toast.error(`Échec de l'envoi de « ${item.file.name} ».`);
+      return;
+    }
 
-      const { url, storageKey } = (await presignRes.json()) as {
-        url: string;
-        storageKey: string;
-      };
-
-      try {
-        const put = await fetch(url, {
-          method: "PUT",
-          headers: { "Content-Type": contentType },
-          body: item.file,
-        });
-        if (!put.ok) {
-          toast.error(`Échec de l'envoi de « ${item.file.name} ».`);
-          continue;
-        }
-      } catch {
-        toast.error(`Échec de l'envoi de « ${item.file.name} ».`);
-        continue;
-      }
-
+    // Local : la route d'upload a déjà créé la pièce jointe (pas de round-trip confirm).
+    if (mode === "s3") {
       const confirmed = await confirmAttachmentAction({
         ticketId,
         filename: item.file.name,
@@ -305,6 +306,11 @@ export function CreateTicketDialog({
       });
       if (!confirmed.ok) toast.error(confirmed.error);
     }
+  }
+
+  /** Téléverse toutes les PJ en attente **en parallèle** (au lieu de séquentiellement). */
+  async function uploadPending(ticketId: string, items: PendingAttachment[]) {
+    await Promise.all(items.map((item) => uploadOne(ticketId, item)));
   }
 
   async function handleSubmit(event: React.FormEvent) {
@@ -339,7 +345,7 @@ export function CreateTicketDialog({
       return;
     }
 
-    if (pending.length > 0) await uploadPending(created.id);
+    if (pending.length > 0) await uploadPending(created.id, pending);
 
     toast.success(`Ticket ${created.key} créé.`);
     router.refresh();

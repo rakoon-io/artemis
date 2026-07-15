@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/session";
 import { canEditTicket } from "@/lib/policies";
 import { getTicketOwnership } from "@/server/services/ticket.service";
 import { presignSchema } from "@/lib/validators";
+import { isDangerousContentType } from "@/lib/attachments";
 import {
   attachmentKey,
   isStorageConfigured,
@@ -10,26 +11,15 @@ import {
 } from "@/lib/storage";
 
 /**
- * Types de contenu refusés à l'upload (risque XSS au rendu inline / téléchargement).
- * Denylist : HTML, SVG, XHTML, et tout type contenant « script ».
- */
-const DANGEROUS_CONTENT_TYPES = new Set([
-  "text/html",
-  "image/svg+xml",
-  "application/xhtml+xml",
-]);
-
-function isDangerousContentType(contentType: string): boolean {
-  const normalized = contentType.trim().toLowerCase();
-  const base = normalized.split(";")[0]?.trim() ?? "";
-  return DANGEROUS_CONTENT_TYPES.has(base) || normalized.includes("script");
-}
-
-/**
- * POST /api/attachments/presign — délivre une URL presignée d'upload (PUT).
+ * POST /api/attachments/presign — prépare l'upload d'une pièce jointe.
  * Le serveur vérifie l'authentification, l'autorisation sur le ticket et valide
- * l'entrée AVANT d'émettre l'URL. La clé S3 est liée au ticket ciblé.
- * Si le stockage S3 n'est pas configuré : 501 (le client crée le ticket sans PJ).
+ * l'entrée AVANT d'émettre l'URL. La clé de stockage est liée au ticket ciblé.
+ *
+ * Réponse : `{ url, storageKey, mode }`.
+ * - `mode: "s3"`   → PUT direct vers S3 (URL presignée), puis `confirmAttachmentAction`.
+ * - `mode: "local"`→ PUT vers notre route `/api/attachments/upload`, qui **enregistre
+ *   elle-même** la pièce jointe (pas de round-trip `confirm`). filename/contentType
+ *   sont encodés dans l'URL pour éviter un aller-retour supplémentaire.
  */
 export async function POST(request: Request): Promise<NextResponse> {
   const user = await requireUser().catch(() => null);
@@ -79,11 +69,14 @@ export async function POST(request: Request): Promise<NextResponse> {
   const key = attachmentKey(ticketId, filename);
   if (isStorageConfigured()) {
     const url = await presignUpload(key, contentType);
-    return NextResponse.json({ url, storageKey: key });
+    return NextResponse.json({ url, storageKey: key, mode: "s3" });
   }
-  // Fallback local (dev sans MinIO) : upload via notre route dédiée.
+  // Fallback local (dev sans MinIO) : upload + enregistrement via notre route dédiée.
+  // filename/contentType voyagent dans l'URL ; la route les revalide (défense en profondeur).
+  const params = new URLSearchParams({ key, filename, contentType });
   return NextResponse.json({
-    url: `/api/attachments/upload?key=${encodeURIComponent(key)}`,
+    url: `/api/attachments/upload?${params.toString()}`,
     storageKey: key,
+    mode: "local",
   });
 }
