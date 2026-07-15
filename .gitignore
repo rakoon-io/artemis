@@ -35,6 +35,9 @@ prisma/*.db
 # Docker
 docker-build.log
 
+# Pièces jointes en stockage local (fallback dev sans S3)
+/.uploads/
+
 # Logs
 *.log
 npm-debug.log*

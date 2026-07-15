@@ -5,11 +5,15 @@ import {
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { promises as fs } from "node:fs";
+import path from "node:path";
 import { env } from "./env";
 
 /**
- * Stockage S3-compatible des pièces jointes (voir ADR-0004).
- * Se désactive proprement si les variables S3_* ne sont pas configurées.
+ * Stockage des pièces jointes (voir ADR-0004).
+ * - Variables `S3_*` configurées ⇒ **stockage S3-compatible** (MinIO/S3), upload direct via URL presignée.
+ * - Sinon ⇒ **fallback disque local** (dossier `.uploads`), pratique en dev sans MinIO.
+ *   ⚠️ En conteneur, le disque n'est pas persistant : configurer S3 en production.
  */
 
 export function isStorageConfigured(): boolean {
@@ -21,6 +25,12 @@ export function isStorageConfigured(): boolean {
   );
 }
 
+export type StorageMode = "s3" | "local";
+export function storageMode(): StorageMode {
+  return isStorageConfigured() ? "s3" : "local";
+}
+
+// ─── S3 ────────────────────────────────────────────────────────────────────
 let cached: S3Client | null = null;
 
 function client(): S3Client {
@@ -63,6 +73,46 @@ export function presignDownload(key: string): Promise<string> {
 
 export async function deleteObject(key: string): Promise<void> {
   await client().send(new DeleteObjectCommand({ Bucket: env.S3_BUCKET, Key: key }));
+}
+
+// ─── Disque local (fallback) ─────────────────────────────────────────────────
+const LOCAL_DIR = process.env.LOCAL_UPLOAD_DIR
+  ? path.resolve(process.env.LOCAL_UPLOAD_DIR)
+  : path.join(process.cwd(), ".uploads");
+
+/** Résout une clé objet en chemin disque, en empêchant toute traversée de répertoire. */
+function localPathForKey(key: string): string {
+  const rel = key
+    .replace(/\\/g, "/")
+    .split("/")
+    .filter((s) => s && s !== "." && s !== "..")
+    .map((s) => s.replace(/[^\w.\-]/g, "_"))
+    .join("/");
+  const full = path.resolve(LOCAL_DIR, rel);
+  if (full !== LOCAL_DIR && !full.startsWith(LOCAL_DIR + path.sep)) {
+    throw new Error("Chemin de stockage invalide.");
+  }
+  return full;
+}
+
+export async function writeLocal(key: string, data: Uint8Array): Promise<void> {
+  const p = localPathForKey(key);
+  await fs.mkdir(path.dirname(p), { recursive: true });
+  await fs.writeFile(p, data);
+}
+
+export async function readLocal(key: string): Promise<Buffer> {
+  return fs.readFile(localPathForKey(key));
+}
+
+export async function deleteLocal(key: string): Promise<void> {
+  await fs.rm(localPathForKey(key), { force: true });
+}
+
+/** Supprime l'objet stocké, quel que soit le mode. */
+export async function deleteStored(key: string): Promise<void> {
+  if (isStorageConfigured()) await deleteObject(key);
+  else await deleteLocal(key).catch(() => {});
 }
 
 /** Clé objet dédiée pour une pièce jointe. */

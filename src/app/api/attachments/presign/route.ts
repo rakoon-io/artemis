@@ -52,10 +52,6 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
   }
 
-  if (!isStorageConfigured()) {
-    return NextResponse.json({ error: "Stockage non configuré" }, { status: 501 });
-  }
-
   const { filename, contentType, ticketId } = parsed.data;
   if (!ticketId) {
     return NextResponse.json({ error: "Ticket requis." }, { status: 400 });
@@ -81,6 +77,13 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   const key = attachmentKey(ticketId, filename);
-  const url = await presignUpload(key, contentType);
-  return NextResponse.json({ url, storageKey: key });
+  if (isStorageConfigured()) {
+    const url = await presignUpload(key, contentType);
+    return NextResponse.json({ url, storageKey: key });
+  }
+  // Fallback local (dev sans MinIO) : upload via notre route dédiée.
+  return NextResponse.json({
+    url: `/api/attachments/upload?key=${encodeURIComponent(key)}`,
+    storageKey: key,
+  });
 }
