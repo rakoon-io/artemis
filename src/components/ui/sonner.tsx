@@ -2,13 +2,19 @@
 
 import { useTheme } from "next-themes";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
+import { themeMode } from "@/lib/themes";
 
 function Toaster(props: ToasterProps) {
-  const { theme = "system" } = useTheme();
+  const { resolvedTheme } = useTheme();
+  // Les palettes (« midnight », « sable »…) ne sont pas « light »/« dark » : on mappe
+  // vers le mode réel pour que Sonner applique le bon style de toast.
+  const theme: ToasterProps["theme"] = resolvedTheme
+    ? themeMode(resolvedTheme)
+    : "system";
 
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme={theme}
       className="toaster group"
       toastOptions={{
         classNames: {

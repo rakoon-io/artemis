@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:is(.dark *, .midnight *, .slate *, .carbon *));
 
 /* ─── Design tokens (charte Rakoon — monochrome + bordeaux #800020) ─────────────────────────── */
 :root {
@@ -36,7 +36,11 @@
   --ring: oklch(0.36 0.13 13);
 }
 
-.dark {
+/* Base sombre — partagée par toutes les palettes sombres (surchargée ensuite). */
+.dark,
+.midnight,
+.slate,
+.carbon {
   --background: oklch(0.15 0 0);
   --foreground: oklch(0.975 0 0);
 
@@ -65,6 +69,110 @@
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.52 0.155 15);
+}
+
+/* ─── Palettes claires (surchargent les neutres de :root ; accent = bordeaux) ── */
+.sand {
+  --background: oklch(0.986 0.008 82);
+  --foreground: oklch(0.2 0.012 66);
+  --card: oklch(0.997 0.006 86);
+  --card-foreground: oklch(0.2 0.012 66);
+  --popover: oklch(0.997 0.006 86);
+  --popover-foreground: oklch(0.2 0.012 66);
+  --secondary: oklch(0.945 0.014 82);
+  --secondary-foreground: oklch(0.26 0.012 66);
+  --muted: oklch(0.945 0.014 82);
+  --muted-foreground: oklch(0.5 0.014 68);
+  --accent: oklch(0.935 0.02 80);
+  --accent-foreground: oklch(0.26 0.014 66);
+  --border: oklch(0.892 0.014 82);
+  --input: oklch(0.892 0.014 82);
+}
+
+.mist {
+  --background: oklch(0.986 0.006 250);
+  --foreground: oklch(0.21 0.02 262);
+  --card: oklch(0.998 0.004 250);
+  --card-foreground: oklch(0.21 0.02 262);
+  --popover: oklch(0.998 0.004 250);
+  --popover-foreground: oklch(0.21 0.02 262);
+  --secondary: oklch(0.952 0.012 250);
+  --secondary-foreground: oklch(0.27 0.02 262);
+  --muted: oklch(0.952 0.012 250);
+  --muted-foreground: oklch(0.5 0.02 258);
+  --accent: oklch(0.945 0.02 250);
+  --accent-foreground: oklch(0.27 0.02 262);
+  --border: oklch(0.9 0.014 250);
+  --input: oklch(0.9 0.014 250);
+}
+
+.sage {
+  --background: oklch(0.986 0.008 162);
+  --foreground: oklch(0.2 0.015 168);
+  --card: oklch(0.998 0.005 162);
+  --card-foreground: oklch(0.2 0.015 168);
+  --popover: oklch(0.998 0.005 162);
+  --popover-foreground: oklch(0.2 0.015 168);
+  --secondary: oklch(0.95 0.014 160);
+  --secondary-foreground: oklch(0.26 0.015 168);
+  --muted: oklch(0.95 0.014 160);
+  --muted-foreground: oklch(0.49 0.016 162);
+  --accent: oklch(0.943 0.022 160);
+  --accent-foreground: oklch(0.26 0.015 168);
+  --border: oklch(0.898 0.016 160);
+  --input: oklch(0.898 0.016 160);
+}
+
+/* ─── Palettes sombres (surchargent la base sombre ; accent = bordeaux clair) ── */
+.midnight {
+  --background: oklch(0.155 0.024 260);
+  --foreground: oklch(0.96 0.01 250);
+  --card: oklch(0.2 0.028 260);
+  --card-foreground: oklch(0.96 0.01 250);
+  --popover: oklch(0.2 0.028 260);
+  --popover-foreground: oklch(0.96 0.01 250);
+  --secondary: oklch(0.28 0.032 260);
+  --secondary-foreground: oklch(0.96 0.01 250);
+  --muted: oklch(0.28 0.032 260);
+  --muted-foreground: oklch(0.72 0.022 254);
+  --accent: oklch(0.31 0.038 260);
+  --accent-foreground: oklch(0.96 0.01 250);
+  --border: oklch(0.8 0.04 258 / 16%);
+  --input: oklch(0.8 0.04 258 / 18%);
+}
+
+.slate {
+  --background: oklch(0.21 0.012 250);
+  --foreground: oklch(0.965 0.005 250);
+  --card: oklch(0.25 0.014 250);
+  --card-foreground: oklch(0.965 0.005 250);
+  --popover: oklch(0.25 0.014 250);
+  --popover-foreground: oklch(0.965 0.005 250);
+  --secondary: oklch(0.305 0.016 250);
+  --secondary-foreground: oklch(0.965 0.005 250);
+  --muted: oklch(0.305 0.016 250);
+  --muted-foreground: oklch(0.73 0.012 250);
+  --accent: oklch(0.335 0.018 250);
+  --accent-foreground: oklch(0.965 0.005 250);
+  --border: oklch(0.9 0.02 250 / 13%);
+  --input: oklch(0.9 0.02 250 / 15%);
+}
+
+.carbon {
+  --background: oklch(0.08 0 0);
+  --foreground: oklch(0.98 0 0);
+  --card: oklch(0.128 0 0);
+  --card-foreground: oklch(0.98 0 0);
+  --popover: oklch(0.128 0 0);
+  --popover-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.185 0 0);
+  --secondary-foreground: oklch(0.98 0 0);
+  --muted: oklch(0.185 0 0);
+  --muted-foreground: oklch(0.68 0 0);
+  --accent: oklch(0.225 0 0);
+  --accent-foreground: oklch(0.98 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 12%);
 }
 
 /* ─── Mappage des tokens vers le thème Tailwind v4 (CSS-first) ─────────────── */
@@ -125,7 +233,10 @@
   :root {
     color-scheme: light;
   }
-  .dark {
+  .dark,
+  .midnight,
+  .slate,
+  .carbon {
     color-scheme: dark;
   }
   * {
