@@ -2,6 +2,11 @@
 
 > Suivi de tickets sobre, moderne et personnalisable, adapté à l'agile.
 
+[![Licence : MIT](https://img.shields.io/badge/licence-MIT-green.svg)](./LICENSE)
+&nbsp;![Next.js 16](https://img.shields.io/badge/Next.js-16-black.svg)
+&nbsp;![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6.svg)
+&nbsp;![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Prisma-4169e1.svg)
+
 ## 📌 Statut
 
 > ✅ **Application v1 implémentée et vérifiée.**
@@ -130,4 +135,4 @@ Idéation → Plan → [validation] → Implémentation → Vérification (typec
 
 ## 📄 Licence
 
-À définir.
+Distribué sous licence **MIT** — voir [`LICENSE`](./LICENSE). Contributions bienvenues.
