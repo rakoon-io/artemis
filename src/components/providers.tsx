@@ -5,6 +5,7 @@ import { ThemeProvider } from "next-themes";
 import { SessionProvider } from "next-auth/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/sonner";
+import { THEME_IDS } from "@/lib/themes";
 
 /**
  * Fournisseurs globaux de l'application (côté client) :
@@ -30,6 +31,7 @@ export function Providers({ children }: { children: ReactNode }) {
       defaultTheme="system"
       enableSystem
       disableTransitionOnChange
+      themes={THEME_IDS}
     >
       <SessionProvider>
         <QueryClientProvider client={queryClient}>

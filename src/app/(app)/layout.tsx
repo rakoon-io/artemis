@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { ThemePicker } from "@/components/theme-picker";
 import { UserMenu } from "@/components/user-menu";
 
 /** Shell global de l'espace connecté : barre du haut + conteneur principal. */
@@ -40,7 +40,7 @@ export default async function AppLayout({
             <span>Rakoon Tracker</span>
           </Link>
           <div className="flex-1" />
-          <ThemeToggle />
+          <ThemePicker />
           <UserMenu user={user} />
         </div>
       </header>
