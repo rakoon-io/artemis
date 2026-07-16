@@ -6,9 +6,9 @@
     </linearGradient>
   </defs>
   <rect width="100" height="100" rx="24" fill="url(#bg)"/>
-  <!-- Croissant de lune (Artemis, deesse de la lune) -->
-  <path d="M64 14 A36 36 0 1 0 64 86 A44 44 0 0 1 64 14 Z" fill="#f8f5ee"/>
-  <!-- Fleche de la chasse, decochee vers le haut -->
+  <!-- Croissant de lune en haut a droite, dos (bord convexe) oriente vers le coin -->
+  <path d="M50.31 13.66 A26 26 0 1 1 86.34 49.69 A27 27 0 0 0 50.31 13.66 Z" fill="#f8f5ee"/>
+  <!-- Fleche de la chasse, decochee vers la lune (haut-droite) -->
   <g transform="rotate(-45 50 50)" stroke="#ffffff" stroke-width="9" fill="none" stroke-linecap="round" stroke-linejoin="round">
     <path d="M30 50 H78"/>
     <path d="M68 42 L84 50 L68 58"/>
