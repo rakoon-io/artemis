@@ -1,9 +1,7 @@
 # SPEC - Artemis
 
-> Cible produit détaillée de la **v1**. La direction générale est fixée par
-> [`.ai/vision.md`](./.ai/vision.md) (North Star) ; le **modèle de données** de référence vit dans
-> [`.ai/architecture.md`](./.ai/architecture.md). Ce document décrit **quoi** construire ; le
-> **comment** technique est dans `.ai/architecture.md`.
+> Cible produit détaillée. Ce document décrit **quoi** construire ; le **comment**
+> technique se lit dans le code (`src/`) et le schéma de données ([`prisma/schema.prisma`](./prisma/schema.prisma)).
 
 ---
 
@@ -49,24 +47,20 @@ travail configurable**.
   ou du **texte** directement dans le formulaire (zone de collage dédiée).
 - Le ticket reçoit une **clé** lisible (`RKN-123`) et arrive dans la première colonne du workflow.
 - Critère : un rapporteur crée un ticket **avec image collée en < 30 s**.
-- Détail : [`.ai/specs/0001-creation-ticket-rapide.md`](./.ai/specs/0001-creation-ticket-rapide.md)
 
 ### 3.2 Vue Kanban
 - Colonnes = statuts **configurables** par projet ; cartes = tickets.
 - **Drag & drop** (souris + **clavier**, via dnd-kit) pour déplacer/réordonner ; persistance de
   l'ordre via `rank` (lexorank).
 - Filtres rapides (assigné, label, type, priorité, sprint) et limite d'en-cours (WIP) optionnelle.
-- Détail : [`.ai/specs/0002-vue-kanban.md`](./.ai/specs/0002-vue-kanban.md)
 
 ### 3.3 Vue liste
 - Table dense : clé, titre, type, priorité, statut, assigné, sprint, labels, dates.
 - **Filtres**, **tri** multi-colonnes et **recherche** plein texte (titre/description).
-- Détail : [`.ai/specs/0005-vue-liste.md`](./.ai/specs/0005-vue-liste.md)
 
 ### 3.4 Sprints / lots
 - Créer un **lot** (regroupement) ou un **sprint** (lot **daté** : `startDate`/`endDate`, objectif).
 - Backlog → planification (glisser des tickets dans un sprint) → sprint actif → clôturé.
-- Détail : [`.ai/specs/0003-sprints-et-lots.md`](./.ai/specs/0003-sprints-et-lots.md)
 
 ### 3.5 Personnalisation
 - **Workflow** : ajouter/renommer/réordonner/supprimer des colonnes par projet.
@@ -80,12 +74,11 @@ travail configurable**.
 ### 3.7 Authentification & rôles
 - Connexion par e-mail/mot de passe (OAuth optionnel en évolution).
 - Rôle porté par l'utilisateur (`ADMIN` / `REPORTER`).
-- Détail : [`.ai/specs/0004-roles-et-permissions.md`](./.ai/specs/0004-roles-et-permissions.md)
 
 ## 4. Modèle de données (résumé)
 
 Entités : **User, Project, Column, Ticket, Sprint, Label, LabelOnTicket, Attachment, Comment**.
-Schéma complet et relations : [`.ai/architecture.md`](./.ai/architecture.md#modèle-de-données-canonique).
+Schéma complet et relations : [`prisma/schema.prisma`](./prisma/schema.prisma).
 
 ## 5. Parcours utilisateur clés
 
@@ -113,7 +106,6 @@ pièces jointes, personnalisation (workflow/labels/thème), rôles Admin/Rapport
 ### Backlog (post-v1, hors périmètre actuel)
 Temps réel, notifications e-mail, app mobile native, intégrations (Jira/GitHub/Slack), reporting
 (burndown/vélocité), multi-tenant, i18n, champs personnalisés, rôles additionnels.
-Rappel des **non-objectifs** : [`.ai/vision.md`](./.ai/vision.md#-non-objectifs-v1).
 
 ## 8. Definition of Done (v1)
 

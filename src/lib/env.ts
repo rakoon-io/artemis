@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * Validation des variables d'environnement (voir .ai/rules.md : « env validées via Zod »).
+ * Validation des variables d'environnement (env validées via Zod).
  * On utilise `safeParse` pour ne pas casser le build quand les variables ne sont pas
  * présentes (le rendu des pages qui touchent la DB est dynamique, pas prérendu au build).
  */
