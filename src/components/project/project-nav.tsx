@@ -18,6 +18,7 @@ export function ProjectNav({ projectKey, isAdmin }: ProjectNavProps) {
     { href: `${base}/board`, label: "Tableau" },
     { href: `${base}/tickets`, label: "Tickets" },
     { href: `${base}/sprints`, label: "Sprints" },
+    { href: `${base}/wiki`, label: "Wiki" },
     ...(isAdmin ? [{ href: `${base}/settings`, label: "Paramètres" }] : []),
   ];
 
