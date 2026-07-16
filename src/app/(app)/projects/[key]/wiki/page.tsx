@@ -10,39 +10,52 @@ import {
   getTicketKeys,
   getWikiPage,
   getWikiPages,
+  searchWikiPages,
 } from "@/server/queries";
 import { Button } from "@/components/ui/button";
 import { WikiContent } from "@/components/wiki/wiki-content";
+import { WikiSearch } from "@/components/wiki/wiki-search";
 import { DeleteWikiPageButton } from "@/components/wiki/delete-wiki-page-button";
 
+interface WikiListItem {
+  id: string;
+  title: string;
+  snippet?: string;
+}
+
 /**
- * Wiki d'un projet (RSC) : barre latérale des pages + page sélectionnée. Le contenu
- * rend les citations de tickets (RKN-123) en liens. Édition ouverte aux utilisateurs
- * connectés ; suppression réservée aux administrateurs.
+ * Wiki d'un projet (RSC) : recherche + barre latérale des pages + page rendue en
+ * Markdown. Les citations de tickets deviennent des liens. Édition ouverte aux
+ * utilisateurs connectés ; suppression réservée aux administrateurs.
  */
 export default async function WikiPage({
   params,
   searchParams,
 }: {
   params: Promise<{ key: string }>;
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; q?: string }>;
 }) {
   const { key } = await params;
-  const { page: requestedId } = await searchParams;
+  const sp = await searchParams;
+  const requestedId = sp.page;
+  const q = (sp.q ?? "").trim();
 
   const project = await getProjectByKey(key);
   if (!project) notFound();
 
-  const [pages, ticketKeys, session] = await Promise.all([
+  const [allPages, ticketKeys, session] = await Promise.all([
     getWikiPages(project.id),
     getTicketKeys(project.id),
     auth(),
   ]);
   const admin = isAdmin(session?.user);
 
-  const selectedId = requestedId ?? pages[0]?.id;
+  const results = q ? await searchWikiPages(project.id, q) : null;
+  const list: WikiListItem[] =
+    results ?? allPages.map((p) => ({ id: p.id, title: p.title }));
+
+  const selectedId = requestedId ?? list[0]?.id;
   const selected = selectedId ? await getWikiPage(selectedId) : null;
-  // Ne pas afficher une page d'un autre projet passée via l'URL.
   const current =
     selected && selected.projectId === project.id ? selected : null;
 
@@ -59,19 +72,25 @@ export default async function WikiPage({
     </Button>
   );
 
+  const pageHref = (id: string) =>
+    q
+      ? `/projects/${project.key}/wiki?page=${id}&q=${encodeURIComponent(q)}`
+      : `/projects/${project.key}/wiki?page=${id}`;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Wiki</h1>
           <p className="text-sm text-muted-foreground">
-            Documentation du projet. Citez des tickets avec leur clé (ex. RKN-3).
+            Documentation du projet en Markdown. Citez des tickets avec leur clé
+            (ex. RKN-3).
           </p>
         </div>
         {createButton}
       </div>
 
-      {pages.length === 0 ? (
+      {allPages.length === 0 ? (
         <div className="flex flex-col items-center gap-4 rounded-lg border border-dashed p-12 text-center">
           <FileText className="size-8 text-muted-foreground" />
           <div className="space-y-1">
@@ -84,23 +103,41 @@ export default async function WikiPage({
         </div>
       ) : (
         <div className="flex flex-col gap-6 md:flex-row">
-          <aside className="shrink-0 md:w-60">
+          <aside className="shrink-0 space-y-3 md:w-64">
+            <WikiSearch projectKey={project.key} initialQuery={q} />
+            {q && (
+              <p className="px-1 text-xs text-muted-foreground">
+                {list.length} résultat{list.length > 1 ? "s" : ""} pour «&nbsp;{q}
+                &nbsp;»
+              </p>
+            )}
             <nav className="flex flex-col gap-0.5" aria-label="Pages du wiki">
-              {pages.map((p) => (
-                <Link
-                  key={p.id}
-                  href={`/projects/${project.key}/wiki?page=${p.id}`}
-                  aria-current={p.id === current?.id ? "page" : undefined}
-                  className={cn(
-                    "truncate rounded-md px-3 py-2 text-sm transition-colors",
-                    p.id === current?.id
-                      ? "bg-accent font-medium text-accent-foreground"
-                      : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
-                  )}
-                >
-                  {p.title}
-                </Link>
-              ))}
+              {list.length === 0 ? (
+                <p className="px-3 py-2 text-sm text-muted-foreground">
+                  Aucune page trouvée.
+                </p>
+              ) : (
+                list.map((p) => (
+                  <Link
+                    key={p.id}
+                    href={pageHref(p.id)}
+                    aria-current={p.id === current?.id ? "page" : undefined}
+                    className={cn(
+                      "block rounded-md px-3 py-2 text-sm transition-colors",
+                      p.id === current?.id
+                        ? "bg-accent text-accent-foreground"
+                        : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                    )}
+                  >
+                    <span className="block truncate font-medium">{p.title}</span>
+                    {p.snippet && (
+                      <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                        {p.snippet}
+                      </span>
+                    )}
+                  </Link>
+                ))
+              )}
             </nav>
           </aside>
 

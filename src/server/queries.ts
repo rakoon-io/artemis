@@ -18,6 +18,11 @@ export function getProjects() {
   return projectService.listProjects();
 }
 
+/** Projets avec statistiques (pour les cartes de la liste). */
+export function getProjectsWithStats() {
+  return projectService.listProjectsWithStats();
+}
+
 export function getProjectByKey(key: string) {
   return projectService.getProjectByKey(key);
 }
@@ -66,6 +71,11 @@ export function getWikiPages(projectId: string) {
 /** Une page de wiki avec son contenu. */
 export function getWikiPage(id: string) {
   return wikiService.getWikiPage(id);
+}
+
+/** Recherche dans les pages de wiki du projet (titre + contenu). */
+export function searchWikiPages(projectId: string, query: string) {
+  return wikiService.searchWikiPages(projectId, query);
 }
 
 /** Clés de tickets du projet, pour lier les citations dans le wiki. */

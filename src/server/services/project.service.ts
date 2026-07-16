@@ -34,6 +34,47 @@ export function listProjects() {
   return prisma.project.findMany({ orderBy: { createdAt: "desc" } });
 }
 
+/**
+ * Projets avec statistiques pour les cartes : nombre de tickets, tickets terminés
+ * (dans la dernière colonne du workflow) et nombre de sprints. 2 requêtes.
+ */
+export async function listProjectsWithStats() {
+  const [projects, columns] = await Promise.all([
+    prisma.project.findMany({
+      orderBy: { createdAt: "desc" },
+      include: { _count: { select: { tickets: true, sprints: true } } },
+    }),
+    prisma.column.findMany({
+      select: {
+        projectId: true,
+        order: true,
+        _count: { select: { tickets: true } },
+      },
+    }),
+  ]);
+
+  // Tickets « terminés » = ceux de la colonne d'ordre le plus élevé (dernière).
+  const doneByProject = new Map<string, number>();
+  const lastOrderByProject = new Map<string, number>();
+  for (const c of columns) {
+    const prev = lastOrderByProject.get(c.projectId);
+    if (prev === undefined || c.order > prev) {
+      lastOrderByProject.set(c.projectId, c.order);
+      doneByProject.set(c.projectId, c._count.tickets);
+    }
+  }
+
+  return projects.map((p) => ({
+    id: p.id,
+    key: p.key,
+    name: p.name,
+    description: p.description,
+    ticketCount: p._count.tickets,
+    sprintCount: p._count.sprints,
+    doneCount: doneByProject.get(p.id) ?? 0,
+  }));
+}
+
 export function getProjectByKey(key: string) {
   return prisma.project.findUnique({ where: { key } });
 }

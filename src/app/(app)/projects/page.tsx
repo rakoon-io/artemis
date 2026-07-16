@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CalendarRange, CircleCheck, Ticket } from "lucide-react";
 import { auth } from "@/auth";
 import { isAdmin } from "@/lib/policies";
-import { getProjects } from "@/server/queries";
+import { getProjectsWithStats } from "@/server/queries";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
+  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
@@ -15,7 +17,10 @@ import { CreateProjectDialog } from "@/components/project/create-project-dialog"
 export const metadata: Metadata = { title: "Projets · Artemis" };
 
 export default async function ProjectsPage() {
-  const [session, projects] = await Promise.all([auth(), getProjects()]);
+  const [session, projects] = await Promise.all([
+    auth(),
+    getProjectsWithStats(),
+  ]);
   const admin = isAdmin(session?.user);
 
   return (
@@ -44,27 +49,61 @@ export default async function ProjectsPage() {
         </Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {projects.map((project) => (
-            <Link
-              key={project.id}
-              href={`/projects/${project.key}/board`}
-              className="rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            >
-              <Card className="h-full transition-colors hover:border-primary/50">
-                <CardHeader>
-                  <Badge variant="secondary" className="w-fit">
-                    {project.key}
-                  </Badge>
-                  <CardTitle className="mt-2">{project.name}</CardTitle>
-                  {project.description ? (
-                    <CardDescription className="line-clamp-2">
-                      {project.description}
-                    </CardDescription>
-                  ) : null}
-                </CardHeader>
-              </Card>
-            </Link>
-          ))}
+          {projects.map((project) => {
+            const pct = project.ticketCount
+              ? Math.round((project.doneCount / project.ticketCount) * 100)
+              : 0;
+            return (
+              <Link
+                key={project.id}
+                href={`/projects/${project.key}/board`}
+                className="rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                <Card className="flex h-full flex-col transition-colors hover:border-primary/50">
+                  <CardHeader className="flex-1">
+                    <Badge variant="secondary" className="w-fit">
+                      {project.key}
+                    </Badge>
+                    <CardTitle className="mt-2">{project.name}</CardTitle>
+                    {project.description ? (
+                      <CardDescription className="line-clamp-2">
+                        {project.description}
+                      </CardDescription>
+                    ) : null}
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <CircleCheck className="size-3.5" />
+                          {project.doneCount} / {project.ticketCount} terminés
+                        </span>
+                        <span className="font-medium text-foreground">{pct}%</span>
+                      </div>
+                      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-primary transition-all"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Ticket className="size-3.5" />
+                        {project.ticketCount} ticket
+                        {project.ticketCount > 1 ? "s" : ""}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <CalendarRange className="size-3.5" />
+                        {project.sprintCount} sprint
+                        {project.sprintCount > 1 ? "s" : ""}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>
