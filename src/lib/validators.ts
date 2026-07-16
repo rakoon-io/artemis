@@ -166,6 +166,18 @@ export const presignSchema = z.object({
     .max(10 * 1024 * 1024, "10 Mo maximum"),
 });
 
+export const createWikiPageSchema = z.object({
+  projectId: z.string().min(1),
+  title: z.string().trim().min(1, "Titre requis").max(200),
+  content: z.string().max(50000, "Contenu trop long").default(""),
+});
+
+export const updateWikiPageSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().trim().min(1, "Titre requis").max(200),
+  content: z.string().max(50000, "Contenu trop long").default(""),
+});
+
 export type CreateTicketInput = z.infer<typeof createTicketSchema>;
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 export type CreateSprintInput = z.infer<typeof createSprintSchema>;

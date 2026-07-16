@@ -32,6 +32,7 @@ model User {
   assigned     Ticket[]     @relation("assignee")
   comments     Comment[]
   attachments  Attachment[]
+  wikiPages    WikiPage[]
 }
 
 model Project {
@@ -49,6 +50,7 @@ model Project {
   labels           Label[]
   ticketTypes      TicketType[]
   ticketPriorities TicketPriority[]
+  wikiPages        WikiPage[]
 }
 
 model Column {
@@ -185,4 +187,19 @@ model Comment {
   createdAt DateTime @default(now())
 
   @@index([ticketId])
+}
+
+// Page de wiki d'un projet - documentation libre, avec citations de tickets (RKN-123).
+model WikiPage {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title     String
+  content   String   @default("")
+  authorId  String?
+  author    User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
 }

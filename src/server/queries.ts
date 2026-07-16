@@ -6,6 +6,7 @@ import * as ticketService from "./services/ticket.service";
 import * as ticketPriorityService from "./services/ticketpriority.service";
 import * as ticketTypeService from "./services/tickettype.service";
 import * as userService from "./services/user.service";
+import * as wikiService from "./services/wiki.service";
 import type { TicketFilters } from "./services/ticket.service";
 
 /**
@@ -50,6 +51,21 @@ export function getSprints(projectId: string) {
 /** Sprints avec leurs tickets (vue Sprints). */
 export function getSprintsWithTickets(projectId: string) {
   return sprintService.listSprintsWithTickets(projectId);
+}
+
+/** Pages de wiki du projet (barre latérale). */
+export function getWikiPages(projectId: string) {
+  return wikiService.listWikiPages(projectId);
+}
+
+/** Une page de wiki avec son contenu. */
+export function getWikiPage(id: string) {
+  return wikiService.getWikiPage(id);
+}
+
+/** Clés de tickets du projet, pour lier les citations dans le wiki. */
+export function getTicketKeys(projectId: string) {
+  return wikiService.listTicketKeys(projectId);
 }
 
 export function getLabels(projectId: string) {
