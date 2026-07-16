@@ -53,7 +53,7 @@ export function LoginForm() {
     <Card>
       <CardHeader>
         <CardTitle className="text-xl">Connexion</CardTitle>
-        <CardDescription>Accédez à votre espace Rakoon Tracker.</CardDescription>
+        <CardDescription>Accédez à votre espace Artemis.</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="grid gap-4">

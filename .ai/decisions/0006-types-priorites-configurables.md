@@ -1,7 +1,7 @@
 # ADR-0006 - Types & priorités de tickets configurables par projet (tables plutôt qu'enums)
 - **Statut** : Acceptée
 - **Date** : 2026-07-13
-- **Décideurs** : équipe Rakoon Tracker
+- **Décideurs** : équipe Artemis
 
 ## Contexte
 La **personnalisation** est une exigence produit (cf. [ADR-0002](./0002-workflow-kanban-personnalisable.md)

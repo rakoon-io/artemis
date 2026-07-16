@@ -1,4 +1,4 @@
-# Rakoon Tracker
+# Artemis
 
 > Suivi de tickets sobre, moderne et personnalisable, adapté à l'agile.
 

@@ -23,7 +23,7 @@ export default function GlobalError({
             Une erreur inattendue est survenue
           </h1>
           <p style={{ color: "#666", marginTop: "0.5rem" }}>
-            Rakoon Tracker a rencontré un problème.
+            Artemis a rencontré un problème.
           </p>
           <button
             onClick={() => reset()}

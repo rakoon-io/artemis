@@ -14,7 +14,7 @@
 
 ## Objectif
 
-**Rakoon Tracker** - outil interne de **suivi de tickets** sobre, moderne, efficace et
+**Artemis** - outil interne de **suivi de tickets** sobre, moderne, efficace et
 personnalisable, adapté à une **méthode agile** (Kanban, vue liste, sprints/lots). Priorité produit :
 **créer un ticket sans friction** (pièce jointe par copier-coller : image, log, texte).
 

@@ -1,10 +1,10 @@
 # ADR-0005 - Déploiement : Dokploy (Docker) sur OVH, sous `apps.rakoon.io`
 - **Statut** : Acceptée
 - **Date** : 2026-07-09
-- **Décideurs** : équipe Rakoon Tracker
+- **Décideurs** : équipe Artemis
 
 ## Contexte
-Rakoon Tracker doit être déployé **« comme les autres applis Rakoon »**. L'infrastructure existante
+Artemis doit être déployé **« comme les autres applis Rakoon »**. L'infrastructure existante
 est un serveur **OVH (AlmaLinux)** exécutant **Dokploy**, avec un reverse-proxy **Traefik** qui route
 le wildcard **`*.apps.rakoon.io`** (DNS + certificats **Let's Encrypt** automatiques, challenge
 HTTP-01). Les applis sœurs suivent ce modèle - ex. `rakoon-io/rakoon-tasker` exposée sur

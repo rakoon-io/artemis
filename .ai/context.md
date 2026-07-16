@@ -1,4 +1,4 @@
-# Contexte - Rakoon Tracker
+# Contexte - Artemis
 
 > **Fichier vivant : à mettre à jour après chaque changement notable.**
 > Il reflète l'**état courant** du projet, les **changements récents** et les **prochaines étapes**.

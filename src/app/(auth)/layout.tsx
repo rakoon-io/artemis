@@ -8,7 +8,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       <div className="flex w-full max-w-sm flex-col gap-6">
         <div className="flex items-center justify-center gap-2 text-lg font-semibold">
           <TrackerMark className="size-8 shrink-0 text-primary" />
-          <span>Rakoon Tracker</span>
+          <span>Artemis</span>
         </div>
         {children}
       </div>

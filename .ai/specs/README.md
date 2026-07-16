@@ -1,6 +1,6 @@
 # Spécifications fonctionnelles
 
-> Spécifications **fonctionnelles** de Rakoon Tracker (v1). Chaque spec **détaille** une
+> Spécifications **fonctionnelles** de Artemis (v1). Chaque spec **détaille** une
 > fonctionnalité déjà résumée dans [`../../SPEC.md`](../../SPEC.md). La direction produit est fixée
 > par la [vision](../vision.md) (North Star) ; le **modèle de données** de référence vit dans
 > [l'architecture](../architecture.md). **En cas de conflit, la vision prime.**

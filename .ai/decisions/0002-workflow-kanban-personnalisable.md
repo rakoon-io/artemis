@@ -1,7 +1,7 @@
 # ADR-0002 - Workflow Kanban personnalisable (colonnes en base)
 - **Statut** : Acceptée
 - **Date** : 2026-07-09
-- **Décideurs** : équipe Rakoon Tracker
+- **Décideurs** : équipe Artemis
 
 ## Contexte
 La **personnalisation du flux de travail** est une exigence produit non négociable : chaque équipe

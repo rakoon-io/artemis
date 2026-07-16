@@ -1,7 +1,7 @@
 # ADR-0004 - Pièces jointes « paste-first » (presse-papier → URL presignée → S3)
 - **Statut** : Acceptée
 - **Date** : 2026-07-09
-- **Décideurs** : équipe Rakoon Tracker
+- **Décideurs** : équipe Artemis
 
 ## Contexte
 La fonction phare du produit est la **création de ticket sans friction** : le **Rapporteur** doit

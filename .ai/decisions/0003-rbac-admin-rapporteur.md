@@ -1,10 +1,10 @@
 # ADR-0003 - RBAC à deux rôles (Admin / Rapporteur), extensible
 - **Statut** : Acceptée
 - **Date** : 2026-07-09
-- **Décideurs** : équipe Rakoon Tracker
+- **Décideurs** : équipe Artemis
 
 ## Contexte
-En v1, Rakoon Tracker distingue deux profils : **Admin** (vue étendue - projets, colonnes,
+En v1, Artemis distingue deux profils : **Admin** (vue étendue - projets, colonnes,
 sprints/lots, labels, utilisateurs, paramètres, accès total aux tickets) et **Rapporteur** (vue
 limitée - créer des tickets avec pièces jointes, consulter et commenter ses projets, éditer ses
 propres tickets). Le modèle doit rester **simple** à porter en v1 tout en autorisant l'ajout futur de

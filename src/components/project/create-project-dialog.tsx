@@ -76,7 +76,7 @@ export function CreateProjectDialog() {
               id="project-name"
               name="name"
               maxLength={80}
-              placeholder="Rakoon Tracker"
+              placeholder="Artemis"
               required
             />
           </div>
