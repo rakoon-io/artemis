@@ -22,9 +22,9 @@ Vue produit → [`README.md`](./README.md) · architecture & modèle de données
 Internet ──HTTPS──> Traefik (dokploy-traefik, :80/:443)
                       │  route tracker.apps.rakoon.io  (Let's Encrypt)
                       ▼
-        rakoon-tracker (Next.js « next start », :3000)
-             ├──► rakoon-tracker-db     (postgres:16)     vol: rakoon-tracker-db-data
-             └──► rakoon-tracker-minio  (S3-compatible)   vol: rakoon-tracker-minio-data
+        artemis (Next.js « next start », :3000)
+             ├──► artemis-db     (postgres:16)     vol: artemis-db-data
+             └──► artemis-minio  (S3-compatible)   vol: artemis-minio-data
                         réseau overlay « dokploy-network »
 ```
 
@@ -44,12 +44,12 @@ accès SSH root/sudo.
 
 | Variable | Requis | Rôle |
 |---|:--:|---|
-| `DATABASE_URL` | | Postgres interne (`rakoon-tracker-db:5432`) |
+| `DATABASE_URL` | | Postgres interne (`artemis-db:5432`) |
 | `AUTH_SECRET` | | Secret Auth.js (`openssl rand -base64 32`) |
 | `AUTH_URL` | | `https://tracker.apps.rakoon.io` |
 | `AUTH_TRUST_HOST` | | `true` (derrière le proxy Traefik) |
-| `S3_ENDPOINT` | | Endpoint stockage pièces jointes (`http://rakoon-tracker-minio:9000`) |
-| `S3_BUCKET` | | Bucket des pièces jointes (`rakoon-tracker-attachments`) |
+| `S3_ENDPOINT` | | Endpoint stockage pièces jointes (`http://artemis-minio:9000`) |
+| `S3_BUCKET` | | Bucket des pièces jointes (`artemis-attachments`) |
 | `S3_ACCESS_KEY_ID` | | Clé d'accès au stockage objet |
 | `S3_SECRET_ACCESS_KEY` | | Clé secrète du stockage objet |
 | `S3_REGION` | | Région du bucket (`us-east-1` par défaut, même avec MinIO) |
@@ -73,39 +73,39 @@ Un `.dockerignore` (à la racine) exclut `node_modules`, `.next`, `.git`, `.env*
 ### 5.1 - Base PostgreSQL dédiée
 ```bash
 DBPW=$(openssl rand -hex 20)
-docker run -d --name rakoon-tracker-db --restart unless-stopped \
+docker run -d --name artemis-db --restart unless-stopped \
   --network dokploy-network \
   -e POSTGRES_USER=tracker -e POSTGRES_PASSWORD="$DBPW" -e POSTGRES_DB=tracker \
-  -v rakoon-tracker-db-data:/var/lib/postgresql/data \
+  -v artemis-db-data:/var/lib/postgresql/data \
   postgres:16
-# DATABASE_URL = postgresql://tracker:$DBPW@rakoon-tracker-db:5432/tracker?schema=public
+# DATABASE_URL = postgresql://tracker:$DBPW@artemis-db:5432/tracker?schema=public
 ```
 
 ### 5.2 - Stockage S3-compatible (MinIO) pour les pièces jointes
 ```bash
 MINIO_PW=$(openssl rand -hex 20)
-docker run -d --name rakoon-tracker-minio --restart unless-stopped \
+docker run -d --name artemis-minio --restart unless-stopped \
   --network dokploy-network \
   -e MINIO_ROOT_USER=tracker -e MINIO_ROOT_PASSWORD="$MINIO_PW" \
-  -v rakoon-tracker-minio-data:/data \
+  -v artemis-minio-data:/data \
   minio/minio server /data --console-address ":9001"
-# Puis créer le bucket "rakoon-tracker-attachments" (via `mc`, ou au démarrage de l'app).
+# Puis créer le bucket "artemis-attachments" (via `mc`, ou au démarrage de l'app).
 ```
 
 ### 5.3 - Build de l'image (contexte = source du repo + Dockerfile)
 ```bash
-docker build -t rakoon-tracker:latest /chemin/vers/le/contexte
+docker build -t artemis:latest /chemin/vers/le/contexte
 ```
 
 ### 5.4 - Fichier d'environnement `rtr.env`
 ```ini
 NODE_ENV=production
-DATABASE_URL=postgresql://tracker:<DBPW>@rakoon-tracker-db:5432/tracker?schema=public
+DATABASE_URL=postgresql://tracker:<DBPW>@artemis-db:5432/tracker?schema=public
 AUTH_SECRET=<openssl rand -base64 32>
 AUTH_URL=https://tracker.apps.rakoon.io
 AUTH_TRUST_HOST=true
-S3_ENDPOINT=http://rakoon-tracker-minio:9000
-S3_BUCKET=rakoon-tracker-attachments
+S3_ENDPOINT=http://artemis-minio:9000
+S3_BUCKET=artemis-attachments
 S3_ACCESS_KEY_ID=tracker
 S3_SECRET_ACCESS_KEY=<MINIO_PW>
 S3_REGION=us-east-1
@@ -114,15 +114,15 @@ S3_REGION=us-east-1
 ### 5.5 - Migrations Prisma
 ```bash
 docker run --rm --network dokploy-network --env-file rtr.env \
-  rakoon-tracker:latest npx prisma migrate deploy
+  artemis:latest npx prisma migrate deploy
 ```
 
 ### 5.6 - Lancement du conteneur applicatif
 ```bash
-docker rm -f rakoon-tracker 2>/dev/null
-docker run -d --name rakoon-tracker --restart unless-stopped \
+docker rm -f artemis 2>/dev/null
+docker run -d --name artemis --restart unless-stopped \
   --network dokploy-network --env-file rtr.env \
-  rakoon-tracker:latest
+  artemis:latest
 ```
 
 ### 5.7 - Route Traefik (HTTPS auto)
@@ -145,7 +145,7 @@ http:
     tracker:
       loadBalancer:
         servers:
-          - url: http://rakoon-tracker:3000
+          - url: http://artemis:3000
 ```
 Traefik obtient alors automatiquement le certificat Let's Encrypt (HTTP-01).
 
@@ -155,22 +155,22 @@ Rapporteur). En production, l'exécuter une fois via un conteneur jetable (comme
 changer les mots de passe** :
 ```bash
 docker run --rm --network dokploy-network --env-file rtr.env \
-  rakoon-tracker:latest npm run db:seed
+  artemis:latest npm run db:seed
 ```
 
 ## 6. Mise à jour / redéploiement
 ```bash
-docker build -t rakoon-tracker:latest <contexte>
+docker build -t artemis:latest <contexte>
 # si le schéma Prisma a changé : rejouer 5.5 (migrate deploy)
-docker rm -f rakoon-tracker
-docker run -d --name rakoon-tracker --restart unless-stopped \
-  --network dokploy-network --env-file rtr.env rakoon-tracker:latest
+docker rm -f artemis
+docker run -d --name artemis --restart unless-stopped \
+  --network dokploy-network --env-file rtr.env artemis:latest
 ```
 La route Traefik, la base et le stockage ne bougent pas (volumes persistants).
 
 ## 7. Option Dokploy-managed (auto-deploy sur `git push`)
 1. Générer un **token API Dokploy** (Settings → API).
-2. Connecter GitHub à Dokploy (App GitHub ou deploy key) sur **`rakoon-io/rakoon-tracker`**.
+2. Connecter GitHub à Dokploy (App GitHub ou deploy key) sur **`rakoon-io/artemis`**.
 3. Créer l'application Dokploy (source Git), y reporter les variables du §3, rattacher Postgres + MinIO.
 4. Chaque `git push` sur la branche de déploiement déclenche alors build + déploiement automatiques.
 
@@ -181,8 +181,8 @@ La route Traefik, la base et le stockage ne bougent pas (volumes persistants).
 - **TLS** : certificat Let's Encrypt actif sur `https://tracker.apps.rakoon.io`.
 
 ## 9. Rollback
-Redéployer l'image précédente (`rakoon-tracker:<tag-précédent>`) ; si le schéma a changé, restaurer
-la base (volume `rakoon-tracker-db-data` / sauvegarde). Documenter la procédure exacte une fois la
+Redéployer l'image précédente (`artemis:<tag-précédent>`) ; si le schéma a changé, restaurer
+la base (volume `artemis-db-data` / sauvegarde). Documenter la procédure exacte une fois la
 CI/CD en place.
 
 ## 10. Sécurité & secrets

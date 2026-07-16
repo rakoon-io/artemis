@@ -17,9 +17,9 @@ Déploiement **conteneurisé** derrière le Traefik de Dokploy :
   `next build` puis `next start` sur le port **3000**.
 - **Sous-domaine dédié `tracker.apps.rakoon.io`** *(proposé, à confirmer)* routé par Traefik
   (`web` → `websecure`, `certResolver: letsencrypt`).
-- Conteneurs sur le réseau overlay **`dokploy-network`** : l'app **`rakoon-tracker`**, la base
-  **`rakoon-tracker-db`** (`postgres:16` + volume persistant) et, pour les pièces jointes, un
-  stockage **S3-compatible** (**MinIO** `rakoon-tracker-minio`, ou un bucket S3 externe).
+- Conteneurs sur le réseau overlay **`dokploy-network`** : l'app **`artemis`**, la base
+  **`artemis-db`** (`postgres:16` + volume persistant) et, pour les pièces jointes, un
+  stockage **S3-compatible** (**MinIO** `artemis-minio`, ou un bucket S3 externe).
 - **Deux modes** (comme rakoon-tasker) : **(a)** direct **Docker + Traefik** piloté en SSH (rebuild
   manuel) ; **(b)** **Dokploy-managed** (auto-deploy sur `git push` via token API Dokploy).
   Le runbook complet est dans [`../../DEPLOY.md`](../../DEPLOY.md).

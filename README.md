@@ -49,7 +49,7 @@ Détails, couches et **modèle de données** → [`.ai/architecture.md`](./.ai/a
 ## Structure du dépôt
 
 ```
-rakoon-tracker/
+artemis/
 ├── AGENTS.md            # garde-fou "à lire avant toute modif" (pilote l'agent)
 ├── SPEC.md              # cible produit détaillée (v1)
 ├── README.md           # ce fichier - présentation & démarrage rapide

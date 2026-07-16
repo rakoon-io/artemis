@@ -67,7 +67,7 @@ Ce choix privilégie la **cohésion**, la **type-safety de bout en bout** et une
 > ci-dessous en donne la carte de référence.
 
 ```
-rakoon-tracker/
+artemis/
 ├── .ai/                     # Memory Bank (docs qui pilotent l'agent)
 ├── prisma/
 │   └── schema.prisma        # modèle de données (source de vérité runtime)

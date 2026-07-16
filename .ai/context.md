@@ -27,7 +27,7 @@
   **migration Prisma initiale + seed**, **smoke test** runtime - tous OK.
 - **Outillage** : `Dockerfile` multi-stage (npm) + `.dockerignore` à la racine, **seed** Prisma
   (comptes de démo : `admin@rakoon.io` / `***MOT-DE-PASSE-RETIRE***`, `rapporteur@rakoon.io` / `***MOT-DE-PASSE-RETIRE***`).
-- **Dépôt GitHub** : **`rakoon-io/rakoon-tracker`** (privé).
+- **Dépôt GitHub** : **`rakoon-io/artemis`** (privé).
 - **Déploiement** : convention **Dokploy / Traefik** sur **`apps.rakoon.io`** documentée
   ([`../DEPLOY.md`](../DEPLOY.md), [ADR-0005](./decisions/0005-deploiement-dokploy-ovh.md)) -
   **pas encore réalisé** : accès SSH serveur confirmé (`rakoon-apps`), déploiement **reporté à la demande**.
@@ -62,7 +62,7 @@ Documentation créée / mise à jour lors de l'initialisation :
 
 ## Prochaines étapes
 
-1. **Documentation validée → commit initial + dépôt `rakoon-io/rakoon-tracker`** (fait).
+1. **Documentation validée → commit initial + dépôt `rakoon-io/artemis`** (fait).
 2. **Scaffolding Next.js** (TypeScript + Tailwind CSS + shadcn/ui + Prisma + Auth.js + dnd-kit +
    Zod + Vitest) ; **`Dockerfile` + `.dockerignore`** à la racine (fait).
 3. **Schéma Prisma + première migration** (User, Project, Column, Ticket, Sprint, Label,
