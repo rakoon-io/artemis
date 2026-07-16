@@ -11,6 +11,40 @@ export function listWikiPages(projectId: string) {
   });
 }
 
+/** Extrait de contenu autour de la première occurrence de la requête. */
+function makeSnippet(content: string, query: string, radius = 80): string {
+  const flat = content.replace(/\s+/g, " ").trim();
+  if (!flat) return "";
+  const idx = flat.toLowerCase().indexOf(query.toLowerCase());
+  if (idx < 0) {
+    return flat.length > radius * 2 ? `${flat.slice(0, radius * 2)}...` : flat;
+  }
+  const start = Math.max(0, idx - radius);
+  const end = Math.min(flat.length, idx + query.length + radius);
+  return `${start > 0 ? "..." : ""}${flat.slice(start, end)}${end < flat.length ? "..." : ""}`;
+}
+
+/** Recherche plein texte (titre + contenu) dans les pages du projet, avec extrait. */
+export async function searchWikiPages(projectId: string, query: string) {
+  const pages = await prisma.wikiPage.findMany({
+    where: {
+      projectId,
+      OR: [
+        { title: { contains: query, mode: "insensitive" } },
+        { content: { contains: query, mode: "insensitive" } },
+      ],
+    },
+    orderBy: { updatedAt: "desc" },
+    select: { id: true, title: true, content: true, updatedAt: true },
+  });
+  return pages.map((p) => ({
+    id: p.id,
+    title: p.title,
+    updatedAt: p.updatedAt,
+    snippet: makeSnippet(p.content, query),
+  }));
+}
+
 /** Une page avec son contenu et son auteur. */
 export function getWikiPage(id: string) {
   return prisma.wikiPage.findUnique({
