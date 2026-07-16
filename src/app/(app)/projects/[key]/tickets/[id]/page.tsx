@@ -41,6 +41,14 @@ export default async function TicketDetailPage({
   const ticket = await getTicketDetail(id);
   if (!ticket) notFound();
 
+  // Les images sont présentées en vignettes ; les autres fichiers en liste.
+  const imageAttachments = ticket.attachments.filter((a) =>
+    a.contentType.startsWith("image/"),
+  );
+  const fileAttachments = ticket.attachments.filter(
+    (a) => !a.contentType.startsWith("image/"),
+  );
+
   const user = await currentUser();
   const canEdit = canEditTicket(user, {
     reporterId: ticket.reporterId,
@@ -152,26 +160,53 @@ export default async function TicketDetailPage({
             </CardHeader>
             <CardContent>
               {ticket.attachments.length > 0 ? (
-                <ul className="space-y-2">
-                  {ticket.attachments.map((att) => (
-                    <li key={att.id}>
-                      <a
-                        href={`/api/attachments/${att.id}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center gap-2 rounded-md border p-2 text-sm transition-colors hover:bg-muted/50"
-                      >
-                        <Download className="size-4 shrink-0 text-muted-foreground" />
-                        <span className="min-w-0 flex-1 truncate font-medium">
-                          {att.filename}
-                        </span>
-                        <span className="shrink-0 text-xs text-muted-foreground">
-                          {formatBytes(att.size)}
-                        </span>
-                      </a>
-                    </li>
-                  ))}
-                </ul>
+                <div className="space-y-3">
+                  {imageAttachments.length > 0 && (
+                    <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {imageAttachments.map((att) => (
+                        <li key={att.id}>
+                          <a
+                            href={`/api/attachments/${att.id}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            title={`${att.filename} (${formatBytes(att.size)})`}
+                            className="group block overflow-hidden rounded-md border transition-colors hover:border-primary/50"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={`/api/attachments/${att.id}`}
+                              alt={att.filename}
+                              loading="lazy"
+                              className="aspect-square w-full bg-muted object-cover transition-transform group-hover:scale-105"
+                            />
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {fileAttachments.length > 0 && (
+                    <ul className="space-y-2">
+                      {fileAttachments.map((att) => (
+                        <li key={att.id}>
+                          <a
+                            href={`/api/attachments/${att.id}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center gap-2 rounded-md border p-2 text-sm transition-colors hover:bg-muted/50"
+                          >
+                            <Download className="size-4 shrink-0 text-muted-foreground" />
+                            <span className="min-w-0 flex-1 truncate font-medium">
+                              {att.filename}
+                            </span>
+                            <span className="shrink-0 text-xs text-muted-foreground">
+                              {formatBytes(att.size)}
+                            </span>
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
                   Aucune pièce jointe.
