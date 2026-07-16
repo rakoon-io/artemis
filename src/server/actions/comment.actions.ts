@@ -6,6 +6,7 @@ import { assertProjectAccess } from "@/server/access";
 import { createCommentSchema } from "@/lib/validators";
 import { createComment } from "@/server/services/comment.service";
 import { getTicketOwnership } from "@/server/services/ticket.service";
+import { notifyNewComment } from "@/server/notifications";
 import { withUser } from "./helpers";
 import type { ActionResult } from "./types";
 
@@ -21,6 +22,8 @@ export async function createCommentAction(
     if (!ticket) return { ok: false, error: "Ticket introuvable." };
     await assertProjectAccess(user, ticket.projectId);
     const comment = await createComment(data.ticketId, user.id, data.body);
+    // Notifie les concernes (rapporteur + assigne), sans bloquer la reponse.
+    void notifyNewComment(data.ticketId, user.id, data.body);
     revalidatePath("/tickets");
     return { ok: true, data: { id: comment.id } };
   });

@@ -27,6 +27,9 @@ tout self-hostable (Docker + PostgreSQL).
 - **Assistant via MCP** - un serveur MCP permet a un assistant de prendre en
   charge des tickets (au nom d'un compte de service, memes regles d'acces). Voir
   [`MCP.md`](./MCP.md).
+- **Notifications par e-mail** - les concernes (rapporteur, assigne) sont
+  prevenus par e-mail (Mailjet) sur les evenements cles : nouveau commentaire,
+  assignation. Optionnel, configure par variables d'environnement.
 - **Personnalisation** - workflow (colonnes), labels, types, priorites, themes clair/sombre.
 - **Roles Admin / Rapporteur** - RBAC extensible, **impose cote serveur**.
 
@@ -83,6 +86,22 @@ artemis/
 
 `src/mcp/` contient le serveur MCP (lance par `npm run mcp`) ; voir
 [`MCP.md`](./MCP.md).
+
+## Notifications par e-mail
+
+Optionnelles, via **Mailjet**. Renseignez ces variables d'environnement pour
+activer l'envoi (sinon, les notifications sont silencieusement desactivees) :
+
+```bash
+MAILJET_API_KEY=""        # cle publique Mailjet
+MAILJET_API_SECRET=""     # cle privee Mailjet
+EMAIL_FROM="noreply@rakoon.io"   # adresse expeditrice validee cote Mailjet
+EMAIL_FROM_NAME="Artemis"
+APP_URL="https://tracker.apps.rakoon.io"   # base des liens dans les e-mails
+```
+
+Les concernes (rapporteur et assigne du ticket) recoivent un e-mail lors d'un
+nouveau commentaire ou d'une assignation ; on ne notifie jamais l'auteur de l'action.
 
 ## Deploiement
 
