@@ -1,4 +1,4 @@
-# ADR-0001 — Stack : monolithe Next.js + TypeScript
+# ADR-0001 - Stack : monolithe Next.js + TypeScript
 - **Statut** : Acceptée
 - **Date** : 2026-07-09
 - **Décideurs** : équipe Rakoon Tracker
@@ -20,14 +20,14 @@ et la logique métier (services + policies). Choix associés :
 - **Auth** : **Auth.js** (sessions + RBAC).
 - **Pièces jointes** : stockage **S3-compatible** (MinIO en local).
 - **Qualité** : **Vitest** (unit) + **Playwright** (e2e), ESLint + Prettier.
-- **Déploiement** : **Dokploy** (Docker) sur OVH (`apps.rakoon.io`) — voir [`./0005-deploiement-dokploy-ovh.md`](./0005-deploiement-dokploy-ovh.md).
+- **Déploiement** : **Dokploy** (Docker) sur OVH (`apps.rakoon.io`) - voir [`./0005-deploiement-dokploy-ovh.md`](./0005-deploiement-dokploy-ovh.md).
 
 ## Alternatives considérées
-- **(A) Remix** — excellent modèle données/formulaires, mais écosystème de composants et
+- **(A) Remix** - excellent modèle données/formulaires, mais écosystème de composants et
   intégrations moins fourni que Next ; bénéfice RSC/streaming moins net pour notre cas.
-- **(B) SvelteKit** — plus léger et performant, mais écosystème Kanban/DnD et librairies de
+- **(B) SvelteKit** - plus léger et performant, mais écosystème Kanban/DnD et librairies de
   composants moins matures, et moindre familiarité de l'équipe.
-- **(C) SPA Vite/React + API séparée (FastAPI/Express)** — la découpe front/back casse la type-safety
+- **(C) SPA Vite/React + API séparée (FastAPI/Express)** - la découpe front/back casse la type-safety
   de bout en bout, double le déploiement et alourdit la DX pour un gain nul à notre échelle.
 
 ## Conséquences

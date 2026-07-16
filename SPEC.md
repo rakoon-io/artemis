@@ -1,4 +1,4 @@
-# 📘 SPEC — Rakoon Tracker
+# SPEC - Rakoon Tracker
 
 > Cible produit détaillée de la **v1**. La direction générale est fixée par
 > [`.ai/vision.md`](./.ai/vision.md) (North Star) ; le **modèle de données** de référence vit dans
@@ -25,24 +25,24 @@ travail configurable**.
 
 | Action | Admin | Rapporteur |
 |--------|:-----:|:----------:|
-| Créer un ticket | ✅ | ✅ |
-| Voir les tickets de ses projets | ✅ | ✅ |
-| Commenter un ticket | ✅ | ✅ |
-| Éditer **ses** tickets | ✅ | ✅ |
-| Éditer **tout** ticket / réassigner / changer le statut d'autrui | ✅ | ❌ |
-| Déplacer une carte en Kanban | ✅ | ⚠️ ses tickets uniquement |
-| Gérer les colonnes / workflow | ✅ | ❌ |
-| Créer / gérer les sprints & lots | ✅ | ❌ |
-| Gérer les labels | ✅ | ❌ |
-| Gérer les utilisateurs & rôles | ✅ | ❌ |
-| Supprimer un ticket / projet | ✅ | ❌ |
-| Paramètres & personnalisation du projet | ✅ | ❌ |
+| Créer un ticket | | |
+| Voir les tickets de ses projets | | |
+| Commenter un ticket | | |
+| Éditer **ses** tickets | | |
+| Éditer **tout** ticket / réassigner / changer le statut d'autrui | | |
+| Déplacer une carte en Kanban | | ses tickets uniquement |
+| Gérer les colonnes / workflow | | |
+| Créer / gérer les sprints & lots | | |
+| Gérer les labels | | |
+| Gérer les utilisateurs & rôles | | |
+| Supprimer un ticket / projet | | |
+| Paramètres & personnalisation du projet | | |
 
 > Règle d'or : **l'UI masque, le serveur impose.** Toute action passe par une policy RBAC serveur.
 
 ## 3. Fonctionnalités (v1)
 
-### 3.1 Création rapide de ticket ⭐ (fonction phare)
+### 3.1 Création rapide de ticket (fonction phare)
 - Formulaire minimal : **titre obligatoire** ; le reste (description, type, priorité, assigné,
   labels, sprint) est **optionnel** et pré-rempli par des valeurs par défaut.
 - **Pièce jointe par copier-coller** : coller une **image** du presse-papier, un **fichier de log**
@@ -106,11 +106,11 @@ Schéma complet et relations : [`.ai/architecture.md`](./.ai/architecture.md#mod
 
 ## 7. Périmètre
 
-### ✅ Dans la v1
+### Dans la v1
 Création rapide de ticket (paste), Kanban configurable, vue liste, sprints/lots, commentaires,
 pièces jointes, personnalisation (workflow/labels/thème), rôles Admin/Rapporteur.
 
-### 🔜 Backlog (post-v1, hors périmètre actuel)
+### Backlog (post-v1, hors périmètre actuel)
 Temps réel, notifications e-mail, app mobile native, intégrations (Jira/GitHub/Slack), reporting
 (burndown/vélocité), multi-tenant, i18n, champs personnalisés, rôles additionnels.
 Rappel des **non-objectifs** : [`.ai/vision.md`](./.ai/vision.md#-non-objectifs-v1).

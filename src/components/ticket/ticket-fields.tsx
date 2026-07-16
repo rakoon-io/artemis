@@ -9,7 +9,7 @@ import type {
 /**
  * Constantes, libellés FR et petits composants d'affichage partagés par la vue
  * liste, le détail et les formulaires de ticket. Types dérivés des queries
- * (import type uniquement — aucun code serveur n'atteint le bundle client).
+ * (import type uniquement - aucun code serveur n'atteint le bundle client).
  */
 
 // Types dérivés des couches de lecture (queries).

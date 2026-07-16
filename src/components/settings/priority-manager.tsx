@@ -36,7 +36,7 @@ export interface TicketPriorityItem {
  * couleur + nom), réordonnancement (monter / descendre), édition (nom, couleur),
  * suppression et ajout. Chaque mutation passe par une Server Action puis
  * rafraîchit la vue. La suppression d'une priorité encore utilisée est refusée
- * côté serveur — l'erreur est alors affichée en toast.
+ * côté serveur - l'erreur est alors affichée en toast.
  */
 export function PriorityManager({
   priorities,

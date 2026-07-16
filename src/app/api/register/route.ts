@@ -11,7 +11,7 @@ import { rateLimit, clientIp } from "@/lib/rate-limit";
  * passe. Le tout premier utilisateur créé devient ADMIN, les suivants REPORTER.
  */
 export async function POST(request: Request): Promise<NextResponse> {
-  // M1 — limitation de débit par IP (anti abus / création de comptes en masse).
+  // M1 - limitation de débit par IP (anti abus / création de comptes en masse).
   const rl = rateLimit(`register:${clientIp(request.headers)}`, 10, 10 * 60 * 1000);
   if (!rl.ok) {
     return NextResponse.json(
@@ -43,7 +43,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   const { name, email, password } = parsed.data;
 
-  // C1 — Inscription restreinte à une liste blanche de domaines (si configurée).
+  // C1 - Inscription restreinte à une liste blanche de domaines (si configurée).
   // Variable absente ⇒ comportement inchangé (dev).
   const allowedDomains = env.ALLOWED_EMAIL_DOMAINS?.split(",")
     .map((d) => d.trim().toLowerCase())

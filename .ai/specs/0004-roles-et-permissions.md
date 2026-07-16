@@ -1,11 +1,11 @@
-# SPEC-0004 — Rôles & permissions
+# SPEC-0004 - Rôles & permissions
 - **Statut** : Rédigée (v1)
 - **Rôles concernés** : Admin · Rapporteur
 
 ## Objectif
 
 Définir l'**authentification** et le modèle d'**autorisation** (RBAC) à deux rôles : `ADMIN`
-(étendu) et `REPORTER` (limité). Principe directeur : **l'UI masque, le serveur impose** — toute
+(étendu) et `REPORTER` (limité). Principe directeur : **l'UI masque, le serveur impose** - toute
 action sensible passe par une **policy** serveur, jamais côté client seul.
 
 ## User stories
@@ -21,18 +21,18 @@ action sensible passe par une **policy** serveur, jamais côté client seul.
 
 | Action | Admin | Rapporteur |
 |--------|:-----:|:----------:|
-| Créer un ticket | ✅ | ✅ |
-| Voir les tickets de ses projets | ✅ | ✅ |
-| Commenter un ticket | ✅ | ✅ |
-| Éditer **ses** tickets | ✅ | ✅ |
-| Éditer **tout** ticket / réassigner / changer le statut d'autrui | ✅ | ❌ |
-| Déplacer une carte en Kanban | ✅ | ⚠️ ses tickets uniquement |
-| Gérer les colonnes / workflow | ✅ | ❌ |
-| Créer / gérer les sprints & lots | ✅ | ❌ |
-| Gérer les labels | ✅ | ❌ |
-| Gérer les utilisateurs & rôles | ✅ | ❌ |
-| Supprimer un ticket / projet | ✅ | ❌ |
-| Paramètres & personnalisation du projet | ✅ | ❌ |
+| Créer un ticket | | |
+| Voir les tickets de ses projets | | |
+| Commenter un ticket | | |
+| Éditer **ses** tickets | | |
+| Éditer **tout** ticket / réassigner / changer le statut d'autrui | | |
+| Déplacer une carte en Kanban | | ses tickets uniquement |
+| Gérer les colonnes / workflow | | |
+| Créer / gérer les sprints & lots | | |
+| Gérer les labels | | |
+| Gérer les utilisateurs & rôles | | |
+| Supprimer un ticket / projet | | |
+| Paramètres & personnalisation du projet | | |
 
 ## Critères d'acceptation
 

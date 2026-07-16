@@ -1,4 +1,4 @@
-# 🧾 Spécifications fonctionnelles
+# Spécifications fonctionnelles
 
 > Spécifications **fonctionnelles** de Rakoon Tracker (v1). Chaque spec **détaille** une
 > fonctionnalité déjà résumée dans [`../../SPEC.md`](../../SPEC.md). La direction produit est fixée
@@ -12,7 +12,7 @@ testables). Le **comment** technique reste dans l'architecture et les ADR (`../d
 
 | Numéro | Titre | Rôles | Lien |
 |--------|-------|-------|------|
-| SPEC-0001 | Création rapide de ticket ⭐ | Admin · Rapporteur | [0001](./0001-creation-ticket-rapide.md) |
+| SPEC-0001 | Création rapide de ticket | Admin · Rapporteur | [0001](./0001-creation-ticket-rapide.md) |
 | SPEC-0002 | Vue Kanban | Admin · Rapporteur | [0002](./0002-vue-kanban.md) |
 | SPEC-0003 | Sprints & lots | Admin | [0003](./0003-sprints-et-lots.md) |
 | SPEC-0004 | Rôles & permissions | Admin · Rapporteur | [0004](./0004-roles-et-permissions.md) |
@@ -29,7 +29,7 @@ testables). Le **comment** technique reste dans l'architecture et les ADR (`../d
 ## Modèle de spec (à copier)
 
 ```markdown
-# SPEC-000X — <Titre>
+# SPEC-000X - <Titre>
 - **Statut** : Rédigée (v1)
 - **Rôles concernés** : <Admin · Rapporteur>
 

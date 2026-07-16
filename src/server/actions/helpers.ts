@@ -6,7 +6,7 @@ import type { ActionResult } from "./types";
 
 /**
  * Utilitaires partagés des Server Actions (module « normal », sans `"use server"`
- * — un fichier `"use server"` ne peut exporter que des actions async).
+ * - un fichier `"use server"` ne peut exporter que des actions async).
  */
 
 /** Utilisateur de session (non nul), tel que renvoyé par `currentUser()`. */

@@ -2,7 +2,7 @@ import type { NextAuthConfig } from "next-auth";
 import type { Role } from "@prisma/client";
 
 /**
- * Config Auth.js « edge-safe » (sans Prisma ni bcrypt) — utilisée par le middleware.
+ * Config Auth.js « edge-safe » (sans Prisma ni bcrypt) - utilisée par le middleware.
  * La logique de connexion (Credentials + bcrypt + Prisma) vit dans `src/auth.ts`.
  */
 export const authConfig = {

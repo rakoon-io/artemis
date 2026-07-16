@@ -1,6 +1,6 @@
 # AGENTS.md
 
-> ## 📌 À lire avant toute modif
+> ## À lire avant toute modif
 > Avant d'écrire ou de modifier quoi que ce soit dans ce dépôt :
 > 1. Lis le **Memory Bank** dans l'ordre : [`.ai/vision.md`](./.ai/vision.md) (North Star) →
 >    [`.ai/architecture.md`](./.ai/architecture.md) → [`.ai/rules.md`](./.ai/rules.md) →
@@ -12,15 +12,15 @@
 
 ---
 
-## 🎯 Objectif
+## Objectif
 
-**Rakoon Tracker** — outil interne de **suivi de tickets** sobre, moderne, efficace et
+**Rakoon Tracker** - outil interne de **suivi de tickets** sobre, moderne, efficace et
 personnalisable, adapté à une **méthode agile** (Kanban, vue liste, sprints/lots). Priorité produit :
 **créer un ticket sans friction** (pièce jointe par copier-coller : image, log, texte).
 
 Cible produit détaillée → **[`SPEC.md`](./SPEC.md)**.
 
-## 🧭 Décisions clés (avec rationale)
+## Décisions clés (avec rationale)
 
 | Décision | Rationale | ADR |
 |----------|-----------|-----|
@@ -30,7 +30,7 @@ Cible produit détaillée → **[`SPEC.md`](./SPEC.md)**.
 | **Pièces jointes « paste-first »** (presse-papier → URL presignée → S3) | Friction minimale à la création, stockage scalable. | [0004](./.ai/decisions/0004-pieces-jointes-paste-first.md) |
 | **Déploiement Dokploy (Docker)** sur `apps.rakoon.io` | Cohérence avec les autres applis Rakoon ; self-hosting maîtrisé, HTTPS via Traefik/Let's Encrypt. | [0005](./.ai/decisions/0005-deploiement-dokploy-ovh.md) |
 
-## 🏗️ Architecture (schéma de la stack)
+## Architecture (schéma de la stack)
 
 ```
                        ┌───────────────────────────────┐
@@ -55,16 +55,16 @@ Cible produit détaillée → **[`SPEC.md`](./SPEC.md)**.
 
 Détails, couches et **modèle de données** → [`.ai/architecture.md`](./.ai/architecture.md).
 
-## 📂 Structure des dossiers
+## Structure des dossiers
 
 ```
 rakoon-tracker/
-├── AGENTS.md            # ce fichier — garde-fou "à lire avant toute modif"
+├── AGENTS.md            # ce fichier - garde-fou "à lire avant toute modif"
 ├── SPEC.md              # cible produit détaillée
 ├── README.md           # présentation & quickstart
 ├── DEPLOY.md           # déploiement Dokploy (apps.rakoon.io)
 └── .ai/                 # ── Memory Bank ──
-    ├── vision.md        # 🌟 North Star (à lire en premier)
+    ├── vision.md        # North Star (à lire en premier)
     ├── context.md       # état courant / récents / prochaines étapes
     ├── architecture.md  # patterns, conventions, structure, modèle de données
     ├── rules.md         # règles DO / DON'T de génération de code
@@ -96,7 +96,7 @@ npm test                     # Vitest (unit)
 
 Déploiement → [`DEPLOY.md`](./DEPLOY.md).
 
-## 🔄 Workflow (méthode AIDD — 7 phases)
+## Workflow (méthode AIDD - 7 phases)
 
 `Idéation → Plan → [validation] → Implémentation → Vérification (typecheck/tests/lint) →
 [validation] Commit → Revue finale`

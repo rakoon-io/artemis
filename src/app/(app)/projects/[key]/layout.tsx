@@ -22,7 +22,7 @@ export default async function ProjectLayout({
 
   return (
     <div
-      className="flex flex-col gap-6"
+      className="flex flex-col gap-4 px-4 py-5 md:px-6"
       style={
         project.accentColor
           ? ({

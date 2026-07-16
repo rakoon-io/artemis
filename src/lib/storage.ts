@@ -13,7 +13,7 @@ import { env } from "./env";
  * Stockage des pièces jointes (voir ADR-0004).
  * - Variables `S3_*` configurées ⇒ **stockage S3-compatible** (MinIO/S3), upload direct via URL presignée.
  * - Sinon ⇒ **fallback disque local** (dossier `.uploads`), pratique en dev sans MinIO.
- *   ⚠️ En conteneur, le disque n'est pas persistant : configurer S3 en production.
+ *   En conteneur, le disque n'est pas persistant : configurer S3 en production.
  */
 
 export function isStorageConfigured(): boolean {

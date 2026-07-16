@@ -1,11 +1,11 @@
-# ADR-0002 — Workflow Kanban personnalisable (colonnes en base)
+# ADR-0002 - Workflow Kanban personnalisable (colonnes en base)
 - **Statut** : Acceptée
 - **Date** : 2026-07-09
 - **Décideurs** : équipe Rakoon Tracker
 
 ## Contexte
 La **personnalisation du flux de travail** est une exigence produit non négociable : chaque équipe
-doit adapter ses statuts — les **Colonnes** du Tableau Kanban — à sa méthode agile. Un jeu de statuts
+doit adapter ses statuts - les **Colonnes** du Tableau Kanban - à sa méthode agile. Un jeu de statuts
 figé conviendrait à une équipe mais pas aux suivantes, et interdirait l'ajout, le renommage, le
 réordonnancement et la suppression de colonnes attendus en v1. Il faut aussi **réordonner librement**
 les cartes dans une colonne sans renuméroter tout son contenu.
@@ -22,10 +22,10 @@ aux autres tickets. L'**Admin** gère les colonnes (ajouter / renommer / réordo
 **Rapporteur** déplace ses propres tickets.
 
 ## Alternatives considérées
-- **Statuts codés en dur (enum)** — simple et « sémantiquement » garanti (ex. `TODO/DOING/DONE`),
+- **Statuts codés en dur (enum)** - simple et « sémantiquement » garanti (ex. `TODO/DOING/DONE`),
   mais **incompatible** avec l'exigence de personnalisation ; toute évolution imposerait une migration
   de schéma.
-- **Workflow global unique pour toute l'organisation** — un seul jeu de colonnes partagé par tous les
+- **Workflow global unique pour toute l'organisation** - un seul jeu de colonnes partagé par tous les
   projets ; plus simple, mais **empêche** chaque projet d'avoir son propre flux, ce que le produit
   promet.
 

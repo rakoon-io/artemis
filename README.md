@@ -1,4 +1,4 @@
-# 🦝 Rakoon Tracker
+# Rakoon Tracker
 
 > Suivi de tickets sobre, moderne et personnalisable, adapté à l'agile.
 
@@ -7,9 +7,9 @@
 &nbsp;![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6.svg)
 &nbsp;![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Prisma-4169e1.svg)
 
-## 📌 Statut
+## Statut
 
-> ✅ **Application v1 implémentée et vérifiée.**
+> **Application v1 implémentée et vérifiée.**
 >
 > Le code applicatif est en place : **Next.js 16** (App Router), **Prisma / PostgreSQL**, **Auth.js**
 > (RBAC Admin / Rapporteur), **Kanban** (dnd-kit), **création paste-first** et vues **liste**,
@@ -17,24 +17,24 @@
 > Reste à faire : le **premier déploiement** sur `tracker.apps.rakoon.io` (voir
 > [`.ai/context.md`](./.ai/context.md)).
 
-## ✨ Fonctionnalités (v1)
+## Fonctionnalités (v1)
 
-- 🎯 **Création rapide de ticket** ⭐ — formulaire minimal (titre obligatoire), le reste optionnel.
-- 📋 **Pièce jointe par copier-coller** — coller une **image** du presse-papier, un **log** ou du
+- **Création rapide de ticket** - formulaire minimal (titre obligatoire), le reste optionnel.
+- **Pièce jointe par copier-coller** - coller une **image** du presse-papier, un **log** ou du
   **texte** directement dans le formulaire (fonction phare, ticket créé en < 30 s).
-- 🗂️ **Vue Kanban configurable** — colonnes = statuts adaptables par projet, drag & drop souris
+- **Vue Kanban configurable** - colonnes = statuts adaptables par projet, drag & drop souris
   **et** clavier (dnd-kit).
-- 📑 **Vue liste** — filtres, tri multi-colonnes et recherche plein texte.
-- 🏃 **Sprints / lots** — backlog, planification, itérations datées.
-- 💬 **Commentaires** — fil de discussion par ticket.
-- 📎 **Pièces jointes** — aperçu inline des images, téléchargement des logs/fichiers.
-- 🎨 **Personnalisation** — workflow (colonnes), labels, thème clair/sombre.
-- 👥 **Rôles Admin / Rapporteur** — RBAC extensible, **imposé côté serveur**.
+- **Vue liste** - filtres, tri multi-colonnes et recherche plein texte.
+- **Sprints / lots** - backlog, planification, itérations datées.
+- **Commentaires** - fil de discussion par ticket.
+- **Pièces jointes** - aperçu inline des images, téléchargement des logs/fichiers.
+- **Personnalisation** - workflow (colonnes), labels, thème clair/sombre.
+- **Rôles Admin / Rapporteur** - RBAC extensible, **imposé côté serveur**.
 
 Périmètre détaillé et non-objectifs v1 → [`SPEC.md`](./SPEC.md) et
 [`.ai/vision.md`](./.ai/vision.md).
 
-## 🛠️ Stack
+## Stack
 
 - **Framework** : Next.js (App Router) · React · TypeScript (strict)
 - **UI** : Tailwind CSS · shadcn/ui (Radix) · dnd-kit (Kanban)
@@ -46,16 +46,16 @@ Périmètre détaillé et non-objectifs v1 → [`SPEC.md`](./SPEC.md) et
 
 Détails, couches et **modèle de données** → [`.ai/architecture.md`](./.ai/architecture.md).
 
-## 📂 Structure du dépôt
+## Structure du dépôt
 
 ```
 rakoon-tracker/
 ├── AGENTS.md            # garde-fou "à lire avant toute modif" (pilote l'agent)
 ├── SPEC.md              # cible produit détaillée (v1)
-├── README.md           # ce fichier — présentation & démarrage rapide
+├── README.md           # ce fichier - présentation & démarrage rapide
 ├── DEPLOY.md           # guide de déploiement Dokploy (apps.rakoon.io)
 └── .ai/                 # ── Memory Bank ──
-    ├── vision.md        # 🌟 North Star (à lire en premier)
+    ├── vision.md        # North Star (à lire en premier)
     ├── context.md       # état courant / récents / prochaines étapes
     ├── architecture.md  # patterns, conventions, structure, modèle de données
     ├── rules.md         # règles DO / DON'T de génération de code
@@ -85,8 +85,8 @@ npm run dev                  # démarrer le serveur (http://localhost:3000)
 
 **Comptes de démo** (créés par le seed) :
 
-- **Admin** — `admin@rakoon.io` / `***MOT-DE-PASSE-RETIRE***`
-- **Rapporteur** — `rapporteur@rakoon.io` / `***MOT-DE-PASSE-RETIRE***`
+- **Admin** - `admin@rakoon.io` / `***MOT-DE-PASSE-RETIRE***`
+- **Rapporteur** - `rapporteur@rakoon.io` / `***MOT-DE-PASSE-RETIRE***`
 
 ```bash
 # Qualité
@@ -96,9 +96,9 @@ npm test                     # Vitest (unit)
 ```
 
 **Qualité vérifiée** (v1) : `typecheck`, `lint`, `build` de production, **tests** unitaires (Vitest),
-**migration** Prisma, **seed** et **smoke test** runtime — tous OK.
+**migration** Prisma, **seed** et **smoke test** runtime - tous OK.
 
-## 🔄 Méthode AIDD
+## Méthode AIDD
 
 **AIDD** (*AI-Driven Development*) : la **documentation pilote le développement**. Le Memory Bank
 (`.ai/`) décrit la vision, l'architecture et les règles ; un agent IA génère puis vérifie le code
@@ -119,11 +119,11 @@ Idéation → Plan → [validation] → Implémentation → Vérification (typec
 À lire pour démarrer : [`AGENTS.md`](./AGENTS.md), [`SPEC.md`](./SPEC.md) et
 [`.ai/vision.md`](./.ai/vision.md).
 
-## 🚀 Déploiement
+## Déploiement
 
 **Dokploy** (Docker) sur `apps.rakoon.io`, comme les autres applis Rakoon. Voir le guide → [`DEPLOY.md`](./DEPLOY.md).
 
-## 🤝 Contribution
+## Contribution
 
 - Respecter les **règles DO / DON'T** de [`.ai/rules.md`](./.ai/rules.md).
 - Suivre le **workflow 7 phases** (ci-dessus) : pas de code avant validation du plan.
@@ -133,6 +133,6 @@ Idéation → Plan → [validation] → Implémentation → Vérification (typec
 - Toute décision structurante ⇒ un ADR dans [`.ai/decisions/`](./.ai/decisions/) ; après un
   changement notable, mettre à jour [`.ai/context.md`](./.ai/context.md).
 
-## 📄 Licence
+## Licence
 
-Distribué sous licence **MIT** — voir [`LICENSE`](./LICENSE). Contributions bienvenues.
+Distribué sous licence **MIT** - voir [`LICENSE`](./LICENSE). Contributions bienvenues.

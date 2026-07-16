@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 
 /**
  * Client Prisma en singleton (évite d'épuiser le pool en dev avec le HMR).
- * Seul point d'accès à la base — la logique métier passe par `server/services`.
+ * Seul point d'accès à la base - la logique métier passe par `server/services`.
  */
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 

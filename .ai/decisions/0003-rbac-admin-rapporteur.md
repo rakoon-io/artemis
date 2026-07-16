@@ -1,12 +1,12 @@
-# ADR-0003 — RBAC à deux rôles (Admin / Rapporteur), extensible
+# ADR-0003 - RBAC à deux rôles (Admin / Rapporteur), extensible
 - **Statut** : Acceptée
 - **Date** : 2026-07-09
 - **Décideurs** : équipe Rakoon Tracker
 
 ## Contexte
-En v1, Rakoon Tracker distingue deux profils : **Admin** (vue étendue — projets, colonnes,
+En v1, Rakoon Tracker distingue deux profils : **Admin** (vue étendue - projets, colonnes,
 sprints/lots, labels, utilisateurs, paramètres, accès total aux tickets) et **Rapporteur** (vue
-limitée — créer des tickets avec pièces jointes, consulter et commenter ses projets, éditer ses
+limitée - créer des tickets avec pièces jointes, consulter et commenter ses projets, éditer ses
 propres tickets). Le modèle doit rester **simple** à porter en v1 tout en autorisant l'ajout futur de
 rôles **sans refonte**. Règle d'or : **l'UI masque, le serveur impose.**
 
@@ -20,9 +20,9 @@ ticket, gérer les colonnes, gérer les sprints, administrer les utilisateurs…
 **testé unitairement**, ce qui rend l'ajout d'un rôle additif.
 
 ## Alternatives considérées
-- **ACL par ressource (permissions fines par entité)** — puissant, mais disproportionné pour deux
+- **ACL par ressource (permissions fines par entité)** - puissant, mais disproportionné pour deux
   rôles ; coût de modélisation, de stockage et de tests injustifié en v1.
-- **Multiplier les rôles dès la v1** (lecteur, développeur, manager…) — complexité prématurée sans
+- **Multiplier les rôles dès la v1** (lecteur, développeur, manager…) - complexité prématurée sans
   besoin produit avéré ; l'extensibilité des policies permet de les ajouter plus tard.
 
 ## Conséquences

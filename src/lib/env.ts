@@ -14,7 +14,7 @@ const schema = z.object({
   AUTH_TRUST_HOST: z.string().optional(),
   // Inscription : liste blanche de domaines e-mail autorisés (CSV). Absent ⇒ tout autorisé (dev).
   ALLOWED_EMAIL_DOMAINS: z.string().optional(),
-  // Stockage S3-compatible (pièces jointes) — optionnel : la fonctionnalité se
+  // Stockage S3-compatible (pièces jointes) - optionnel : la fonctionnalité se
   // désactive proprement si non configuré.
   S3_ENDPOINT: z.string().optional(),
   S3_BUCKET: z.string().optional(),
@@ -33,7 +33,7 @@ if (!parsed.success) {
 export const env = parsed.success ? parsed.data : schema.parse({});
 
 /**
- * Correctif H2 — les secrets doivent être présents à l'exécution en production.
+ * Correctif H2 - les secrets doivent être présents à l'exécution en production.
  * Au build, ils sont fournis via des placeholders : pas de throw parasite.
  * En développement, un avertissement suffit (secrets facultatifs en local).
  */
@@ -45,6 +45,6 @@ if (process.env.NODE_ENV === "production") {
   }
 } else if (!env.AUTH_SECRET || !env.DATABASE_URL) {
   console.warn(
-    "[env] AUTH_SECRET ou DATABASE_URL manquant — toléré en développement uniquement.",
+    "[env] AUTH_SECRET ou DATABASE_URL manquant - toléré en développement uniquement.",
   );
 }

@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 
 /**
- * Service Type de ticket — accès données pur (autorisation dans les actions).
+ * Service Type de ticket - accès données pur (autorisation dans les actions).
  * Configurable par projet ; ordre stable via `order` ; unicité `(projectId, name)`
  * garantie en base. Suppression refusée si des tickets l'utilisent.
  */

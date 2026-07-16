@@ -11,7 +11,7 @@ import {
 } from "@/lib/storage";
 
 /**
- * POST /api/attachments/presign — prépare l'upload d'une pièce jointe.
+ * POST /api/attachments/presign - prépare l'upload d'une pièce jointe.
  * Le serveur vérifie l'authentification, l'autorisation sur le ticket et valide
  * l'entrée AVANT d'émettre l'URL. La clé de stockage est liée au ticket ciblé.
  *
@@ -54,7 +54,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
   }
 
-  // H1 — l'appelant doit pouvoir éditer le ticket ciblé (reporter, assigné ou admin).
+  // H1 - l'appelant doit pouvoir éditer le ticket ciblé (reporter, assigné ou admin).
   const ticket = await getTicketOwnership(ticketId);
   if (!ticket) {
     return NextResponse.json({ error: "Ticket introuvable." }, { status: 404 });

@@ -1,5 +1,5 @@
 /**
- * Catalogue des thèmes de l'interface — plusieurs palettes **claires** et **sombres**,
+ * Catalogue des thèmes de l'interface - plusieurs palettes **claires** et **sombres**,
  * plus l'option « Système ». Chaque thème = une classe CSS unique posée sur `<html>`
  * (voir les blocs de tokens dans `globals.css`). Les palettes définissent les neutres
  * et surfaces ; la couleur d'accent (`--primary`) reste le bordeaux Rakoon, et peut

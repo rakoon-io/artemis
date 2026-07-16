@@ -103,13 +103,13 @@ export function TicketTable({
                     </span>
                   </span>
                 ) : (
-                  <span className="text-muted-foreground">—</span>
+                  <span className="text-muted-foreground">-</span>
                 )}
               </td>
               <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">
                 {ticket.sprintId
-                  ? (sprintName.get(ticket.sprintId) ?? "—")
-                  : "—"}
+                  ? (sprintName.get(ticket.sprintId) ?? "-")
+                  : "-"}
               </td>
               <td className="px-3 py-2">
                 {ticket.labels.length > 0 ? (
@@ -123,7 +123,7 @@ export function TicketTable({
                     ))}
                   </span>
                 ) : (
-                  <span className="text-muted-foreground">—</span>
+                  <span className="text-muted-foreground">-</span>
                 )}
               </td>
               <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">

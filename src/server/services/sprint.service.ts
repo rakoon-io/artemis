@@ -1,12 +1,34 @@
 import { prisma } from "@/lib/db";
 import type { SprintState } from "@prisma/client";
 
-/** Service Sprint — accès données pur. Les dates arrivent en ISO (string) depuis Zod. */
+/** Service Sprint - accès données pur. Les dates arrivent en ISO (string) depuis Zod. */
 
 export function listSprints(projectId: string) {
   return prisma.sprint.findMany({
     where: { projectId },
     orderBy: { createdAt: "desc" },
+  });
+}
+
+/** Sprints du projet avec leurs tickets (pour la vue Sprints qui liste le contenu). */
+export function listSprintsWithTickets(projectId: string) {
+  return prisma.sprint.findMany({
+    where: { projectId },
+    orderBy: { createdAt: "desc" },
+    include: {
+      tickets: {
+        orderBy: { rank: "asc" },
+        select: {
+          id: true,
+          key: true,
+          title: true,
+          column: { select: { name: true } },
+          type: { select: { name: true, color: true } },
+          priority: { select: { name: true, color: true } },
+          assignee: { select: { name: true, email: true } },
+        },
+      },
+    },
   });
 }
 

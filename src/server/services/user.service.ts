@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import { Prisma, Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
 
-/** Service Utilisateur — minimisation RGPD : n'expose que id/name/email/role. */
+/** Service Utilisateur - minimisation RGPD : n'expose que id/name/email/role. */
 
 /** Sélection publique : jamais de `passwordHash` renvoyé au client. */
 const publicUserSelect = {

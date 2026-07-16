@@ -13,7 +13,7 @@ import { withUser } from "./helpers";
 import type { ActionResult } from "./types";
 
 /**
- * Actions Pièce jointe — confirme l'enregistrement d'une PJ déjà téléversée en S3
+ * Actions Pièce jointe - confirme l'enregistrement d'une PJ déjà téléversée en S3
  * (via URL presignée) et supprime une PJ. Autorisation : mêmes règles que l'édition
  * du ticket (`canEditTicket`). « L'UI masque, le serveur impose. »
  */
@@ -36,7 +36,7 @@ export async function confirmAttachmentAction(
 ): Promise<ActionResult<{ id: string }>> {
   return withUser<{ id: string }>(async (user) => {
     const data = confirmAttachmentSchema.parse(input);
-    // M2 — la clé doit être celle émise pour CE ticket (empêche de confirmer un objet S3 arbitraire).
+    // M2 - la clé doit être celle émise pour CE ticket (empêche de confirmer un objet S3 arbitraire).
     if (!data.storageKey.startsWith(`attachments/${data.ticketId}/`)) {
       return { ok: false, error: "Clé de stockage invalide." };
     }

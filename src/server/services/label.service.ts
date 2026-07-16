@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 
-/** Service Label — accès données pur. Unicité `(projectId, name)` garantie en base. */
+/** Service Label - accès données pur. Unicité `(projectId, name)` garantie en base. */
 
 export function listLabels(projectId: string) {
   return prisma.label.findMany({

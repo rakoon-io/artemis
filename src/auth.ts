@@ -18,7 +18,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       authorize: async (raw) => {
         const parsed = credentialsSchema.safeParse(raw);
         if (!parsed.success) return null;
-        // M1 — limitation des tentatives de connexion par e-mail (anti brute-force).
+        // M1 - limitation des tentatives de connexion par e-mail (anti brute-force).
         const rl = rateLimit(
           `login:${parsed.data.email.toLowerCase()}`,
           10,

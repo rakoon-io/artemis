@@ -14,7 +14,7 @@ import type { BoardColumnData, BoardTicket, CurrentUser } from "./kanban-board";
 
 /**
  * Colonne du tableau : zone de dépôt (droppable) + liste triable de cartes.
- * L'en-tête affiche le compteur et, si défini, un badge de limite WIP —
+ * L'en-tête affiche le compteur et, si défini, un badge de limite WIP -
  * signalé visuellement en cas de dépassement mais **non bloquant** (ADR-0002).
  */
 export function BoardColumn({
@@ -41,7 +41,7 @@ export function BoardColumn({
   return (
     <section
       aria-label={column.name}
-      className="flex h-full w-72 shrink-0 flex-col rounded-xl border bg-muted/30"
+      className="flex h-full min-w-[16rem] max-w-[24rem] flex-1 flex-col rounded-xl border bg-muted/30"
     >
       <header className="flex items-center justify-between gap-2 border-b px-3 py-2">
         <div className="flex min-w-0 items-center gap-2">

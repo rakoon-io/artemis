@@ -1,4 +1,4 @@
-# 🚀 Déploiement — Rakoon Tracker
+# Déploiement - Rakoon Tracker
 
 > Déploiement **« comme les autres applis Rakoon »** : serveur **OVH + Dokploy**, reverse-proxy
 > **Traefik** sur le wildcard **`*.apps.rakoon.io`**. Décision tracée dans
@@ -6,7 +6,7 @@
 >
 > ℹ️ **L'application v1 est implémentée** (Next.js, **npm**) : `package.json` + `package-lock.json`,
 > `src/`, `prisma/` (schéma + migration) et un **`Dockerfile` multi-stage** sont à la racine. Le
-> déploiement reste à réaliser — bloqué sur l'**accès serveur / Dokploy** (voir
+> déploiement reste à réaliser - bloqué sur l'**accès serveur / Dokploy** (voir
 > [`.ai/context.md`](./.ai/context.md)).
 
 Vue produit → [`README.md`](./README.md) · architecture & modèle de données →
@@ -14,7 +14,7 @@ Vue produit → [`README.md`](./README.md) · architecture & modèle de données
 
 ## 1. Cible & modèle
 
-- **Sous-domaine** : **`tracker.apps.rakoon.io`** *(proposé — à confirmer ; ex. `rakoon-tasker` = `spark.apps.rakoon.io`)*.
+- **Sous-domaine** : **`tracker.apps.rakoon.io`** *(proposé - à confirmer ; ex. `rakoon-tasker` = `spark.apps.rakoon.io`)*.
 - **Reverse-proxy** : Traefik de Dokploy (`web` :80 → `websecure` :443, `certResolver: letsencrypt`).
 - **Réseau** : overlay Swarm **`dokploy-network`** (résolution des conteneurs par leur nom).
 
@@ -44,19 +44,19 @@ accès SSH root/sudo.
 
 | Variable | Requis | Rôle |
 |---|:--:|---|
-| `DATABASE_URL` | ✅ | Postgres interne (`rakoon-tracker-db:5432`) |
-| `AUTH_SECRET` | ✅ | Secret Auth.js (`openssl rand -base64 32`) |
-| `AUTH_URL` | ✅ | `https://tracker.apps.rakoon.io` |
-| `AUTH_TRUST_HOST` | ✅ | `true` (derrière le proxy Traefik) |
-| `S3_ENDPOINT` | ✅ | Endpoint stockage pièces jointes (`http://rakoon-tracker-minio:9000`) |
-| `S3_BUCKET` | ✅ | Bucket des pièces jointes (`rakoon-tracker-attachments`) |
-| `S3_ACCESS_KEY_ID` | ✅ | Clé d'accès au stockage objet |
-| `S3_SECRET_ACCESS_KEY` | ✅ | Clé secrète du stockage objet |
-| `S3_REGION` | ✅ | Région du bucket (`us-east-1` par défaut, même avec MinIO) |
+| `DATABASE_URL` | | Postgres interne (`rakoon-tracker-db:5432`) |
+| `AUTH_SECRET` | | Secret Auth.js (`openssl rand -base64 32`) |
+| `AUTH_URL` | | `https://tracker.apps.rakoon.io` |
+| `AUTH_TRUST_HOST` | | `true` (derrière le proxy Traefik) |
+| `S3_ENDPOINT` | | Endpoint stockage pièces jointes (`http://rakoon-tracker-minio:9000`) |
+| `S3_BUCKET` | | Bucket des pièces jointes (`rakoon-tracker-attachments`) |
+| `S3_ACCESS_KEY_ID` | | Clé d'accès au stockage objet |
+| `S3_SECRET_ACCESS_KEY` | | Clé secrète du stockage objet |
+| `S3_REGION` | | Région du bucket (`us-east-1` par défaut, même avec MinIO) |
 
 ## 4. Dockerfile (multi-stage)
 
-Le **`Dockerfile` multi-stage (npm) est à la racine du dépôt** — inutile de le recopier ici.
+Le **`Dockerfile` multi-stage (npm) est à la racine du dépôt** - inutile de le recopier ici.
 
 En résumé :
 
@@ -68,9 +68,9 @@ En résumé :
 Un `.dockerignore` (à la racine) exclut `node_modules`, `.next`, `.git`, `.env*`, `.ai`, `*.md`,
 `coverage`.
 
-## 5. Déploiement direct (Docker + Traefik) — exécuté sur le serveur en `sudo`
+## 5. Déploiement direct (Docker + Traefik) - exécuté sur le serveur en `sudo`
 
-### 5.1 — Base PostgreSQL dédiée
+### 5.1 - Base PostgreSQL dédiée
 ```bash
 DBPW=$(openssl rand -hex 20)
 docker run -d --name rakoon-tracker-db --restart unless-stopped \
@@ -81,7 +81,7 @@ docker run -d --name rakoon-tracker-db --restart unless-stopped \
 # DATABASE_URL = postgresql://tracker:$DBPW@rakoon-tracker-db:5432/tracker?schema=public
 ```
 
-### 5.2 — Stockage S3-compatible (MinIO) pour les pièces jointes
+### 5.2 - Stockage S3-compatible (MinIO) pour les pièces jointes
 ```bash
 MINIO_PW=$(openssl rand -hex 20)
 docker run -d --name rakoon-tracker-minio --restart unless-stopped \
@@ -92,12 +92,12 @@ docker run -d --name rakoon-tracker-minio --restart unless-stopped \
 # Puis créer le bucket "rakoon-tracker-attachments" (via `mc`, ou au démarrage de l'app).
 ```
 
-### 5.3 — Build de l'image (contexte = source du repo + Dockerfile)
+### 5.3 - Build de l'image (contexte = source du repo + Dockerfile)
 ```bash
 docker build -t rakoon-tracker:latest /chemin/vers/le/contexte
 ```
 
-### 5.4 — Fichier d'environnement `rtr.env`
+### 5.4 - Fichier d'environnement `rtr.env`
 ```ini
 NODE_ENV=production
 DATABASE_URL=postgresql://tracker:<DBPW>@rakoon-tracker-db:5432/tracker?schema=public
@@ -111,13 +111,13 @@ S3_SECRET_ACCESS_KEY=<MINIO_PW>
 S3_REGION=us-east-1
 ```
 
-### 5.5 — Migrations Prisma
+### 5.5 - Migrations Prisma
 ```bash
 docker run --rm --network dokploy-network --env-file rtr.env \
   rakoon-tracker:latest npx prisma migrate deploy
 ```
 
-### 5.6 — Lancement du conteneur applicatif
+### 5.6 - Lancement du conteneur applicatif
 ```bash
 docker rm -f rakoon-tracker 2>/dev/null
 docker run -d --name rakoon-tracker --restart unless-stopped \
@@ -125,7 +125,7 @@ docker run -d --name rakoon-tracker --restart unless-stopped \
   rakoon-tracker:latest
 ```
 
-### 5.7 — Route Traefik (HTTPS auto)
+### 5.7 - Route Traefik (HTTPS auto)
 Fichier **`/etc/dokploy/traefik/dynamic/tracker.yml`** (rechargé à chaud) :
 ```yaml
 http:
@@ -149,7 +149,7 @@ http:
 ```
 Traefik obtient alors automatiquement le certificat Let's Encrypt (HTTP-01).
 
-### 5.8 — Compte admin initial
+### 5.8 - Compte admin initial
 Un **script de seed** (`npm run db:seed`, ou `npx prisma db seed`) crée les comptes de démo (Admin +
 Rapporteur). En production, l'exécuter une fois via un conteneur jetable (comme en 5.5) **puis
 changer les mots de passe** :
@@ -188,4 +188,4 @@ CI/CD en place.
 ## 10. Sécurité & secrets
 - `.env*` et `rtr.env` **jamais commités** (gitignore).
 - Pièces jointes servies via **URLs presignées à durée limitée** (droits vérifiés avant émission).
-- Secrets côté serveur / gestionnaire de secrets Dokploy — **jamais dans le dépôt**.
+- Secrets côté serveur / gestionnaire de secrets Dokploy - **jamais dans le dépôt**.

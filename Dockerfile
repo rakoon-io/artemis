@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Rakoon Tracker — image de production (voir DEPLOY.md / ADR-0005).
+# Rakoon Tracker - image de production (voir DEPLOY.md / ADR-0005).
 
 # ---- Builder ----
 FROM node:20-bookworm AS builder

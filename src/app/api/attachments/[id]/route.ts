@@ -5,7 +5,7 @@ import { getAttachment } from "@/server/services/attachment.service";
 import { isStorageConfigured, presignDownload, readLocal } from "@/lib/storage";
 
 /**
- * GET /api/attachments/[id] — sert la pièce jointe.
+ * GET /api/attachments/[id] - sert la pièce jointe.
  * - S3 : redirection vers une URL presignée à durée limitée.
  * - Local (fallback) : lecture disque + streaming.
  * Authentification requise dans les deux cas.
@@ -28,7 +28,7 @@ export async function GET(
 
   if (isStorageConfigured()) {
     const url = await presignDownload(attachment.storageKey);
-    // `redirect` lève NEXT_REDIRECT (307) — hors de tout try/catch pour propager.
+    // `redirect` lève NEXT_REDIRECT (307) - hors de tout try/catch pour propager.
     redirect(url);
   }
 

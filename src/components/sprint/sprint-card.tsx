@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -9,6 +10,7 @@ import {
   Flag,
   Loader2,
   Play,
+  RotateCcw,
   Trash2,
 } from "lucide-react";
 import { SprintState } from "@prisma/client";
@@ -39,6 +41,17 @@ import {
 } from "@/components/ui/dialog";
 import { formatDate } from "@/lib/utils";
 
+/** Ticket rattaché à un sprint (champs d'affichage). */
+export interface SprintTicketRow {
+  id: string;
+  key: string;
+  title: string;
+  column: { name: string };
+  type: { name: string; color: string };
+  priority: { name: string; color: string };
+  assignee: { name: string | null; email: string } | null;
+}
+
 /** Métadonnées d'affichage par état de sprint. */
 const STATE_META: Record<
   SprintState,
@@ -49,16 +62,57 @@ const STATE_META: Record<
   [SprintState.COMPLETED]: { label: "Terminé", variant: "outline" },
 };
 
+function TicketRow({
+  ticket,
+  projectKey,
+}: {
+  ticket: SprintTicketRow;
+  projectKey: string;
+}) {
+  return (
+    <Link
+      href={`/projects/${projectKey}/tickets/${ticket.id}`}
+      className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent"
+    >
+      <span className="w-16 shrink-0 truncate font-mono text-xs text-muted-foreground">
+        {ticket.key}
+      </span>
+      <span
+        className="size-2 shrink-0 rounded-full"
+        style={{ backgroundColor: ticket.type.color }}
+        title={ticket.type.name}
+        aria-hidden
+      />
+      <span className="flex-1 truncate">{ticket.title}</span>
+      <span className="hidden shrink-0 items-center gap-1.5 text-xs text-muted-foreground sm:flex">
+        <span
+          className="size-2 rounded-full"
+          style={{ backgroundColor: ticket.priority.color }}
+          aria-hidden
+        />
+        {ticket.priority.name}
+      </span>
+      <Badge variant="outline" className="shrink-0 font-normal">
+        {ticket.column.name}
+      </Badge>
+    </Link>
+  );
+}
+
 /**
- * Carte d'un sprint / lot. Les actions d'état (Démarrer / Clôturer) et la
- * suppression ne sont rendues que pour un administrateur (`isAdmin`) — le
- * serveur impose de toute façon l'autorisation.
+ * Carte d'un sprint / lot : en-tête (état, objectif, dates), liste de ses tickets,
+ * et actions d'administration (Démarrer / Clôturer / Supprimer) réservées à l'admin.
+ * Le serveur impose l'autorisation dans tous les cas.
  */
 export function SprintCard({
   sprint,
+  tickets,
+  projectKey,
   isAdmin,
 }: {
   sprint: Sprint;
+  tickets: SprintTicketRow[];
+  projectKey: string;
   isAdmin: boolean;
 }) {
   const router = useRouter();
@@ -97,9 +151,14 @@ export function SprintCard({
   return (
     <Card className="flex flex-col">
       <CardHeader>
-        <div className="flex items-start justify-between gap-2">
+        <div className="flex flex-wrap items-start justify-between gap-2">
           <CardTitle className="text-base">{sprint.name}</CardTitle>
-          <Badge variant={meta.variant}>{meta.label}</Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary">
+              {tickets.length} ticket{tickets.length > 1 ? "s" : ""}
+            </Badge>
+            <Badge variant={meta.variant}>{meta.label}</Badge>
+          </div>
         </div>
         {sprint.goal ? (
           <CardDescription>{sprint.goal}</CardDescription>
@@ -108,20 +167,35 @@ export function SprintCard({
             Sans objectif défini.
           </CardDescription>
         )}
+        <p className="flex flex-wrap items-center gap-1.5 pt-1 text-sm text-muted-foreground">
+          {isLot ? (
+            <>
+              <Flag className="size-4 shrink-0" />
+              Lot, sans dates
+            </>
+          ) : (
+            <>
+              <CalendarRange className="size-4 shrink-0" />
+              {formatDate(sprint.startDate)}
+              <ArrowRight className="size-3 shrink-0" />
+              {formatDate(sprint.endDate)}
+            </>
+          )}
+        </p>
       </CardHeader>
       <CardContent className="flex-1">
-        {isLot ? (
-          <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            <Flag className="size-4 shrink-0" />
-            Lot — sans dates
+        {tickets.length === 0 ? (
+          <p className="rounded-md border border-dashed px-3 py-4 text-center text-sm text-muted-foreground">
+            Aucun ticket dans ce sprint.
           </p>
         ) : (
-          <p className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
-            <CalendarRange className="size-4 shrink-0" />
-            {formatDate(sprint.startDate)}
-            <ArrowRight className="size-3 shrink-0" />
-            {formatDate(sprint.endDate)}
-          </p>
+          <ul className="divide-y rounded-md border">
+            {tickets.map((ticket) => (
+              <li key={ticket.id}>
+                <TicketRow ticket={ticket} projectKey={projectKey} />
+              </li>
+            ))}
+          </ul>
         )}
       </CardContent>
       {isAdmin && (
@@ -157,6 +231,23 @@ export function SprintCard({
             >
               {pending ? <Loader2 className="animate-spin" /> : <Flag />}
               Clôturer
+            </Button>
+          )}
+          {sprint.state === SprintState.COMPLETED && (
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() =>
+                changeState(
+                  SprintState.ACTIVE,
+                  `Sprint « ${sprint.name} » rouvert.`,
+                )
+              }
+              disabled={pending}
+            >
+              {pending ? <Loader2 className="animate-spin" /> : <RotateCcw />}
+              Rouvrir
             </Button>
           )}
           <Dialog

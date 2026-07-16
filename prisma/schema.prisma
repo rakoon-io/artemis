@@ -1,4 +1,4 @@
-// Rakoon Tracker — schéma de données (canonique).
+// Rakoon Tracker - schéma de données (canonique).
 // Voir .ai/architecture.md#modèle-de-données-canonique
 generator client {
   provider = "prisma-client-js"
@@ -63,7 +63,7 @@ model Column {
   @@index([projectId])
 }
 
-// Type de ticket — configurable par projet (voir ADR-0002 : personnalisation).
+// Type de ticket - configurable par projet (voir ADR-0002 : personnalisation).
 model TicketType {
   id        String   @id @default(cuid())
   projectId String
@@ -77,7 +77,7 @@ model TicketType {
   @@index([projectId])
 }
 
-// Priorité de ticket — configurable par projet.
+// Priorité de ticket - configurable par projet.
 model TicketPriority {
   id        String   @id @default(cuid())
   projectId String

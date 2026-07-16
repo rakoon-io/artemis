@@ -1,4 +1,4 @@
-# SPEC-0005 — Vue liste
+# SPEC-0005 - Vue liste
 - **Statut** : Rédigée (v1)
 - **Rôles concernés** : Admin · Rapporteur
 

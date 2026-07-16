@@ -1,4 +1,4 @@
-# ADR-0006 — Types & priorités de tickets configurables par projet (tables plutôt qu'enums)
+# ADR-0006 - Types & priorités de tickets configurables par projet (tables plutôt qu'enums)
 - **Statut** : Acceptée
 - **Date** : 2026-07-13
 - **Décideurs** : équipe Rakoon Tracker
@@ -22,8 +22,8 @@ Les types et priorités deviennent des **données par projet**, plus des enums :
 - Le rendu (badges board / liste / filtres / dialogs) s'appuie sur `name` + `color` configurés.
 
 ## Alternatives considérées
-- **Conserver les enums** — simple, mais **incompatible** avec l'exigence de personnalisation.
-- **Overlay de configuration** (garder les 4 enums, table de surcharge nom/couleur) — permettrait de
+- **Conserver les enums** - simple, mais **incompatible** avec l'exigence de personnalisation.
+- **Overlay de configuration** (garder les 4 enums, table de surcharge nom/couleur) - permettrait de
   renommer/recolorer sans migration, mais **interdit l'ajout/suppression** de types → écarté.
 
 ## Conséquences

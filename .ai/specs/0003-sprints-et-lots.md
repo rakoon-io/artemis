@@ -1,4 +1,4 @@
-# SPEC-0003 — Sprints & lots
+# SPEC-0003 - Sprints & lots
 - **Statut** : Rédigée (v1)
 - **Rôles concernés** : Admin
 
@@ -47,7 +47,7 @@ Le cycle de vie suit les états `PLANNED` → `ACTIVE` → `COMPLETED`, du backl
 ## Cas limites
 
 - **Sprint sans date** : traité comme un **lot** ; aucun calcul d'échéance.
-- **Une seule date renseignée** : refusé — cohérence exigée (les deux dates ou aucune).
+- **Une seule date renseignée** : refusé - cohérence exigée (les deux dates ou aucune).
 - **Tickets non terminés à la clôture** : l'Admin choisit leur destination (backlog / sprint
   suivant) ; aucun ticket n'est perdu.
 - **Chevauchement de sprints** : autorisé mais **signalé** (avertissement) ; pas de blocage en v1.

@@ -4,12 +4,15 @@ import { Role } from "@prisma/client";
 import { auth } from "@/auth";
 import {
   getBoardData,
+  getLabels,
   getMembers,
   getProjectByKey,
+  getSprints,
   getTicketPriorities,
   getTicketTypes,
 } from "@/server/queries";
 import { KanbanBoard, type CurrentUser } from "@/components/board/kanban-board";
+import { CreateTicketDialog } from "@/components/ticket/create-ticket-dialog";
 
 /**
  * Vue Kanban d'un projet (RSC). Charge le projet, ses colonnes/tickets ordonnés
@@ -24,36 +27,41 @@ export default async function BoardPage({
   const project = await getProjectByKey(key);
   if (!project) notFound();
 
-  const [{ columns }, members, types, priorities, session] = await Promise.all([
-    getBoardData(project.id),
-    getMembers(),
-    getTicketTypes(project.id),
-    getTicketPriorities(project.id),
-    auth(),
-  ]);
+  const [{ columns }, members, types, priorities, labels, sprints, session] =
+    await Promise.all([
+      getBoardData(project.id),
+      getMembers(),
+      getTicketTypes(project.id),
+      getTicketPriorities(project.id),
+      getLabels(project.id),
+      getSprints(project.id),
+      auth(),
+    ]);
 
   const currentUser: CurrentUser = session?.user
     ? { id: session.user.id, role: session.user.role ?? Role.REPORTER }
     : { id: "", role: Role.REPORTER };
 
   return (
-    <div className="flex h-dvh flex-col">
-      <header className="flex shrink-0 items-center gap-2 border-b px-4 py-3 md:px-6">
-        <span className="font-mono text-xs text-muted-foreground">{project.key}</span>
-        <h1 className="text-lg font-semibold">{project.name}</h1>
-        <span className="text-sm text-muted-foreground">· Tableau</span>
-      </header>
-
-      <KanbanBoard
-        className="min-h-0 flex-1"
-        columns={columns}
-        projectId={project.id}
-        projectKey={project.key}
-        currentUser={currentUser}
-        members={members}
-        types={types}
-        priorities={priorities}
-      />
-    </div>
+    <KanbanBoard
+      className="h-[calc(100dvh-12rem)]"
+      columns={columns}
+      projectId={project.id}
+      projectKey={project.key}
+      currentUser={currentUser}
+      members={members}
+      types={types}
+      priorities={priorities}
+      action={
+        <CreateTicketDialog
+          projectId={project.id}
+          members={members}
+          sprints={sprints}
+          labels={labels}
+          types={types}
+          priorities={priorities}
+        />
+      }
+    />
   );
 }

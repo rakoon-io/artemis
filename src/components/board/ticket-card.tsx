@@ -28,7 +28,7 @@ export function canDragTicket(user: CurrentUser, ticket: BoardTicket): boolean {
 }
 
 /**
- * Rendu visuel pur d'une carte (sans logique dnd) — partagé par la carte
+ * Rendu visuel pur d'une carte (sans logique dnd) - partagé par la carte
  * triable et le `DragOverlay`. `handle` = poignée de déplacement (ou statique).
  */
 export function TicketCardView({

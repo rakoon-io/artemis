@@ -36,7 +36,7 @@ export interface TicketTypeItem {
  * nom), réordonnancement (monter / descendre), édition (nom, couleur),
  * suppression et ajout. Chaque mutation passe par une Server Action puis
  * rafraîchit la vue. La suppression d'un type encore utilisé est refusée côté
- * serveur — l'erreur est alors affichée en toast.
+ * serveur - l'erreur est alors affichée en toast.
  */
 export function TypeManager({
   types,

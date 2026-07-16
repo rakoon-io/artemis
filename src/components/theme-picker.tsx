@@ -53,7 +53,7 @@ function ThemeRow({
 }
 
 /**
- * Sélecteur de thème ⭐ — « Système » + plusieurs palettes claires et sombres, avec
+ * Sélecteur de thème - « Système » + plusieurs palettes claires et sombres, avec
  * aperçu de chaque palette. Le choix est mémorisé (next-themes / localStorage) et
  * appliqué immédiatement à toute l'application, sans rechargement.
  */

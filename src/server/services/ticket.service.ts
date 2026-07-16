@@ -3,7 +3,7 @@ import { rankAfter } from "@/lib/rank";
 import { Prisma } from "@prisma/client";
 
 /**
- * Service Ticket — accès données pur (autorisation dans les actions).
+ * Service Ticket - accès données pur (autorisation dans les actions).
  * Génération de clé et rang initial faits en transaction.
  * Chaque lecture renvoie `type`/`priority` en `{ id, name, color }` (badges UI).
  */
@@ -67,7 +67,7 @@ export function createTicket(input: CreateTicketServiceInput, reporterId: string
       priorityId = firstPriority.id;
     }
 
-    // M3 — cohérence projet : sprint, assigné et labels doivent être valides pour ce projet.
+    // M3 - cohérence projet : sprint, assigné et labels doivent être valides pour ce projet.
     let sprintId = input.sprintId ?? null;
     if (sprintId) {
       const sprint = await tx.sprint.findFirst({
@@ -255,7 +255,7 @@ export function updateTicket(input: UpdateTicketServiceInput) {
     if (!ticket) throw new Error("Ticket introuvable.");
     const { projectId } = ticket;
 
-    // M3 — cohérence projet : on n'applique sprint/assigné/labels que s'ils sont valides.
+    // M3 - cohérence projet : on n'applique sprint/assigné/labels que s'ils sont valides.
     // Un sprint hors projet ou un assigné inexistant est ignoré (valeur non appliquée) ;
     // `null` reste appliqué (désassignation / retrait de sprint volontaires).
     let sprintId = rest.sprintId;

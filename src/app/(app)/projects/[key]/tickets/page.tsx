@@ -88,14 +88,9 @@ export default async function TicketsListPage({
   const to = Math.min(list.total, list.page * list.pageSize);
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 p-6">
+    <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-mono text-muted-foreground">{project.key}</p>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {project.name} — Tickets
-          </h1>
-        </div>
+        <h1 className="text-2xl font-semibold tracking-tight">Tickets</h1>
         <CreateTicketDialog
           projectId={project.id}
           members={members}

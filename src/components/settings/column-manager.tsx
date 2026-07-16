@@ -379,7 +379,7 @@ function AddColumnForm({ projectId }: { projectId: string }) {
           type="number"
           min={1}
           max={999}
-          placeholder="—"
+          placeholder="-"
         />
       </div>
       <Button type="submit" disabled={submitting}>

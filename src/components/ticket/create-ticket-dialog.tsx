@@ -39,7 +39,7 @@ import {
 } from "./ticket-fields";
 
 /**
- * Création rapide « paste-first » ⭐ — le titre suffit ; on peut coller une image
+ * Création rapide « paste-first » - le titre suffit ; on peut coller une image
  * (aperçu + PJ en attente) ou un log/texte (PJ .txt ou insertion en description).
  * À la soumission, les PJ sont téléversées **en parallèle** (S3 ou disque local selon
  * la configuration) ; un échec d'envoi n'empêche pas la création du ticket.

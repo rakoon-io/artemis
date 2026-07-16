@@ -21,7 +21,7 @@ import {
 } from "./attachment-upload";
 
 /**
- * Gestion des pièces jointes « en attente » (avant enregistrement du ticket) —
+ * Gestion des pièces jointes « en attente » (avant enregistrement du ticket) -
  * partagée par les dialogues de création ET d'édition. Capture d'images du
  * presse-papier, aperçus, et téléversement en parallèle à la sauvegarde.
  */
@@ -142,7 +142,7 @@ export function usePendingAttachments() {
 export type PendingAttachmentsApi = ReturnType<typeof usePendingAttachments>;
 
 /**
- * Champ « Pièces jointes » ⭐ — zone de collage (image/log/texte) + glisser-déposer
+ * Champ « Pièces jointes » - zone de collage (image/log/texte) + glisser-déposer
  * + Parcourir, avec aperçu des pièces en attente. `onInsertText` permet, quand du
  * texte est collé, de l'insérer dans la description plutôt qu'en pièce jointe.
  */

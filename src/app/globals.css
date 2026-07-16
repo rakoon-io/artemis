@@ -2,7 +2,7 @@
 
 @custom-variant dark (&:is(.dark *, .midnight *, .slate *, .carbon *));
 
-/* ─── Design tokens (charte Rakoon — monochrome + bordeaux #800020) ─────────────────────────── */
+/* ─── Design tokens (charte Rakoon - monochrome + bordeaux #800020) ─────────────────────────── */
 :root {
   --radius: 0.625rem;
 
@@ -15,7 +15,7 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.16 0 0);
 
-  /* Bordeaux Rakoon — #800020 */
+  /* Bordeaux Rakoon - #800020 */
   --primary: oklch(0.36 0.13 13);
   --primary-foreground: oklch(0.985 0 0);
 
@@ -36,7 +36,7 @@
   --ring: oklch(0.36 0.13 13);
 }
 
-/* Base sombre — partagée par toutes les palettes sombres (surchargée ensuite). */
+/* Base sombre - partagée par toutes les palettes sombres (surchargée ensuite). */
 .dark,
 .midnight,
 .slate,

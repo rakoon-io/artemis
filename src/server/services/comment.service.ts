@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 
-/** Service Commentaire — accès données pur. */
+/** Service Commentaire - accès données pur. */
 
 export function listComments(ticketId: string) {
   return prisma.comment.findMany({

@@ -27,7 +27,7 @@ import { UserManager } from "@/components/settings/user-manager";
 
 /**
  * Paramètres du projet (RSC) : personnalisation du workflow (colonnes) et des
- * labels. Réservé aux administrateurs — un non-admin voit un message d'accès
+ * labels. Réservé aux administrateurs - un non-admin voit un message d'accès
  * refusé (l'onglet est de toute façon masqué en amont).
  */
 export default async function SettingsPage({
@@ -40,7 +40,7 @@ export default async function SettingsPage({
 
   if (!session?.user || !isAdmin(session.user)) {
     return (
-      <div className="mx-auto max-w-2xl p-6">
+      <div className="mx-auto max-w-2xl">
         <Card>
           <CardHeader>
             <CardTitle>Accès réservé aux administrateurs</CardTitle>
@@ -77,7 +77,7 @@ export default async function SettingsPage({
       <div className="space-y-1">
         <p className="font-mono text-xs text-muted-foreground">{project.key}</p>
         <h1 className="text-2xl font-semibold tracking-tight">
-          {project.name} — Paramètres
+          {project.name} - Paramètres
         </h1>
         <p className="text-sm text-muted-foreground">
           Éditez le projet, personnalisez le workflow (colonnes, labels) et gérez

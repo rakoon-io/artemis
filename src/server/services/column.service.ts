@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db";
 import { rankAfter } from "@/lib/rank";
 
 /**
- * Service Colonne — accès données pur.
+ * Service Colonne - accès données pur.
  * Suppression : réaffecte les tickets vers la 1re colonne (order min) du projet
  * avant de supprimer, en réattribuant des rangs propres (voir ADR-0002).
  */

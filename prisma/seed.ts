@@ -4,7 +4,7 @@ import { generateNKeysBetween } from "fractional-indexing";
 
 const prisma = new PrismaClient();
 
-// Jeux par défaut — alignés sur project.service.ts (order = index dans le tableau).
+// Jeux par défaut - alignés sur project.service.ts (order = index dans le tableau).
 const DEFAULT_TICKET_TYPES = [
   { name: "Bug", color: "#EF4444" },
   { name: "Fonctionnalité", color: "#6366F1" },
@@ -43,7 +43,7 @@ async function main() {
 
   // --- Projet de démonstration (idempotent) ---
   if (await prisma.project.findUnique({ where: { key: "RKN" } })) {
-    console.log("Seed déjà présent (projet RKN) — rien à faire.");
+    console.log("Seed déjà présent (projet RKN) - rien à faire.");
     return;
   }
 

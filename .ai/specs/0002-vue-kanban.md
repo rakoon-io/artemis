@@ -1,4 +1,4 @@
-# SPEC-0002 — Vue Kanban
+# SPEC-0002 - Vue Kanban
 - **Statut** : Rédigée (v1)
 - **Rôles concernés** : Admin · Rapporteur
 

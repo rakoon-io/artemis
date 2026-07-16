@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 
-/** Service Pièce jointe — accès données pur (métadonnées ; l'objet vit dans S3). */
+/** Service Pièce jointe - accès données pur (métadonnées ; l'objet vit dans S3). */
 
 export interface CreateAttachmentServiceInput {
   ticketId: string;

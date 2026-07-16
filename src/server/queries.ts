@@ -10,7 +10,7 @@ import type { TicketFilters } from "./services/ticket.service";
 
 /**
  * Couche lecture pour les Server Components : enveloppe les services (aucune écriture).
- * Aucune requête Prisma directe ici — tout passe par `services/*`.
+ * Aucune requête Prisma directe ici - tout passe par `services/*`.
  */
 
 export function getProjects() {
@@ -45,6 +45,11 @@ export function getTicketDetail(id: string) {
 
 export function getSprints(projectId: string) {
   return sprintService.listSprints(projectId);
+}
+
+/** Sprints avec leurs tickets (vue Sprints). */
+export function getSprintsWithTickets(projectId: string) {
+  return sprintService.listSprintsWithTickets(projectId);
 }
 
 export function getLabels(projectId: string) {

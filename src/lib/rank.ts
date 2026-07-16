@@ -1,7 +1,7 @@
 import { generateKeyBetween, generateNKeysBetween } from "fractional-indexing";
 
 /**
- * Ordre lexicographique des cartes (lexorank) — voir ADR-0002.
+ * Ordre lexicographique des cartes (lexorank) - voir ADR-0002.
  * S'appuie sur `fractional-indexing` (éprouvé) : insérer entre deux voisines
  * ne recalcule qu'un seul `rank`, sans renuméroter la colonne.
  */

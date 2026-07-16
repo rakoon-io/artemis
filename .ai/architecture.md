@@ -1,4 +1,4 @@
-# 🏗️ Architecture — Rakoon Tracker
+# Architecture - Rakoon Tracker
 
 > Référence technique **canonique** : stack, structure des fichiers, **modèle de données**, patterns
 > et conventions. Le modèle de données défini ici fait autorité ; les autres documents le résument
@@ -31,7 +31,7 @@ Ce choix privilégie la **cohésion**, la **type-safety de bout en bout** et une
 └────────────────────────────┬───────────────────────────────┘
                              │ appels typés
 ┌────────────────────────────▼───────────────────────────────┐
-│         Couche métier — services + policies (RBAC)           │
+│         Couche métier - services + policies (RBAC)           │
 │                validation Zod à la frontière                 │
 └──────────┬──────────────────────────────────┬──────────────┘
            │ Prisma                             │ SDK S3
@@ -150,7 +150,7 @@ model Column {                               // colonne Kanban = statut configur
   tickets   Ticket[]
 }
 
-model TicketType {                           // type de ticket — configurable par projet
+model TicketType {                           // type de ticket - configurable par projet
   id        String   @id @default(cuid())
   projectId String
   project   Project  @relation(fields: [projectId], references: [id])
@@ -161,7 +161,7 @@ model TicketType {                           // type de ticket — configurable 
   @@unique([projectId, name])
 }
 
-model TicketPriority {                        // priorité de ticket — configurable par projet
+model TicketPriority {                        // priorité de ticket - configurable par projet
   id        String   @id @default(cuid())
   projectId String
   project   Project  @relation(fields: [projectId], references: [id])
@@ -256,7 +256,7 @@ model Comment {
 > ℹ️ **Notes de modélisation (v1).** La relation `Attachment.uploadedBy → User` est en place dans le
 > schéma réel. **Aucune appartenance par projet** (`ProjectMember`) n'est modélisée en v1 : la
 > visibilité est **à l'échelle de l'organisation** (organisation unique, inscription restreinte par
-> domaine — cf. correctif de sécurité **C1**), `ProjectMember` restant une **évolution future** (voir
+> domaine - cf. correctif de sécurité **C1**), `ProjectMember` restant une **évolution future** (voir
 > [`context.md`](./context.md)).
 
 ## Patterns clés
@@ -299,7 +299,7 @@ model Comment {
 - **Unit** (Vitest) : services, policies, validators.
 - **E2E** (Playwright) : parcours création de ticket, Kanban (drag & drop), sprint.
 - **Typecheck** : `tsc --noEmit`. **Lint** : ESLint. **Format** : Prettier.
-- **Build** : `npm run build` force `NODE_ENV=production` via **`cross-env`** — évite un souci de
+- **Build** : `npm run build` force `NODE_ENV=production` via **`cross-env`** - évite un souci de
   prerender React quand l'environnement ambiant vaut `development`.
 - **CI** (future) : `typecheck` + `lint` + `test` sur chaque PR.
 

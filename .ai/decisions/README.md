@@ -1,4 +1,4 @@
-# 🗂️ Décisions d'architecture (ADR)
+# Décisions d'architecture (ADR)
 
 Ce dossier trace les **décisions d'architecture** structurantes de Rakoon Tracker sous forme
 d'**ADR** (*Architecture Decision Records*).
@@ -11,7 +11,7 @@ pas : si la direction change, on ajoute un **nouvel** ADR qui la remplace (statu
 [architecture](../architecture.md) (modèle de données & patterns) et la
 [spec produit](../../SPEC.md).
 
-## 📋 Index des ADR
+## Index des ADR
 
 | Numéro | Titre | Statut | Lien |
 |--------|-------|--------|------|
@@ -22,17 +22,17 @@ pas : si la direction change, on ajoute un **nouvel** ADR qui la remplace (statu
 | ADR-0005 | Déploiement Dokploy (Docker) sur OVH / `apps.rakoon.io` | Acceptée | [0005](./0005-deploiement-dokploy-ovh.md) |
 | ADR-0006 | Types & priorités de tickets configurables par projet (tables) | Acceptée | [0006](./0006-types-priorites-configurables.md) |
 
-## 🧭 Conventions
+## Conventions
 
 - **Nommage** : `000X-titre-en-kebab-case.md`, numérotation continue.
 - **Statuts** : `Proposée` → `Acceptée` → (`Remplacée` | `Dépréciée`).
 - **Immuabilité** : on ne réécrit pas une décision acceptée ; on en ouvre une nouvelle.
 - Toute **décision structurante** ⇒ un ADR (rappel dans [`AGENTS.md`](../../AGENTS.md)).
 
-## 📝 Modèle vierge (à copier)
+## Modèle vierge (à copier)
 
 ```markdown
-# ADR-000X — <Titre>
+# ADR-000X - <Titre>
 - **Statut** : Acceptée
 - **Date** : AAAA-MM-JJ
 - **Décideurs** : équipe Rakoon Tracker

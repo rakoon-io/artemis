@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ChevronDown, X } from "lucide-react";
@@ -94,6 +94,7 @@ export function KanbanBoard({
   types,
   priorities,
   className,
+  action,
 }: {
   columns: BoardColumnData[];
   projectId: string;
@@ -103,6 +104,8 @@ export function KanbanBoard({
   types: TicketTypeOption[];
   priorities: PriorityOption[];
   className?: string;
+  /** Élément affiché à droite de la barre de filtres (ex. « Nouveau ticket »). */
+  action?: ReactNode;
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -113,7 +116,7 @@ export function KanbanBoard({
 
   // Après une action serveur (`router.refresh()`), remplace l'état optimiste par
   // la vérité canonique renvoyée en props (ajustement d'état pendant le rendu,
-  // pattern recommandé plutôt qu'un effet — cf. « You Might Not Need an Effect »).
+  // pattern recommandé plutôt qu'un effet - cf. « You Might Not Need an Effect »).
   if (initialColumns !== syncedColumns) {
     setSyncedColumns(initialColumns);
     setColumns(initialColumns);
@@ -288,7 +291,7 @@ export function KanbanBoard({
 
   return (
     <TooltipProvider>
-      <div className={cn("flex min-h-0 flex-1 flex-col gap-3 p-4 md:p-6", className)}>
+      <div className={cn("flex min-h-0 flex-col gap-3", className)}>
         {/* Barre de filtres */}
         <div className="flex flex-wrap items-center gap-2">
           <FilterMenu
@@ -329,6 +332,7 @@ export function KanbanBoard({
               Réinitialiser
             </Button>
           )}
+          {action && <div className="ml-auto">{action}</div>}
         </div>
 
         <DndContext

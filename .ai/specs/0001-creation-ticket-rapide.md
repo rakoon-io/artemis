@@ -1,4 +1,4 @@
-# SPEC-0001 — Création rapide de ticket ⭐
+# SPEC-0001 - Création rapide de ticket 
 - **Statut** : Rédigée (v1)
 - **Rôles concernés** : Admin · Rapporteur
 

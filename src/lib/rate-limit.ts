@@ -1,8 +1,8 @@
 /**
- * Limiteur de débit en mémoire (fenêtre fixe) — correctif M1 de l'audit.
+ * Limiteur de débit en mémoire (fenêtre fixe) - correctif M1 de l'audit.
  *
  * Le store est porté par `globalThis` (comme le client Prisma) pour être **partagé**
- * entre toutes les routes et évaluations de module d'un même process Node — sinon
+ * entre toutes les routes et évaluations de module d'un même process Node - sinon
  * chaque route bundle sa propre copie du `Map` et le compteur ne s'accumule pas.
  * Mono-instance : suffisant pour un déploiement Dokploy à une réplique derrière Traefik.
  * (Pour du multi-instance, remplacer le store par Redis/Upstash.)

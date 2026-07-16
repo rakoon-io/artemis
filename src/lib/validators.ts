@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { Role } from "@prisma/client";
 
-/** Schémas Zod partagés client/serveur — validation à chaque frontière (voir .ai/rules.md). */
+/** Schémas Zod partagés client/serveur - validation à chaque frontière (voir .ai/rules.md). */
 
-/** Couleur hexadécimale #RRGGBB — partagée par labels, types et priorités. */
+/** Couleur hexadécimale #RRGGBB - partagée par labels, types et priorités. */
 const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/, "Couleur hexadécimale (#RRGGBB)");
 
 export const credentialsSchema = z.object({

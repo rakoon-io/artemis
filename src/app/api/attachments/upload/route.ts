@@ -9,7 +9,7 @@ import { writeLocal } from "@/lib/storage";
 const MAX_SIZE = 10 * 1024 * 1024; // 10 Mo
 
 /**
- * PUT /api/attachments/upload?key=&filename=&contentType= — réception d'une pièce
+ * PUT /api/attachments/upload?key=&filename=&contentType= - réception d'une pièce
  * jointe en **stockage local** (fallback quand S3/MinIO n'est pas configuré).
  *
  * Cette route fait tout en un seul appel : écriture disque **et** enregistrement des
@@ -29,7 +29,7 @@ export async function PUT(request: Request): Promise<NextResponse> {
   const contentType =
     (params.get("contentType") ?? "").slice(0, 120) || "application/octet-stream";
 
-  // La clé doit cibler un ticket (`attachments/<ticketId>/...`) — sinon rejet.
+  // La clé doit cibler un ticket (`attachments/<ticketId>/...`) - sinon rejet.
   if (!key.startsWith("attachments/")) {
     return NextResponse.json({ error: "Clé invalide." }, { status: 400 });
   }
