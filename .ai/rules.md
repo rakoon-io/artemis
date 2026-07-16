@@ -1,4 +1,4 @@
-# Règles de génération de code - Rakoon Tracker
+# Règles de génération de code - Artemis
 
 > **Ces règles s'imposent à toute génération ou édition de code.** Elles déclinent la
 > [`vision.md`](./vision.md) et l'[`architecture.md`](./architecture.md) en consignes concrètes et

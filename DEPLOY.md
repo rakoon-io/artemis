@@ -1,4 +1,4 @@
-# Déploiement - Rakoon Tracker
+# Déploiement - Artemis
 
 > Déploiement **« comme les autres applis Rakoon »** : serveur **OVH + Dokploy**, reverse-proxy
 > **Traefik** sur le wildcard **`*.apps.rakoon.io`**. Décision tracée dans

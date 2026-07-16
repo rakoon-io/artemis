@@ -30,7 +30,7 @@ export default async function AppLayout({
             className="flex items-center gap-2 font-semibold transition-opacity hover:opacity-80"
           >
             <TrackerMark className="size-7 shrink-0 text-primary" />
-            <span>Rakoon Tracker</span>
+            <span>Artemis</span>
           </Link>
           <div className="flex-1" />
           <ThemePicker />

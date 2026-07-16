@@ -1,4 +1,4 @@
-# Architecture - Rakoon Tracker
+# Architecture - Artemis
 
 > Référence technique **canonique** : stack, structure des fichiers, **modèle de données**, patterns
 > et conventions. Le modèle de données défini ici fait autorité ; les autres documents le résument
@@ -8,7 +8,7 @@
 
 ## Vue d'ensemble
 
-Rakoon Tracker est un **monolithe full-stack TypeScript** bâti sur **Next.js (App Router)**. Le même
+Artemis est un **monolithe full-stack TypeScript** bâti sur **Next.js (App Router)**. Le même
 projet sert le rendu (React Server/Client Components), l'API (Route Handlers + Server Actions) et la
 logique métier (services), avec **Prisma** pour l'accès à **PostgreSQL** et un **stockage
 S3-compatible** pour les pièces jointes.

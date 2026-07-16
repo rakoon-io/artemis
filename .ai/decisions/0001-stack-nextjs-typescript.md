@@ -1,10 +1,10 @@
 # ADR-0001 - Stack : monolithe Next.js + TypeScript
 - **Statut** : Acceptée
 - **Date** : 2026-07-09
-- **Décideurs** : équipe Rakoon Tracker
+- **Décideurs** : équipe Artemis
 
 ## Contexte
-Rakoon Tracker est un outil interne de suivi de tickets voulu sobre, moderne, efficace et
+Artemis est un outil interne de suivi de tickets voulu sobre, moderne, efficace et
 personnalisable, livré par une équipe **unique et réduite**. Trois exigences pèsent sur le choix
 technique : une **type-safety de bout en bout** (du formulaire jusqu'à la base), une **DX élevée**
 pour itérer vite, et la possibilité de **self-hoster** (Docker + PostgreSQL) autant que de déployer

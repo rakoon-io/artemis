@@ -1,4 +1,4 @@
-// Rakoon Tracker - schéma de données (canonique).
+// Artemis - schéma de données (canonique).
 // Voir .ai/architecture.md#modèle-de-données-canonique
 generator client {
   provider = "prisma-client-js"

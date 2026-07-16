@@ -56,7 +56,7 @@ export function RegisterForm() {
         return;
       }
 
-      toast.success("Bienvenue sur Rakoon Tracker !");
+      toast.success("Bienvenue sur Artemis !");
       router.push("/projects");
       router.refresh();
     } catch {
@@ -71,7 +71,7 @@ export function RegisterForm() {
       <CardHeader>
         <CardTitle className="text-xl">Créer un compte</CardTitle>
         <CardDescription>
-          Rejoignez votre espace Rakoon Tracker.
+          Rejoignez votre espace Artemis.
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>

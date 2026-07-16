@@ -1,4 +1,4 @@
-# Vision - Rakoon Tracker
+# Vision - Artemis
 
 > **À lire en premier.** Ce document est la « North Star » du projet : toute décision produit
 > ou de code doit pouvoir s'y rattacher. En cas de doute ou de conflit, **cette vision prime**.
@@ -9,13 +9,13 @@
 
 ## Objectif
 
-**Rakoon Tracker** est un **outil de suivi de tickets** (bugs, tâches, demandes) pensé pour être
+**Artemis** est un **outil de suivi de tickets** (bugs, tâches, demandes) pensé pour être
 **sobre, moderne, efficace et personnalisable**. Il permet à une équipe d'organiser son travail
 selon une **méthode agile** (backlog, sprints/lots, tableau Kanban) sans la lourdeur des suites
 généralistes du marché.
 
 **Problème résolu.** Les outils existants sont soit trop complexes et coûteux, soit trop rigides.
-Rakoon Tracker vise le juste milieu : **création de ticket sans friction**, **flux de travail
+Artemis vise le juste milieu : **création de ticket sans friction**, **flux de travail
 personnalisable**, et une interface épurée qui va à l'essentiel.
 
 ## Proposition de valeur

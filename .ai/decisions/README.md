@@ -1,6 +1,6 @@
 # Décisions d'architecture (ADR)
 
-Ce dossier trace les **décisions d'architecture** structurantes de Rakoon Tracker sous forme
+Ce dossier trace les **décisions d'architecture** structurantes de Artemis sous forme
 d'**ADR** (*Architecture Decision Records*).
 
 Un **ADR** est une note courte et datée qui capture **une** décision technique importante : son
@@ -35,7 +35,7 @@ pas : si la direction change, on ajoute un **nouvel** ADR qui la remplace (statu
 # ADR-000X - <Titre>
 - **Statut** : Acceptée
 - **Date** : AAAA-MM-JJ
-- **Décideurs** : équipe Rakoon Tracker
+- **Décideurs** : équipe Artemis
 
 ## Contexte
 <Problème à résoudre, contraintes et forces en présence.>

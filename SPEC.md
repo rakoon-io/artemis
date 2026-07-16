@@ -1,4 +1,4 @@
-# SPEC - Rakoon Tracker
+# SPEC - Artemis
 
 > Cible produit détaillée de la **v1**. La direction générale est fixée par
 > [`.ai/vision.md`](./.ai/vision.md) (North Star) ; le **modèle de données** de référence vit dans
@@ -9,7 +9,7 @@
 
 ## 1. Résumé
 
-Rakoon Tracker est un **outil interne de suivi de tickets** sobre, moderne, efficace et
+Artemis est un **outil interne de suivi de tickets** sobre, moderne, efficace et
 personnalisable, adapté à une **méthode agile** (backlog, sprints/lots, Kanban). L'accent est mis
 sur une **création de ticket sans friction** (pièce jointe par copier-coller) et un **flux de
 travail configurable**.

@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/card";
 import { CreateProjectDialog } from "@/components/project/create-project-dialog";
 
-export const metadata: Metadata = { title: "Projets · Rakoon Tracker" };
+export const metadata: Metadata = { title: "Projets · Artemis" };
 
 export default async function ProjectsPage() {
   const [session, projects] = await Promise.all([auth(), getProjects()]);

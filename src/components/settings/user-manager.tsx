@@ -192,7 +192,7 @@ function DeleteUserDialog({
           <DialogTitle>Supprimer « {displayName} » ?</DialogTitle>
           <DialogDescription>
             Cette action est définitive : l&apos;utilisateur perdra l&apos;accès à
-            Rakoon Tracker.
+            Artemis.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

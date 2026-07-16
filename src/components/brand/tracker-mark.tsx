@@ -1,8 +1,8 @@
 import type { SVGProps } from "react";
 
 /**
- * Emblème de Rakoon Tracker : un arc bandé, flèche encochée prête à décocher,
- * clin d'oeil a la traque / au suivi (tracking). Monochrome via `currentColor`,
+ * Emblème d'Artemis : un arc bandé, flèche encochée prête à décocher,
+ * clin d'oeil à la traque / au suivi (tracking). Monochrome via `currentColor`,
  * il s'adapte donc automatiquement au thème (pas besoin de `dark:invert`).
  */
 export function TrackerMark(props: SVGProps<SVGSVGElement>) {
@@ -12,7 +12,7 @@ export function TrackerMark(props: SVGProps<SVGSVGElement>) {
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       role="img"
-      aria-label="Rakoon Tracker"
+      aria-label="Artemis"
       {...props}
     >
       <g

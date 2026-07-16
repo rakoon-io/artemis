@@ -3,7 +3,7 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 
 export const metadata: Metadata = {
-  title: "Rakoon Tracker",
+  title: "Artemis",
   description:
     "Suivi de tickets sobre, moderne et personnalisable pour une méthode agile.",
 };

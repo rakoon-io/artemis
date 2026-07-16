@@ -51,7 +51,7 @@ async function main() {
   const project = await prisma.project.create({
     data: {
       key: "RKN",
-      name: "Rakoon Tracker",
+      name: "Artemis",
       description: "Projet de démonstration livré par le seed.",
       columns: { create: colNames.map((name, order) => ({ name, order })) },
       labels: {
