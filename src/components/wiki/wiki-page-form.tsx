@@ -24,31 +24,15 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WikiContent } from "@/components/wiki/wiki-content";
 import {
+  detectMention,
+  rankTickets,
+  type MentionState,
+  type TicketRef,
+} from "@/lib/wiki-mentions";
+import {
   createWikiPageAction,
   updateWikiPageAction,
 } from "@/server/actions/wiki.actions";
-
-interface TicketRef {
-  id: string;
-  key: string;
-  title: string;
-}
-
-interface MentionState {
-  start: number;
-  query: string;
-}
-
-/** Détecte une mention « @… » en cours de frappe autour du curseur. */
-function detectMention(value: string, caret: number): MentionState | null {
-  let i = caret;
-  while (i > 0 && /[A-Za-z0-9-]/.test(value[i - 1])) i--;
-  if (i === 0 || value[i - 1] !== "@") return null;
-  const atPos = i - 1;
-  // Le « @ » doit débuter un mot (précédé d'un espace, d'une ponctuation, ou du début).
-  if (atPos > 0 && /[A-Za-z0-9]/.test(value[atPos - 1])) return null;
-  return { start: atPos, query: value.slice(i, caret) };
-}
 
 // Propriétés à copier sur le div miroir pour retrouver la position du curseur.
 const CARET_PROPS = [
@@ -116,16 +100,7 @@ export function WikiPageForm({
     tickets.map((t) => [t.key.toUpperCase(), t.id]),
   );
 
-  const mentionResults = mention
-    ? tickets
-        .filter((t) => {
-          const q = mention.query.toLowerCase();
-          return (
-            t.key.toLowerCase().includes(q) || t.title.toLowerCase().includes(q)
-          );
-        })
-        .slice(0, 8)
-    : [];
+  const mentionResults = mention ? rankTickets(tickets, mention.query) : [];
 
   /** Textarea de l'éditeur (accès dans les handlers, hors rendu). */
   function editor(): HTMLTextAreaElement | null {
