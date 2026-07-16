@@ -14,19 +14,28 @@ import {
 import { cn } from "@/lib/utils";
 import { DARK_THEMES, LIGHT_THEMES, type ThemeDef } from "@/lib/themes";
 
-/** Vignette d'aperçu d'une palette : fond + trait de texte + pastille d'accent. */
+/**
+ * Mini aperçu de la palette : une petite « fenêtre » avec une barre d'accent, le
+ * fond, et une carte de surface qui révèle la teinte propre à chaque palette
+ * (pour les distinguer clairement dans le menu).
+ */
 function Swatch({ swatch }: { swatch: ThemeDef["swatch"] }) {
   return (
     <span
-      className="relative flex size-5 shrink-0 items-center justify-center overflow-hidden rounded-full border border-black/10 dark:border-white/15"
+      className="relative block h-6 w-8 shrink-0 overflow-hidden rounded-[5px] border border-black/10 shadow-sm dark:border-white/15"
       style={{ background: swatch.bg }}
       aria-hidden
     >
+      {/* Barre d'accent (en-tête de la fenêtre) */}
       <span
-        className="absolute inset-x-1 bottom-1 h-[2px] rounded-full"
-        style={{ background: swatch.fg, opacity: 0.4 }}
+        className="absolute inset-x-0 top-0 h-1.5"
+        style={{ background: swatch.primary }}
       />
-      <span className="size-2 rounded-full" style={{ background: swatch.primary }} />
+      {/* Carte de surface (révèle la teinte de la palette) */}
+      <span
+        className="absolute inset-x-1 bottom-1 h-2 rounded-[2px]"
+        style={{ background: swatch.surface }}
+      />
     </span>
   );
 }
@@ -75,8 +84,8 @@ export function ThemePicker() {
           onSelect={() => setTheme("system")}
           className={cn("gap-2.5", current === "system" && "bg-accent/60")}
         >
-          <span className="flex size-5 shrink-0 items-center justify-center rounded-full border border-border bg-gradient-to-br from-background to-muted-foreground/40 text-foreground">
-            <Monitor className="size-3" />
+          <span className="flex h-6 w-8 shrink-0 items-center justify-center rounded-[5px] border border-border bg-gradient-to-br from-background to-muted-foreground/40 text-foreground shadow-sm">
+            <Monitor className="size-3.5" />
           </span>
           <span className="flex-1">Système</span>
           {current === "system" && <Check className="size-4 text-primary" />}
