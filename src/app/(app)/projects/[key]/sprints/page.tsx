@@ -3,10 +3,14 @@ import { SprintState } from "@prisma/client";
 
 import { auth } from "@/auth";
 import { isAdmin } from "@/lib/policies";
-import { getProjectByKey, getSprintsWithTickets } from "@/server/queries";
+import {
+  getBacklogTickets,
+  getProjectByKey,
+  getSprintsWithTickets,
+} from "@/server/queries";
 import { Badge } from "@/components/ui/badge";
 import { CreateSprintDialog } from "@/components/sprint/create-sprint-dialog";
-import { SprintCard } from "@/components/sprint/sprint-card";
+import { SprintCard, SprintTicketItem } from "@/components/sprint/sprint-card";
 
 /** Groupes affichés, dans l'ordre Actif, Planifiés, Terminés. */
 const GROUPS = [
@@ -16,9 +20,9 @@ const GROUPS = [
 ] as const;
 
 /**
- * Sprints et lots d'un projet (RSC). Liste les sprints regroupés par état, avec
- * pour chacun ses tickets rattachés. Les actions d'administration ne sont
- * proposées qu'aux administrateurs.
+ * Sprints et lots d'un projet (RSC). Liste les sprints regroupés par état avec
+ * leurs tickets, plus le backlog (tickets sans sprint). Chaque ticket peut être
+ * distribué dans un sprint (ou renvoyé au backlog) via son menu.
  */
 export default async function SprintsPage({
   params,
@@ -29,11 +33,15 @@ export default async function SprintsPage({
   const project = await getProjectByKey(key);
   if (!project) notFound();
 
-  const [sprints, session] = await Promise.all([
+  const [sprints, backlog, session] = await Promise.all([
     getSprintsWithTickets(project.id),
+    getBacklogTickets(project.id),
     auth(),
   ]);
   const admin = isAdmin(session?.user);
+  const sprintOptions = sprints.map((s) => ({ id: s.id, name: s.name }));
+
+  const isEmpty = sprints.length === 0 && backlog.length === 0;
 
   return (
     <div className="space-y-8">
@@ -41,7 +49,8 @@ export default async function SprintsPage({
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">Sprints et lots</h1>
           <p className="max-w-prose text-sm text-muted-foreground">
-            Un <strong className="font-medium text-foreground">lot</strong> est un
+            Distribuez les tickets du backlog dans les sprints. Un{" "}
+            <strong className="font-medium text-foreground">lot</strong> est un
             sprint sans dates ; ajoutez des dates et un objectif pour en faire une
             itération.
           </p>
@@ -49,10 +58,10 @@ export default async function SprintsPage({
         {admin && <CreateSprintDialog projectId={project.id} />}
       </div>
 
-      {sprints.length === 0 ? (
+      {isEmpty ? (
         <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
-          Aucun sprint pour l&apos;instant.
-          {admin ? " Créez-en un pour commencer à planifier." : ""}
+          Aucun sprint ni ticket pour l&apos;instant.
+          {admin ? " Créez un sprint pour commencer à planifier." : ""}
         </div>
       ) : (
         <div className="space-y-8">
@@ -74,6 +83,7 @@ export default async function SprintsPage({
                       sprint={sprint}
                       tickets={sprint.tickets}
                       projectKey={project.key}
+                      sprintOptions={sprintOptions}
                       isAdmin={admin}
                     />
                   ))}
@@ -81,6 +91,36 @@ export default async function SprintsPage({
               </section>
             );
           })}
+
+          <section className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Backlog
+              </h2>
+              <Badge variant="outline">{backlog.length}</Badge>
+              <span className="text-xs text-muted-foreground">
+                tickets sans sprint
+              </span>
+            </div>
+            {backlog.length === 0 ? (
+              <p className="rounded-md border border-dashed px-3 py-4 text-sm text-muted-foreground">
+                Le backlog est vide : tous les tickets sont rattachés à un sprint.
+              </p>
+            ) : (
+              <ul className="divide-y rounded-lg border">
+                {backlog.map((ticket) => (
+                  <li key={ticket.id}>
+                    <SprintTicketItem
+                      ticket={ticket}
+                      projectKey={project.key}
+                      currentSprintId={null}
+                      sprintOptions={sprintOptions}
+                    />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
         </div>
       )}
     </div>

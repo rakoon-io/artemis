@@ -7,7 +7,9 @@ import { toast } from "sonner";
 import {
   ArrowRight,
   CalendarRange,
+  Check,
   Flag,
+  FolderInput,
   Loader2,
   Play,
   RotateCcw,
@@ -19,6 +21,7 @@ import {
   deleteSprintAction,
   setSprintStateAction,
 } from "@/server/actions/sprint.actions";
+import { setTicketSprintAction } from "@/server/actions/ticket.actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,9 +42,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { formatDate } from "@/lib/utils";
 
-/** Ticket rattaché à un sprint (champs d'affichage). */
+/** Ticket rattaché à un sprint (ou au backlog), champs d'affichage. */
 export interface SprintTicketRow {
   id: string;
   key: string;
@@ -50,6 +61,12 @@ export interface SprintTicketRow {
   type: { name: string; color: string };
   priority: { name: string; color: string };
   assignee: { name: string | null; email: string } | null;
+}
+
+/** Sprint sélectionnable pour la distribution des tickets. */
+export interface SprintChoice {
+  id: string;
+  name: string;
 }
 
 /** Métadonnées d'affichage par état de sprint. */
@@ -62,28 +79,107 @@ const STATE_META: Record<
   [SprintState.COMPLETED]: { label: "Terminé", variant: "outline" },
 };
 
-function TicketRow({
+/** Menu de déplacement d'un ticket vers un sprint (ou le backlog). */
+function TicketSprintMenu({
+  ticketId,
+  currentSprintId,
+  sprintOptions,
+}: {
+  ticketId: string;
+  currentSprintId: string | null;
+  sprintOptions: SprintChoice[];
+}) {
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+
+  async function move(sprintId: string | null) {
+    if (pending || sprintId === currentSprintId) return;
+    setPending(true);
+    const res = await setTicketSprintAction(ticketId, sprintId);
+    setPending(false);
+    if (!res.ok) {
+      toast.error(res.error);
+      return;
+    }
+    toast.success(sprintId ? "Ticket ajouté au sprint." : "Ticket renvoyé au backlog.");
+    router.refresh();
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-7 shrink-0 text-muted-foreground"
+          aria-label="Déplacer le ticket vers un sprint"
+          disabled={pending}
+        >
+          {pending ? <Loader2 className="animate-spin" /> : <FolderInput />}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">
+          Déplacer vers
+        </DropdownMenuLabel>
+        {sprintOptions.length === 0 && (
+          <p className="px-2 py-1.5 text-xs text-muted-foreground">
+            Aucun sprint. Créez-en un.
+          </p>
+        )}
+        {sprintOptions.map((s) => (
+          <DropdownMenuItem
+            key={s.id}
+            onSelect={() => move(s.id)}
+            className="gap-2"
+          >
+            <span className="flex-1 truncate">{s.name}</span>
+            {currentSprintId === s.id && (
+              <Check className="size-4 shrink-0 text-primary" />
+            )}
+          </DropdownMenuItem>
+        ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => move(null)} className="gap-2">
+          <span className="flex-1">Backlog (aucun sprint)</span>
+          {currentSprintId === null && (
+            <Check className="size-4 shrink-0 text-primary" />
+          )}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/** Ligne d'un ticket dans la vue Sprints : lien + badges + menu de distribution. */
+export function SprintTicketItem({
   ticket,
   projectKey,
+  currentSprintId,
+  sprintOptions,
 }: {
   ticket: SprintTicketRow;
   projectKey: string;
+  currentSprintId: string | null;
+  sprintOptions: SprintChoice[];
 }) {
   return (
-    <Link
-      href={`/projects/${projectKey}/tickets/${ticket.id}`}
-      className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent"
-    >
-      <span className="w-16 shrink-0 truncate font-mono text-xs text-muted-foreground">
-        {ticket.key}
-      </span>
-      <span
-        className="size-2 shrink-0 rounded-full"
-        style={{ backgroundColor: ticket.type.color }}
-        title={ticket.type.name}
-        aria-hidden
-      />
-      <span className="flex-1 truncate">{ticket.title}</span>
+    <div className="flex items-center gap-2 px-2 py-1.5 text-sm">
+      <Link
+        href={`/projects/${projectKey}/tickets/${ticket.id}`}
+        className="flex min-w-0 flex-1 items-center gap-2 transition-colors hover:text-primary"
+      >
+        <span className="w-16 shrink-0 truncate font-mono text-xs text-muted-foreground">
+          {ticket.key}
+        </span>
+        <span
+          className="size-2 shrink-0 rounded-full"
+          style={{ backgroundColor: ticket.type.color }}
+          title={ticket.type.name}
+          aria-hidden
+        />
+        <span className="flex-1 truncate">{ticket.title}</span>
+      </Link>
       <span className="hidden shrink-0 items-center gap-1.5 text-xs text-muted-foreground sm:flex">
         <span
           className="size-2 rounded-full"
@@ -92,27 +188,35 @@ function TicketRow({
         />
         {ticket.priority.name}
       </span>
-      <Badge variant="outline" className="shrink-0 font-normal">
+      <Badge variant="outline" className="hidden shrink-0 font-normal sm:inline-flex">
         {ticket.column.name}
       </Badge>
-    </Link>
+      <TicketSprintMenu
+        ticketId={ticket.id}
+        currentSprintId={currentSprintId}
+        sprintOptions={sprintOptions}
+      />
+    </div>
   );
 }
 
 /**
- * Carte d'un sprint / lot : en-tête (état, objectif, dates), liste de ses tickets,
- * et actions d'administration (Démarrer / Clôturer / Supprimer) réservées à l'admin.
- * Le serveur impose l'autorisation dans tous les cas.
+ * Carte d'un sprint / lot : en-tête (état, objectif, dates), liste de ses tickets
+ * (chacun déplaçable vers un autre sprint ou le backlog), et actions d'administration
+ * (Démarrer / Clôturer / Rouvrir / Supprimer) réservées à l'admin. Le serveur impose
+ * l'autorisation dans tous les cas.
  */
 export function SprintCard({
   sprint,
   tickets,
   projectKey,
+  sprintOptions,
   isAdmin,
 }: {
   sprint: Sprint;
   tickets: SprintTicketRow[];
   projectKey: string;
+  sprintOptions: SprintChoice[];
   isAdmin: boolean;
 }) {
   const router = useRouter();
@@ -192,7 +296,12 @@ export function SprintCard({
           <ul className="divide-y rounded-md border">
             {tickets.map((ticket) => (
               <li key={ticket.id}>
-                <TicketRow ticket={ticket} projectKey={projectKey} />
+                <SprintTicketItem
+                  ticket={ticket}
+                  projectKey={projectKey}
+                  currentSprintId={sprint.id}
+                  sprintOptions={sprintOptions}
+                />
               </li>
             ))}
           </ul>

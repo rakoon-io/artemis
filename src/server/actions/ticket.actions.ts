@@ -70,3 +70,18 @@ export async function deleteTicketAction(id: string): Promise<ActionResult> {
     return { ok: true };
   });
 }
+
+/** Affecte un ticket à un sprint, ou l'en retire (sprintId = null renvoie au backlog). */
+export async function setTicketSprintAction(
+  ticketId: string,
+  sprintId: string | null,
+): Promise<ActionResult> {
+  return withUser(async (user) => {
+    const ticket = await getTicketOwnership(ticketId);
+    if (!ticket) return { ok: false, error: "Ticket introuvable." };
+    assert(canEditTicket(user, ticket), "Modification de ce ticket non autorisée.");
+    await updateTicket({ id: ticketId, sprintId });
+    revalidateBoardAndList();
+    return { ok: true };
+  });
+}

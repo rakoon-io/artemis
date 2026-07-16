@@ -202,6 +202,23 @@ export function listBoardTickets(projectId: string) {
   });
 }
 
+/** Tickets du projet sans sprint (backlog), pour la vue Sprints. */
+export function listBacklogTickets(projectId: string) {
+  return prisma.ticket.findMany({
+    where: { projectId, sprintId: null },
+    orderBy: { updatedAt: "desc" },
+    select: {
+      id: true,
+      key: true,
+      title: true,
+      column: { select: { name: true } },
+      type: { select: { name: true, color: true } },
+      priority: { select: { name: true, color: true } },
+      assignee: { select: { name: true, email: true } },
+    },
+  });
+}
+
 export function getTicketById(id: string) {
   return prisma.ticket.findUnique({
     where: { id },

@@ -53,6 +53,11 @@ export function getSprintsWithTickets(projectId: string) {
   return sprintService.listSprintsWithTickets(projectId);
 }
 
+/** Tickets sans sprint (backlog), pour la vue Sprints. */
+export function getBacklogTickets(projectId: string) {
+  return ticketService.listBacklogTickets(projectId);
+}
+
 /** Pages de wiki du projet (barre latérale). */
 export function getWikiPages(projectId: string) {
   return wikiService.listWikiPages(projectId);
