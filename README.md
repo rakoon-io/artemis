@@ -24,6 +24,9 @@ tout self-hostable (Docker + PostgreSQL).
 - **Commentaires** - fil de discussion par ticket.
 - **Pieces jointes** - vignettes des images, telechargement des logs et fichiers.
 - **Controle d'acces par projet** - chaque projet a ses membres ; l'admin voit tout.
+- **Assistant via MCP** - un serveur MCP permet a un assistant de prendre en
+  charge des tickets (au nom d'un compte de service, memes regles d'acces). Voir
+  [`MCP.md`](./MCP.md).
 - **Personnalisation** - workflow (colonnes), labels, types, priorites, themes clair/sombre.
 - **Roles Admin / Rapporteur** - RBAC extensible, **impose cote serveur**.
 
@@ -74,8 +77,12 @@ artemis/
 │   └── lib/        # utilitaires, policies RBAC, validateurs Zod
 ├── prisma/         # schema, migrations et seed
 ├── SPEC.md         # cible produit detaillee
+├── MCP.md          # serveur MCP (assistant IA sur les tickets)
 └── DEPLOY.md       # guide de deploiement
 ```
+
+`src/mcp/` contient le serveur MCP (lance par `npm run mcp`) ; voir
+[`MCP.md`](./MCP.md).
 
 ## Deploiement
 

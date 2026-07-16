@@ -40,6 +40,17 @@ async function main() {
       passwordHash: await bcrypt.hash("rapporteur1234", 12),
     },
   });
+  // Compte de service pour l'assistant IA (serveur MCP). Sans mot de passe : il
+  // n'a pas d'accès web, il agit via le serveur MCP (voir MCP.md).
+  const assistant = await prisma.user.upsert({
+    where: { email: "bot@rakoon.io" },
+    update: {},
+    create: {
+      email: "bot@rakoon.io",
+      name: "Artemis Assistant",
+      role: Role.REPORTER,
+    },
+  });
 
   // --- Projet de démonstration (idempotent) ---
   if (await prisma.project.findUnique({ where: { key: "RKN" } })) {
@@ -88,9 +99,12 @@ async function main() {
     },
   });
 
-  // Le Rapporteur est membre du projet de démonstration (accès accordé).
-  await prisma.projectMember.create({
-    data: { projectId: project.id, userId: reporter.id },
+  // Le Rapporteur et l'assistant IA sont membres du projet de démonstration.
+  await prisma.projectMember.createMany({
+    data: [
+      { projectId: project.id, userId: reporter.id },
+      { projectId: project.id, userId: assistant.id },
+    ],
   });
 
   const col = (name: string) => project.columns.find((c) => c.name === name)!;
@@ -155,7 +169,8 @@ async function main() {
   console.log(
     `Seed OK : projet RKN, ${samples.length} tickets.\n` +
       `  Admin      : admin@rakoon.io / admin1234 (accès à tous les projets)\n` +
-      `  Rapporteur : rapporteur@rakoon.io / rapporteur1234 (membre de RKN)`,
+      `  Rapporteur : rapporteur@rakoon.io / rapporteur1234 (membre de RKN)\n` +
+      `  Assistant  : bot@rakoon.io (compte de service MCP, membre de RKN)`,
   );
 }
 
