@@ -62,7 +62,8 @@ export function DeleteWikiPageButton({
         <DialogHeader>
           <DialogTitle>Supprimer « {pageTitle} » ?</DialogTitle>
           <DialogDescription>
-            La page sera définitivement supprimée. Cette action est irréversible.
+            La page et ses éventuelles sous-pages seront définitivement
+            supprimées. Cette action est irréversible.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

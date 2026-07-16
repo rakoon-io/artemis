@@ -2,12 +2,12 @@ import { prisma } from "@/lib/db";
 
 /** Service Wiki - pages de documentation par projet (autorisation dans les actions). */
 
-/** Pages du projet (métadonnées, pour la barre latérale), plus récentes d'abord. */
+/** Pages du projet (métadonnées + parent), pour construire l'arborescence. */
 export function listWikiPages(projectId: string) {
   return prisma.wikiPage.findMany({
     where: { projectId },
-    orderBy: { updatedAt: "desc" },
-    select: { id: true, title: true, updatedAt: true },
+    orderBy: { title: "asc" },
+    select: { id: true, title: true, parentId: true, updatedAt: true },
   });
 }
 
@@ -58,22 +58,37 @@ export interface CreateWikiPageServiceInput {
   title: string;
   content: string;
   authorId: string;
+  parentId?: string | null;
 }
 
 export function createWikiPage(input: CreateWikiPageServiceInput) {
-  return prisma.wikiPage.create({ data: input });
+  return prisma.wikiPage.create({
+    data: {
+      projectId: input.projectId,
+      title: input.title,
+      content: input.content,
+      authorId: input.authorId,
+      parentId: input.parentId ?? null,
+    },
+  });
 }
 
 export interface UpdateWikiPageServiceInput {
   id: string;
   title: string;
   content: string;
+  parentId?: string | null;
 }
 
 export function updateWikiPage(input: UpdateWikiPageServiceInput) {
   return prisma.wikiPage.update({
     where: { id: input.id },
-    data: { title: input.title, content: input.content },
+    data: {
+      title: input.title,
+      content: input.content,
+      // `undefined` = ne pas toucher le parent ; `null` = remonter à la racine.
+      ...(input.parentId !== undefined ? { parentId: input.parentId } : {}),
+    },
   });
 }
 

@@ -5,6 +5,7 @@ import { FileText, Pencil, Plus } from "lucide-react";
 import { auth } from "@/auth";
 import { isAdmin } from "@/lib/policies";
 import { cn, formatDate } from "@/lib/utils";
+import { ancestorsOf, orderedTree } from "@/lib/wiki-tree";
 import { getAccessibleProjectByKey } from "@/server/access";
 import {
   getTicketKeys,
@@ -63,6 +64,10 @@ export default async function WikiPage({
     ticketKeys.map((t) => [t.key.toUpperCase(), t.id]),
   );
 
+  // Arborescence (hors recherche) et fil d'Ariane de la page courante.
+  const tree = orderedTree(allPages);
+  const trail = current ? ancestorsOf(allPages, current.id) : [];
+
   const createButton = (
     <Button asChild>
       <Link href={`/projects/${project.key}/wiki/new`}>
@@ -112,29 +117,52 @@ export default async function WikiPage({
               </p>
             )}
             <nav className="flex flex-col gap-0.5" aria-label="Pages du wiki">
-              {list.length === 0 ? (
-                <p className="px-3 py-2 text-sm text-muted-foreground">
-                  Aucune page trouvée.
-                </p>
+              {q ? (
+                // Résultats de recherche : liste plate avec extraits.
+                list.length === 0 ? (
+                  <p className="px-3 py-2 text-sm text-muted-foreground">
+                    Aucune page trouvée.
+                  </p>
+                ) : (
+                  list.map((p) => (
+                    <Link
+                      key={p.id}
+                      href={pageHref(p.id)}
+                      aria-current={p.id === current?.id ? "page" : undefined}
+                      className={cn(
+                        "block rounded-md px-3 py-2 text-sm transition-colors",
+                        p.id === current?.id
+                          ? "bg-accent text-accent-foreground"
+                          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                      )}
+                    >
+                      <span className="block truncate font-medium">
+                        {p.title}
+                      </span>
+                      {p.snippet && (
+                        <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                          {p.snippet}
+                        </span>
+                      )}
+                    </Link>
+                  ))
+                )
               ) : (
-                list.map((p) => (
+                // Arborescence : indentation par profondeur.
+                tree.map(({ page: p, depth }) => (
                   <Link
                     key={p.id}
                     href={pageHref(p.id)}
                     aria-current={p.id === current?.id ? "page" : undefined}
+                    style={{ paddingLeft: `${12 + depth * 16}px` }}
                     className={cn(
-                      "block rounded-md px-3 py-2 text-sm transition-colors",
+                      "block truncate rounded-md py-2 pr-3 text-sm transition-colors",
                       p.id === current?.id
-                        ? "bg-accent text-accent-foreground"
+                        ? "bg-accent font-medium text-accent-foreground"
                         : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
                     )}
                   >
-                    <span className="block truncate font-medium">{p.title}</span>
-                    {p.snippet && (
-                      <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                        {p.snippet}
-                      </span>
-                    )}
+                    {p.title}
                   </Link>
                 ))
               )}
@@ -146,6 +174,24 @@ export default async function WikiPage({
               <article className="space-y-4">
                 <div className="flex flex-wrap items-start justify-between gap-3 border-b pb-4">
                   <div className="space-y-1">
+                    {trail.length > 0 && (
+                      <nav
+                        aria-label="Fil d'Ariane"
+                        className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground"
+                      >
+                        {trail.map((a) => (
+                          <span key={a.id} className="flex items-center gap-1">
+                            <Link
+                              href={pageHref(a.id)}
+                              className="hover:text-foreground hover:underline"
+                            >
+                              {a.title}
+                            </Link>
+                            <span aria-hidden>/</span>
+                          </span>
+                        ))}
+                      </nav>
+                    )}
                     <h2 className="text-xl font-semibold tracking-tight">
                       {current.title}
                     </h2>
@@ -156,6 +202,14 @@ export default async function WikiPage({
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
+                    <Button asChild variant="outline" size="sm">
+                      <Link
+                        href={`/projects/${project.key}/wiki/new?parent=${current.id}`}
+                      >
+                        <Plus />
+                        Sous-page
+                      </Link>
+                    </Button>
                     <Button asChild variant="outline" size="sm">
                       <Link
                         href={`/projects/${project.key}/wiki/${current.id}/edit`}

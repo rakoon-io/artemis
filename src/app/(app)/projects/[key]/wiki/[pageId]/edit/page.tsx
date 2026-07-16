@@ -3,8 +3,9 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 import { auth } from "@/auth";
+import { parentOptions } from "@/lib/wiki-tree";
 import { getAccessibleProjectByKey } from "@/server/access";
-import { getTicketRefs, getWikiPage } from "@/server/queries";
+import { getTicketRefs, getWikiPage, getWikiPages } from "@/server/queries";
 import { Button } from "@/components/ui/button";
 import { WikiPageForm } from "@/components/wiki/wiki-page-form";
 
@@ -19,11 +20,19 @@ export default async function EditWikiPage({
   const project = await getAccessibleProjectByKey(session?.user, key);
   if (!project) notFound();
 
-  const [page, tickets] = await Promise.all([
+  const [page, tickets, pages] = await Promise.all([
     getWikiPage(pageId),
     getTicketRefs(project.id),
+    getWikiPages(project.id),
   ]);
   if (!page || page.projectId !== project.id) notFound();
+
+  // Options de parent : tout l'arbre sauf la page et ses descendants (anti-cycle).
+  const parents = parentOptions(pages, page.id).map((n) => ({
+    id: n.page.id,
+    title: n.page.title,
+    depth: n.depth,
+  }));
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -42,7 +51,13 @@ export default async function EditWikiPage({
         projectId={project.id}
         projectKey={project.key}
         tickets={tickets}
-        page={{ id: page.id, title: page.title, content: page.content }}
+        parents={parents}
+        page={{
+          id: page.id,
+          title: page.title,
+          content: page.content,
+          parentId: page.parentId,
+        }}
       />
     </div>
   );

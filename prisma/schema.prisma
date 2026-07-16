@@ -207,16 +207,21 @@ model Comment {
 }
 
 // Page de wiki d'un projet - documentation libre, avec citations de tickets (RKN-123).
+// Organisation arborescente : une page peut avoir une page parente (self-relation).
 model WikiPage {
-  id        String   @id @default(cuid())
+  id        String     @id @default(cuid())
   projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parentId  String?
+  parent    WikiPage?  @relation("WikiTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children  WikiPage[] @relation("WikiTree")
   title     String
-  content   String   @default("")
+  content   String     @default("")
   authorId  String?
-  author    User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  author    User?      @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 
   @@index([projectId])
+  @@index([parentId])
 }
