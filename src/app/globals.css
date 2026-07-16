@@ -246,3 +246,72 @@
     @apply bg-background text-foreground font-sans antialiased;
   }
 }
+
+/* Rendu Markdown des pages de wiki (GFM). */
+.wiki-prose {
+  @apply text-sm leading-relaxed;
+}
+.wiki-prose > * + * {
+  @apply mt-3;
+}
+.wiki-prose h1 {
+  @apply mt-6 text-xl font-semibold tracking-tight;
+}
+.wiki-prose h2 {
+  @apply mt-5 text-lg font-semibold tracking-tight;
+}
+.wiki-prose h3 {
+  @apply mt-4 text-base font-semibold;
+}
+.wiki-prose h4 {
+  @apply mt-3 text-sm font-semibold;
+}
+.wiki-prose ul {
+  @apply ml-5 list-disc space-y-1;
+}
+.wiki-prose ol {
+  @apply ml-5 list-decimal space-y-1;
+}
+.wiki-prose li {
+  @apply pl-1;
+}
+.wiki-prose li::marker {
+  @apply text-muted-foreground;
+}
+.wiki-prose a {
+  @apply font-medium text-primary underline underline-offset-2;
+}
+.wiki-prose code {
+  @apply rounded bg-muted px-1.5 py-0.5 font-mono text-[0.85em];
+}
+.wiki-prose pre {
+  @apply overflow-x-auto rounded-lg border bg-muted/50 p-3 text-[0.85em];
+}
+.wiki-prose pre code {
+  @apply bg-transparent p-0 text-[1em];
+}
+.wiki-prose blockquote {
+  @apply border-l-2 border-border pl-4 italic text-muted-foreground;
+}
+.wiki-prose table {
+  @apply block w-full overflow-x-auto border-collapse text-sm;
+}
+.wiki-prose th,
+.wiki-prose td {
+  @apply border border-border px-3 py-1.5 text-left align-top;
+}
+.wiki-prose th {
+  @apply bg-muted/50 font-semibold;
+}
+.wiki-prose hr {
+  @apply my-5 border-t border-border;
+}
+.wiki-prose img {
+  @apply max-w-full rounded-md;
+}
+.wiki-prose input[type="checkbox"] {
+  @apply mr-1.5 align-middle;
+}
+.wiki-prose li:has(> input[type="checkbox"]) {
+  @apply -ml-5 list-none;
+}
