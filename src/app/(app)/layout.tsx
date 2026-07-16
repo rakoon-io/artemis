@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
+import { TrackerMark } from "@/components/brand/tracker-mark";
 import { ThemePicker } from "@/components/theme-picker";
 import { UserMenu } from "@/components/user-menu";
 
@@ -29,14 +29,7 @@ export default async function AppLayout({
             href="/projects"
             className="flex items-center gap-2 font-semibold transition-opacity hover:opacity-80"
           >
-            <Image
-              src="/rakoon-mark.png"
-              alt="Rakoon"
-              width={22}
-              height={22}
-              className="dark:invert"
-              priority
-            />
+            <TrackerMark className="size-7 shrink-0 text-primary" />
             <span>Rakoon Tracker</span>
           </Link>
           <div className="flex-1" />
