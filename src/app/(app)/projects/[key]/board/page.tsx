@@ -2,11 +2,11 @@ import { notFound } from "next/navigation";
 import { Role } from "@prisma/client";
 
 import { auth } from "@/auth";
+import { getAccessibleProjectByKey } from "@/server/access";
 import {
+  getAssignableUsers,
   getBoardData,
   getLabels,
-  getMembers,
-  getProjectByKey,
   getSprints,
   getTicketPriorities,
   getTicketTypes,
@@ -24,18 +24,18 @@ export default async function BoardPage({
   params: Promise<{ key: string }>;
 }) {
   const { key } = await params;
-  const project = await getProjectByKey(key);
+  const session = await auth();
+  const project = await getAccessibleProjectByKey(session?.user, key);
   if (!project) notFound();
 
-  const [{ columns }, members, types, priorities, labels, sprints, session] =
+  const [{ columns }, members, types, priorities, labels, sprints] =
     await Promise.all([
       getBoardData(project.id),
-      getMembers(),
+      getAssignableUsers(project.id),
       getTicketTypes(project.id),
       getTicketPriorities(project.id),
       getLabels(project.id),
       getSprints(project.id),
-      auth(),
     ]);
 
   const currentUser: CurrentUser = session?.user

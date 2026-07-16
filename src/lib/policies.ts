@@ -26,10 +26,25 @@ export type AdminAction =
   | "manage_sprints"
   | "manage_labels"
   | "manage_users"
+  | "manage_members"
   | "delete_ticket";
 
 export function can(user: PolicyUser | null | undefined, _action: AdminAction): boolean {
   return isAdmin(user);
+}
+
+/**
+ * Accès à un projet : un administrateur accède à tous les projets ; un autre
+ * utilisateur doit en être membre. `isMember` est calculé côté serveur (DB) puis
+ * passé ici pour garder cette fonction pure et testable.
+ */
+export function canAccessProject(
+  user: PolicyUser | null | undefined,
+  isMember: boolean,
+): boolean {
+  if (!user) return false;
+  if (isAdmin(user)) return true;
+  return isMember;
 }
 
 /** Tout utilisateur connecté peut créer un ticket / commenter. */

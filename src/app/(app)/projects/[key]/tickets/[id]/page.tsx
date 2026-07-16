@@ -14,9 +14,10 @@ import { Separator } from "@/components/ui/separator";
 import { currentUser } from "@/lib/session";
 import { can, canEditTicket } from "@/lib/policies";
 import { formatDate, initials } from "@/lib/utils";
+import { getAccessibleProjectByKey } from "@/server/access";
 import {
+  getAssignableUsers,
   getLabels,
-  getMembers,
   getSprints,
   getTicketDetail,
   getTicketPriorities,
@@ -38,8 +39,13 @@ export default async function TicketDetailPage({
   params: Promise<{ key: string; id: string }>;
 }) {
   const { key, id } = await params;
-  const ticket = await getTicketDetail(id);
-  if (!ticket) notFound();
+  const user = await currentUser();
+  const [project, ticket] = await Promise.all([
+    getAccessibleProjectByKey(user, key),
+    getTicketDetail(id),
+  ]);
+  // Accès refusé ou ticket d'un autre projet : indistinguable d'un ticket absent.
+  if (!project || !ticket || ticket.projectId !== project.id) notFound();
 
   // Les images sont présentées en vignettes ; les autres fichiers en liste.
   const imageAttachments = ticket.attachments.filter((a) =>
@@ -49,7 +55,6 @@ export default async function TicketDetailPage({
     (a) => !a.contentType.startsWith("image/"),
   );
 
-  const user = await currentUser();
   const canEdit = canEditTicket(user, {
     reporterId: ticket.reporterId,
     assigneeId: ticket.assigneeId,
@@ -58,7 +63,7 @@ export default async function TicketDetailPage({
 
   let editData:
     | {
-        members: Awaited<ReturnType<typeof getMembers>>;
+        members: Awaited<ReturnType<typeof getAssignableUsers>>;
         sprints: Awaited<ReturnType<typeof getSprints>>;
         labels: Awaited<ReturnType<typeof getLabels>>;
         types: Awaited<ReturnType<typeof getTicketTypes>>;
@@ -67,7 +72,7 @@ export default async function TicketDetailPage({
     | null = null;
   if (canEdit) {
     const [members, sprints, labels, types, priorities] = await Promise.all([
-      getMembers(),
+      getAssignableUsers(ticket.projectId),
       getSprints(ticket.projectId),
       getLabels(ticket.projectId),
       getTicketTypes(ticket.projectId),

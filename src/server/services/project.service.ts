@@ -37,14 +37,19 @@ export function listProjects() {
 /**
  * Projets avec statistiques pour les cartes : nombre de tickets, tickets terminés
  * (dans la dernière colonne du workflow) et nombre de sprints. 2 requêtes.
+ * `projectIds` (facultatif) restreint aux projets accessibles ; `[]` = aucun.
  */
-export async function listProjectsWithStats() {
+export async function listProjectsWithStats(projectIds?: string[]) {
+  const projectWhere = projectIds ? { id: { in: projectIds } } : {};
+  const columnWhere = projectIds ? { projectId: { in: projectIds } } : {};
   const [projects, columns] = await Promise.all([
     prisma.project.findMany({
+      where: projectWhere,
       orderBy: { createdAt: "desc" },
       include: { _count: { select: { tickets: true, sprints: true } } },
     }),
     prisma.column.findMany({
+      where: columnWhere,
       select: {
         projectId: true,
         order: true,

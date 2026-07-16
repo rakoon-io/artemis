@@ -3,7 +3,7 @@ import Link from "next/link";
 import { CalendarRange, CircleCheck, Ticket } from "lucide-react";
 import { auth } from "@/auth";
 import { isAdmin } from "@/lib/policies";
-import { getProjectsWithStats } from "@/server/queries";
+import { getAccessibleProjectsWithStats } from "@/server/queries";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -17,10 +17,8 @@ import { CreateProjectDialog } from "@/components/project/create-project-dialog"
 export const metadata: Metadata = { title: "Projets · Artemis" };
 
 export default async function ProjectsPage() {
-  const [session, projects] = await Promise.all([
-    auth(),
-    getProjectsWithStats(),
-  ]);
+  const session = await auth();
+  const projects = await getAccessibleProjectsWithStats(session?.user);
   const admin = isAdmin(session?.user);
 
   return (

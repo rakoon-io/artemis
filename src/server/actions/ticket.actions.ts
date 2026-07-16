@@ -2,6 +2,7 @@
 
 import type { z } from "zod";
 import { assert, can, canCreateTicket, canEditTicket } from "@/lib/policies";
+import { assertProjectAccess } from "@/server/access";
 import { createTicketSchema, updateTicketSchema } from "@/lib/validators";
 import {
   createTicket,
@@ -19,6 +20,7 @@ export async function createTicketAction(
   return withUser<{ id: string; key: string }>(async (user) => {
     assert(canCreateTicket(user), "Vous devez être connecté pour créer un ticket.");
     const data = createTicketSchema.parse(input);
+    await assertProjectAccess(user, data.projectId);
     const ticket = await createTicket(
       {
         projectId: data.projectId,
@@ -45,6 +47,7 @@ export async function updateTicketAction(
     const data = updateTicketSchema.parse(input);
     const ticket = await getTicketOwnership(data.id);
     if (!ticket) return { ok: false, error: "Ticket introuvable." };
+    await assertProjectAccess(user, ticket.projectId);
     assert(canEditTicket(user, ticket), "Modification de ce ticket non autorisée.");
     await updateTicket({
       id: data.id,
@@ -79,6 +82,7 @@ export async function setTicketSprintAction(
   return withUser(async (user) => {
     const ticket = await getTicketOwnership(ticketId);
     if (!ticket) return { ok: false, error: "Ticket introuvable." };
+    await assertProjectAccess(user, ticket.projectId);
     assert(canEditTicket(user, ticket), "Modification de ce ticket non autorisée.");
     await updateTicket({ id: ticketId, sprintId });
     revalidateBoardAndList();

@@ -2,7 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
-import { getProjectByKey, getTicketRefs } from "@/server/queries";
+import { auth } from "@/auth";
+import { getAccessibleProjectByKey } from "@/server/access";
+import { getTicketRefs } from "@/server/queries";
 import { Button } from "@/components/ui/button";
 import { WikiPageForm } from "@/components/wiki/wiki-page-form";
 
@@ -13,7 +15,8 @@ export default async function NewWikiPage({
   params: Promise<{ key: string }>;
 }) {
   const { key } = await params;
-  const project = await getProjectByKey(key);
+  const session = await auth();
+  const project = await getAccessibleProjectByKey(session?.user, key);
   if (!project) notFound();
 
   const tickets = await getTicketRefs(project.id);

@@ -3,6 +3,7 @@ import { Role } from "@prisma/client";
 import {
   isAdmin,
   can,
+  canAccessProject,
   canCreateTicket,
   canEditTicket,
   canMoveTicket,
@@ -45,5 +46,16 @@ describe("policies (RBAC)", () => {
     expect(canMoveTicket(reporter, ticket)).toBe(true);
     expect(canMoveTicket(other, ticket)).toBe(false);
     expect(canMoveTicket(admin, ticket)).toBe(true);
+  });
+
+  it("l'accès projet : l'Admin passe partout, le Rapporteur seulement s'il est membre", () => {
+    // Admin : accès quel que soit le statut de membre.
+    expect(canAccessProject(admin, false)).toBe(true);
+    expect(canAccessProject(admin, true)).toBe(true);
+    // Rapporteur : uniquement membre.
+    expect(canAccessProject(reporter, true)).toBe(true);
+    expect(canAccessProject(reporter, false)).toBe(false);
+    // Non connecté : jamais.
+    expect(canAccessProject(null, true)).toBe(false);
   });
 });

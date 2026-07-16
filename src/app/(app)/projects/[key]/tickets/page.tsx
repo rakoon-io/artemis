@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { auth } from "@/auth";
 import { Button } from "@/components/ui/button";
+import { getAccessibleProjectByKey } from "@/server/access";
 import {
+  getAssignableUsers,
   getLabels,
-  getMembers,
-  getProjectByKey,
   getSprints,
   getTicketPriorities,
   getTicketsList,
@@ -32,7 +33,8 @@ export default async function TicketsListPage({
   const { key } = await params;
   const sp = await searchParams;
 
-  const project = await getProjectByKey(key);
+  const session = await auth();
+  const project = await getAccessibleProjectByKey(session?.user, key);
   if (!project) notFound();
 
   const q = one(sp.q);
@@ -55,7 +57,7 @@ export default async function TicketsListPage({
     }),
     getSprints(project.id),
     getLabels(project.id),
-    getMembers(),
+    getAssignableUsers(project.id),
     getTicketTypes(project.id),
     getTicketPriorities(project.id),
   ]);

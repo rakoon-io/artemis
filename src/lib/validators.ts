@@ -44,6 +44,11 @@ export const updateUserRoleSchema = z.object({
   role: z.nativeEnum(Role),
 });
 
+export const projectMemberSchema = z.object({
+  projectId: z.string().min(1),
+  userId: z.string().min(1),
+});
+
 export const createTicketSchema = z.object({
   projectId: z.string().min(1),
   title: z.string().min(1, "Titre requis").max(200),

@@ -7,6 +7,7 @@ import {
   getLabels,
   getMembers,
   getProjectByKey,
+  getProjectMembersView,
   getTicketPriorities,
   getTicketTypes,
 } from "@/server/queries";
@@ -21,6 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ColumnManager } from "@/components/settings/column-manager";
 import { LabelManager } from "@/components/settings/label-manager";
 import { PriorityManager } from "@/components/settings/priority-manager";
+import { MemberManager } from "@/components/settings/member-manager";
 import { ProjectSettingsForm } from "@/components/settings/project-settings-form";
 import { TypeManager } from "@/components/settings/type-manager";
 import { UserManager } from "@/components/settings/user-manager";
@@ -57,13 +59,15 @@ export default async function SettingsPage({
   const project = await getProjectByKey(key);
   if (!project) notFound();
 
-  const [{ columns }, labels, members, types, priorities] = await Promise.all([
-    getBoardData(project.id),
-    getLabels(project.id),
-    getMembers(),
-    getTicketTypes(project.id),
-    getTicketPriorities(project.id),
-  ]);
+  const [{ columns }, labels, members, membersView, types, priorities] =
+    await Promise.all([
+      getBoardData(project.id),
+      getLabels(project.id),
+      getMembers(),
+      getProjectMembersView(project.id),
+      getTicketTypes(project.id),
+      getTicketPriorities(project.id),
+    ]);
 
   const columnSummaries = columns.map((column) => ({
     id: column.id,
@@ -92,6 +96,7 @@ export default async function SettingsPage({
           <TabsTrigger value="labels">Labels</TabsTrigger>
           <TabsTrigger value="types">Types</TabsTrigger>
           <TabsTrigger value="priorities">Priorités</TabsTrigger>
+          <TabsTrigger value="members">Membres</TabsTrigger>
           <TabsTrigger value="users">Utilisateurs</TabsTrigger>
         </TabsList>
 
@@ -175,6 +180,21 @@ export default async function SettingsPage({
                 priorities={priorities}
                 projectId={project.id}
               />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="members" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Membres du projet</CardTitle>
+              <CardDescription>
+                Donnez ou retirez l&apos;accès à ce projet, utilisateur par
+                utilisateur. Les administrateurs accèdent à tous les projets.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <MemberManager projectId={project.id} users={membersView} />
             </CardContent>
           </Card>
         </TabsContent>

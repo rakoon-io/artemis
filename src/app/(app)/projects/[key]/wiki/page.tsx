@@ -5,8 +5,8 @@ import { FileText, Pencil, Plus } from "lucide-react";
 import { auth } from "@/auth";
 import { isAdmin } from "@/lib/policies";
 import { cn, formatDate } from "@/lib/utils";
+import { getAccessibleProjectByKey } from "@/server/access";
 import {
-  getProjectByKey,
   getTicketKeys,
   getWikiPage,
   getWikiPages,
@@ -40,13 +40,13 @@ export default async function WikiPage({
   const requestedId = sp.page;
   const q = (sp.q ?? "").trim();
 
-  const project = await getProjectByKey(key);
+  const session = await auth();
+  const project = await getAccessibleProjectByKey(session?.user, key);
   if (!project) notFound();
 
-  const [allPages, ticketKeys, session] = await Promise.all([
+  const [allPages, ticketKeys] = await Promise.all([
     getWikiPages(project.id),
     getTicketKeys(project.id),
-    auth(),
   ]);
   const admin = isAdmin(session?.user);
 

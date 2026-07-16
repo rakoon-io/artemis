@@ -88,6 +88,11 @@ async function main() {
     },
   });
 
+  // Le Rapporteur est membre du projet de démonstration (accès accordé).
+  await prisma.projectMember.create({
+    data: { projectId: project.id, userId: reporter.id },
+  });
+
   const col = (name: string) => project.columns.find((c) => c.name === name)!;
   const label = (name: string) => project.labels.find((l) => l.name === name)!;
   const type = (name: string) => project.ticketTypes.find((t) => t.name === name)!;
@@ -149,8 +154,8 @@ async function main() {
 
   console.log(
     `Seed OK : projet RKN, ${samples.length} tickets.\n` +
-      `  Admin      : admin@rakoon.io / ***MOT-DE-PASSE-RETIRE***\n` +
-      `  Rapporteur : rapporteur@rakoon.io / ***MOT-DE-PASSE-RETIRE***`,
+      `  Admin      : admin@rakoon.io / ***MOT-DE-PASSE-RETIRE*** (accès à tous les projets)\n` +
+      `  Rapporteur : rapporteur@rakoon.io / ***MOT-DE-PASSE-RETIRE*** (membre de RKN)`,
   );
 }
 

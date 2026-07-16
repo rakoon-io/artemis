@@ -28,11 +28,12 @@ model User {
   role         Role         @default(REPORTER)
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
-  reported     Ticket[]     @relation("reporter")
-  assigned     Ticket[]     @relation("assignee")
+  reported     Ticket[]        @relation("reporter")
+  assigned     Ticket[]        @relation("assignee")
   comments     Comment[]
   attachments  Attachment[]
   wikiPages    WikiPage[]
+  memberships  ProjectMember[]
 }
 
 model Project {
@@ -51,6 +52,23 @@ model Project {
   ticketTypes      TicketType[]
   ticketPriorities TicketPriority[]
   wikiPages        WikiPage[]
+  members          ProjectMember[]
+}
+
+// Appartenance d'un utilisateur à un projet : contrôle l'accès (voir ADR-0003).
+// Les administrateurs accèdent à tous les projets sans ligne ici ; cette table
+// n'accorde l'accès qu'aux Rapporteurs projet par projet.
+model ProjectMember {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([projectId, userId])
+  @@index([userId])
+  @@index([projectId])
 }
 
 model Column {

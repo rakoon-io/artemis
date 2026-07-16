@@ -3,9 +3,9 @@ import { SprintState } from "@prisma/client";
 
 import { auth } from "@/auth";
 import { isAdmin } from "@/lib/policies";
+import { getAccessibleProjectByKey } from "@/server/access";
 import {
   getBacklogTickets,
-  getProjectByKey,
   getSprintsWithTickets,
 } from "@/server/queries";
 import { Badge } from "@/components/ui/badge";
@@ -30,13 +30,13 @@ export default async function SprintsPage({
   params: Promise<{ key: string }>;
 }) {
   const { key } = await params;
-  const project = await getProjectByKey(key);
+  const session = await auth();
+  const project = await getAccessibleProjectByKey(session?.user, key);
   if (!project) notFound();
 
-  const [sprints, backlog, session] = await Promise.all([
+  const [sprints, backlog] = await Promise.all([
     getSprintsWithTickets(project.id),
     getBacklogTickets(project.id),
-    auth(),
   ]);
   const admin = isAdmin(session?.user);
   const sprintOptions = sprints.map((s) => ({ id: s.id, name: s.name }));

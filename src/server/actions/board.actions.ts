@@ -2,6 +2,7 @@
 
 import type { z } from "zod";
 import { assert, canMoveTicket } from "@/lib/policies";
+import { assertProjectAccess } from "@/server/access";
 import { rankBetween } from "@/lib/rank";
 import { moveTicketSchema } from "@/lib/validators";
 import { getTicketOwnership, moveTicket } from "@/server/services/ticket.service";
@@ -19,6 +20,7 @@ export async function moveTicketAction(
     const data = moveTicketSchema.parse(input);
     const ticket = await getTicketOwnership(data.ticketId);
     if (!ticket) return { ok: false, error: "Ticket introuvable." };
+    await assertProjectAccess(user, ticket.projectId);
     assert(canMoveTicket(user, ticket), "Déplacement de ce ticket non autorisé.");
     const rank = rankBetween(data.afterRank ?? null, data.beforeRank ?? null);
     await moveTicket(data.ticketId, data.columnId, rank);

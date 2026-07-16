@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/session";
-import { getAttachment } from "@/server/services/attachment.service";
+import { canAccess } from "@/server/access";
+import { getAttachmentWithProject } from "@/server/services/attachment.service";
 import { isStorageConfigured, presignDownload, readLocal } from "@/lib/storage";
 
 /**
@@ -21,9 +22,13 @@ export async function GET(
     return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
-  const attachment = await getAttachment(id);
+  const attachment = await getAttachmentWithProject(id);
   if (!attachment) {
     return NextResponse.json({ error: "Pièce jointe introuvable." }, { status: 404 });
+  }
+  // L'utilisateur doit avoir accès au projet du ticket porteur (membre ou admin).
+  if (!(await canAccess(user, attachment.ticket.projectId))) {
+    return NextResponse.json({ error: "Non autorisé." }, { status: 403 });
   }
 
   if (isStorageConfigured()) {

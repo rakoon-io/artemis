@@ -35,6 +35,14 @@ export function getAttachment(id: string) {
   return prisma.attachment.findUnique({ where: { id } });
 }
 
+/** Pièce jointe + projet du ticket porteur (pour la garde d'accès au téléchargement). */
+export function getAttachmentWithProject(id: string) {
+  return prisma.attachment.findUnique({
+    where: { id },
+    include: { ticket: { select: { projectId: true } } },
+  });
+}
+
 export function deleteAttachment(id: string) {
   return prisma.attachment.delete({ where: { id } });
 }

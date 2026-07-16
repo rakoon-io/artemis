@@ -2,7 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { isAdmin } from "@/lib/policies";
-import { getProjectByKey } from "@/server/queries";
+import { getAccessibleProjectByKey } from "@/server/access";
 import { Badge } from "@/components/ui/badge";
 import { ProjectNav } from "@/components/project/project-nav";
 
@@ -15,7 +15,8 @@ export default async function ProjectLayout({
   params: Promise<{ key: string }>;
 }) {
   const { key } = await params;
-  const [project, session] = await Promise.all([getProjectByKey(key), auth()]);
+  const session = await auth();
+  const project = await getAccessibleProjectByKey(session?.user, key);
   if (!project) notFound();
 
   const admin = isAdmin(session?.user);

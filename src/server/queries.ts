@@ -1,5 +1,7 @@
+import { isAdmin, type PolicyUser } from "@/lib/policies";
 import * as columnService from "./services/column.service";
 import * as labelService from "./services/label.service";
+import * as membershipService from "./services/membership.service";
 import * as projectService from "./services/project.service";
 import * as sprintService from "./services/sprint.service";
 import * as ticketService from "./services/ticket.service";
@@ -23,8 +25,26 @@ export function getProjectsWithStats() {
   return projectService.listProjectsWithStats();
 }
 
+/**
+ * Projets accessibles avec statistiques : un administrateur voit tout ; un autre
+ * utilisateur ne voit que les projets dont il est membre (aucun s'il n'en a pas).
+ */
+export async function getAccessibleProjectsWithStats(
+  user: PolicyUser | null | undefined,
+) {
+  if (isAdmin(user)) return projectService.listProjectsWithStats();
+  if (!user) return [];
+  const ids = await membershipService.listAccessibleProjectIds(user.id);
+  return projectService.listProjectsWithStats(ids);
+}
+
 export function getProjectByKey(key: string) {
   return projectService.getProjectByKey(key);
+}
+
+/** Tous les utilisateurs avec leur appartenance au projet (onglet Membres). */
+export function getProjectMembersView(projectId: string) {
+  return membershipService.listProjectMembersView(projectId);
 }
 
 /** Colonnes ordonnées + leurs tickets ordonnés par rang (avec assignee/labels). */
@@ -104,4 +124,9 @@ export function getTicketPriorities(projectId: string) {
 
 export function getMembers() {
   return userService.listUsers();
+}
+
+/** Utilisateurs assignables dans un projet (administrateurs + membres). */
+export function getAssignableUsers(projectId: string) {
+  return membershipService.listAssignableUsers(projectId);
 }

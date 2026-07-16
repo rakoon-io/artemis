@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { assert, canEditTicket } from "@/lib/policies";
+import { assertProjectAccess } from "@/server/access";
 import { getTicketOwnership } from "@/server/services/ticket.service";
 import {
   createAttachment,
@@ -42,6 +43,7 @@ export async function confirmAttachmentAction(
     }
     const ticket = await getTicketOwnership(data.ticketId);
     if (!ticket) return { ok: false, error: "Ticket introuvable." };
+    await assertProjectAccess(user, ticket.projectId);
     assert(
       canEditTicket(user, ticket),
       "Ajout de pièce jointe non autorisé sur ce ticket.",
@@ -66,6 +68,7 @@ export async function deleteAttachmentAction(id: string): Promise<ActionResult> 
     if (!attachment) return { ok: false, error: "Pièce jointe introuvable." };
     const ticket = await getTicketOwnership(attachment.ticketId);
     if (!ticket) return { ok: false, error: "Ticket introuvable." };
+    await assertProjectAccess(user, ticket.projectId);
     assert(
       canEditTicket(user, ticket),
       "Suppression de pièce jointe non autorisée.",

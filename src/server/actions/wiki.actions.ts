@@ -2,6 +2,7 @@
 
 import type { z } from "zod";
 import { assert, isAdmin } from "@/lib/policies";
+import { assertProjectAccess } from "@/server/access";
 import { createWikiPageSchema, updateWikiPageSchema } from "@/lib/validators";
 import {
   createWikiPage,
@@ -24,6 +25,7 @@ export async function createWikiPageAction(
 ): Promise<ActionResult<{ id: string }>> {
   return withUser<{ id: string }>(async (user) => {
     const data = createWikiPageSchema.parse(input);
+    await assertProjectAccess(user, data.projectId);
     const page = await createWikiPage({
       projectId: data.projectId,
       title: data.title,
@@ -38,10 +40,11 @@ export async function createWikiPageAction(
 export async function updateWikiPageAction(
   input: z.input<typeof updateWikiPageSchema>,
 ): Promise<ActionResult<{ id: string }>> {
-  return withUser<{ id: string }>(async () => {
+  return withUser<{ id: string }>(async (user) => {
     const data = updateWikiPageSchema.parse(input);
     const existing = await getWikiPage(data.id);
     if (!existing) return { ok: false, error: "Page introuvable." };
+    await assertProjectAccess(user, existing.projectId);
     await updateWikiPage(data);
     return { ok: true, data: { id: data.id } };
   });

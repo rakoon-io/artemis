@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/session";
 import { canEditTicket } from "@/lib/policies";
+import { canAccess } from "@/server/access";
 import { getTicketOwnership } from "@/server/services/ticket.service";
 import { presignSchema } from "@/lib/validators";
 import { isDangerousContentType } from "@/lib/attachments";
@@ -59,7 +60,8 @@ export async function POST(request: Request): Promise<NextResponse> {
   if (!ticket) {
     return NextResponse.json({ error: "Ticket introuvable." }, { status: 404 });
   }
-  if (!canEditTicket(user, ticket)) {
+  // Accès au projet requis (membre ou admin), en plus des droits d'édition du ticket.
+  if (!(await canAccess(user, ticket.projectId)) || !canEditTicket(user, ticket)) {
     return NextResponse.json(
       { error: "Non autorisé sur ce ticket." },
       { status: 403 },
