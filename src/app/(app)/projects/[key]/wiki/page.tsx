@@ -13,7 +13,6 @@ import {
 } from "@/server/queries";
 import { Button } from "@/components/ui/button";
 import { WikiContent } from "@/components/wiki/wiki-content";
-import { WikiPageDialog } from "@/components/wiki/wiki-page-dialog";
 import { DeleteWikiPageButton } from "@/components/wiki/delete-wiki-page-button";
 
 /**
@@ -51,10 +50,12 @@ export default async function WikiPage({
     ticketKeys.map((t) => [t.key.toUpperCase(), t.id]),
   );
 
-  const createTrigger = (
-    <Button>
-      <Plus />
-      Nouvelle page
+  const createButton = (
+    <Button asChild>
+      <Link href={`/projects/${project.key}/wiki/new`}>
+        <Plus />
+        Nouvelle page
+      </Link>
     </Button>
   );
 
@@ -67,11 +68,7 @@ export default async function WikiPage({
             Documentation du projet. Citez des tickets avec leur clé (ex. RKN-3).
           </p>
         </div>
-        <WikiPageDialog
-          projectId={project.id}
-          projectKey={project.key}
-          trigger={createTrigger}
-        />
+        {createButton}
       </div>
 
       {pages.length === 0 ? (
@@ -83,11 +80,7 @@ export default async function WikiPage({
               Créez la première page de documentation de ce projet.
             </p>
           </div>
-          <WikiPageDialog
-            projectId={project.id}
-            projectKey={project.key}
-            trigger={createTrigger}
-          />
+          {createButton}
         </div>
       ) : (
         <div className="flex flex-col gap-6 md:flex-row">
@@ -126,21 +119,14 @@ export default async function WikiPage({
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <WikiPageDialog
-                      projectId={project.id}
-                      projectKey={project.key}
-                      page={{
-                        id: current.id,
-                        title: current.title,
-                        content: current.content,
-                      }}
-                      trigger={
-                        <Button variant="outline" size="sm">
-                          <Pencil />
-                          Éditer
-                        </Button>
-                      }
-                    />
+                    <Button asChild variant="outline" size="sm">
+                      <Link
+                        href={`/projects/${project.key}/wiki/${current.id}/edit`}
+                      >
+                        <Pencil />
+                        Éditer
+                      </Link>
+                    </Button>
                     {admin && (
                       <DeleteWikiPageButton
                         pageId={current.id}
