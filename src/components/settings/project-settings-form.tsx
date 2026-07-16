@@ -21,7 +21,7 @@ export interface ProjectSettingsFormProps {
 
 /** Couleur d'accent par défaut (charte Rakoon, bordeaux) affichée quand aucune
  *  couleur personnalisée n'est définie. */
-const DEFAULT_ACCENT = "#800020";
+const DEFAULT_ACCENT = "#5f4ec2";
 
 /**
  * Édition du projet (Admin) : nom + description + couleur d'accent. La mutation

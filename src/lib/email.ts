@@ -107,18 +107,18 @@ export interface TicketEmailArgs {
 /** Gabarit HTML de marque Artemis pour une notification de ticket. */
 export function ticketEmailHtml(args: TicketEmailArgs): string {
   const quoteBlock = args.quote
-    ? `<blockquote style="margin:16px 0 0;padding:12px 16px;background:#f8fafc;border-left:3px solid #800020;border-radius:6px;font-size:14px;color:#334155;white-space:pre-wrap;">${esc(args.quote)}</blockquote>`
+    ? `<blockquote style="margin:16px 0 0;padding:12px 16px;background:#f8fafc;border-left:3px solid #5f4ec2;border-radius:6px;font-size:14px;color:#334155;white-space:pre-wrap;">${esc(args.quote)}</blockquote>`
     : "";
   return `<!DOCTYPE html><html lang="fr"><body style="margin:0;background:#f1f5f9;font-family:-apple-system,system-ui,Segoe UI,Roboto,sans-serif;color:#0f172a;">
   <div style="max-width:540px;margin:0 auto;padding:32px 20px;">
     <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:28px;">
-      <p style="font-size:18px;font-weight:700;margin:0 0 2px;color:#800020;">Artemis</p>
+      <p style="font-size:18px;font-weight:700;margin:0 0 2px;color:#5f4ec2;">Artemis</p>
       <h1 style="font-size:18px;margin:16px 0 6px;">${esc(args.heading)}</h1>
       <p style="font-size:15px;line-height:1.5;margin:0 0 14px;color:#334155;">${esc(args.intro)}</p>
       <p style="font-size:15px;margin:0;"><span style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#64748b;">${esc(args.ticketKey)}</span> <strong>${esc(args.ticketTitle)}</strong></p>
       ${quoteBlock}
       <p style="margin:24px 0 0;">
-        <a href="${esc(args.url)}" style="display:inline-block;background:#800020;color:#fff;text-decoration:none;font-weight:600;padding:11px 22px;border-radius:9px;font-size:14px;">Ouvrir le ticket</a>
+        <a href="${esc(args.url)}" style="display:inline-block;background:#5f4ec2;color:#fff;text-decoration:none;font-weight:600;padding:11px 22px;border-radius:9px;font-size:14px;">Ouvrir le ticket</a>
       </p>
       <p style="font-size:12px;color:#94a3b8;margin:22px 0 0;line-height:1.5;">Vous recevez cet e-mail car vous etes concerne par ce ticket sur Artemis.</p>
     </div>

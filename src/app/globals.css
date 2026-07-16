@@ -2,7 +2,7 @@
 
 @custom-variant dark (&:is(.dark *, .midnight *, .slate *, .carbon *));
 
-/* ─── Design tokens (charte Rakoon - monochrome + bordeaux #800020) ─────────────────────────── */
+/* ─── Design tokens (charte Artemis - neutres + accent indigo/violet crépusculaire) ─────────── */
 :root {
   --radius: 0.625rem;
 
@@ -15,8 +15,8 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.16 0 0);
 
-  /* Bordeaux Rakoon - #800020 */
-  --primary: oklch(0.36 0.13 13);
+  /* Accent Artemis - indigo/violet crépusculaire (#5f4ec2) */
+  --primary: oklch(0.505 0.175 285);
   --primary-foreground: oklch(0.985 0 0);
 
   --secondary: oklch(0.967 0 0);
@@ -33,7 +33,7 @@
 
   --border: oklch(0.915 0 0);
   --input: oklch(0.915 0 0);
-  --ring: oklch(0.36 0.13 13);
+  --ring: oklch(0.505 0.175 285);
 }
 
 /* Base sombre - partagée par toutes les palettes sombres (surchargée ensuite). */
@@ -50,8 +50,8 @@
   --popover: oklch(0.192 0 0);
   --popover-foreground: oklch(0.975 0 0);
 
-  /* Bordeaux éclairci pour le fond sombre */
-  --primary: oklch(0.52 0.155 15);
+  /* Accent Artemis éclairci pour le fond sombre (#8576e4) */
+  --primary: oklch(0.63 0.16 287);
   --primary-foreground: oklch(0.99 0 0);
 
   --secondary: oklch(0.26 0 0);
@@ -68,10 +68,28 @@
 
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.52 0.155 15);
+  --ring: oklch(0.63 0.16 287);
 }
 
-/* ─── Palettes claires (surchargent les neutres de :root ; accent = bordeaux) ── */
+/* Artemis Nuit - palette sombre signature : neutres teintés crépuscule (indigo). */
+.dark {
+  --background: oklch(0.17 0.03 280);
+  --card: oklch(0.215 0.032 282);
+  --card-foreground: oklch(0.97 0.01 285);
+  --popover: oklch(0.215 0.032 282);
+  --popover-foreground: oklch(0.97 0.01 285);
+  --foreground: oklch(0.97 0.01 285);
+  --secondary: oklch(0.27 0.032 283);
+  --secondary-foreground: oklch(0.97 0.01 285);
+  --muted: oklch(0.265 0.03 283);
+  --muted-foreground: oklch(0.72 0.03 285);
+  --accent: oklch(0.30 0.04 285);
+  --accent-foreground: oklch(0.97 0.01 285);
+  --border: oklch(0.7 0.05 285 / 16%);
+  --input: oklch(0.7 0.05 285 / 20%);
+}
+
+/* ─── Palettes claires (surchargent les neutres de :root ; accent = indigo/violet) ── */
 .sand {
   --background: oklch(0.986 0.008 82);
   --foreground: oklch(0.2 0.012 66);
@@ -123,7 +141,7 @@
   --input: oklch(0.898 0.016 160);
 }
 
-/* ─── Palettes sombres (surchargent la base sombre ; accent = bordeaux clair) ── */
+/* ─── Palettes sombres (surchargent la base sombre ; accent = indigo/violet clair) ── */
 .midnight {
   --background: oklch(0.155 0.024 260);
   --foreground: oklch(0.96 0.01 250);

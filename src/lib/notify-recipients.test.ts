@@ -48,7 +48,7 @@ describe("ticketEmailHtml", () => {
     expect(html).toContain("RKN-3");
     expect(html).toContain("Limite de WIP");
     expect(html).toContain("https://artemis.example/projects/RKN/tickets/abc");
-    expect(html).toContain("#800020"); // marque Artemis
+    expect(html).toContain("#5f4ec2"); // accent Artemis
   });
 
   it("echappe le HTML et affiche la citation quand fournie", () => {
