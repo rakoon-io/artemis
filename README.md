@@ -7,132 +7,89 @@
 &nbsp;![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6.svg)
 &nbsp;![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Prisma-4169e1.svg)
 
-## Statut
+Artemis est un outil de suivi de tickets pour equipes agiles : creation de ticket
+sans friction, tableau Kanban configurable, sprints et lots, wiki de projet, le
+tout self-hostable (Docker + PostgreSQL).
 
-> **Application v1 implémentée et vérifiée.**
->
-> Le code applicatif est en place : **Next.js 16** (App Router), **Prisma / PostgreSQL**, **Auth.js**
-> (RBAC Admin / Rapporteur), **Kanban** (dnd-kit), **création paste-first** et vues **liste**,
-> **sprints / lots** et **paramètres**. Les commandes de démarrage ci-dessous sont fonctionnelles.
-> Reste à faire : le **premier déploiement** sur `tracker.apps.rakoon.io` (voir
-> [`.ai/context.md`](./.ai/context.md)).
+## Fonctionnalites
 
-## Fonctionnalités (v1)
-
-- **Création rapide de ticket** - formulaire minimal (titre obligatoire), le reste optionnel.
-- **Pièce jointe par copier-coller** - coller une **image** du presse-papier, un **log** ou du
-  **texte** directement dans le formulaire (fonction phare, ticket créé en < 30 s).
-- **Vue Kanban configurable** - colonnes = statuts adaptables par projet, drag & drop souris
+- **Creation rapide de ticket** - formulaire minimal (titre obligatoire), le reste optionnel.
+- **Piece jointe par copier-coller** - coller une **image** du presse-papier, un **log** ou du
+  **texte** directement dans le formulaire, ticket cree en quelques secondes.
+- **Vue Kanban configurable** - colonnes = statuts adaptables par projet, glisser-deposer souris
   **et** clavier (dnd-kit).
 - **Vue liste** - filtres, tri multi-colonnes et recherche plein texte.
-- **Sprints / lots** - backlog, planification, itérations datées.
+- **Sprints / lots** - backlog, planification, iterations datees, reouverture.
+- **Wiki de projet** - documentation en Markdown etendu, recherche, citation de tickets avec `@`.
 - **Commentaires** - fil de discussion par ticket.
-- **Pièces jointes** - aperçu inline des images, téléchargement des logs/fichiers.
-- **Personnalisation** - workflow (colonnes), labels, thème clair/sombre.
-- **Rôles Admin / Rapporteur** - RBAC extensible, **imposé côté serveur**.
-
-Périmètre détaillé et non-objectifs v1 → [`SPEC.md`](./SPEC.md) et
-[`.ai/vision.md`](./.ai/vision.md).
+- **Pieces jointes** - vignettes des images, telechargement des logs et fichiers.
+- **Controle d'acces par projet** - chaque projet a ses membres ; l'admin voit tout.
+- **Personnalisation** - workflow (colonnes), labels, types, priorites, themes clair/sombre.
+- **Roles Admin / Rapporteur** - RBAC extensible, **impose cote serveur**.
 
 ## Stack
 
-- **Framework** : Next.js (App Router) · React · TypeScript (strict)
-- **UI** : Tailwind CSS · shadcn/ui (Radix) · dnd-kit (Kanban)
-- **Données** : Prisma · PostgreSQL · stockage **S3-compatible** (MinIO en local)
-- **État & validation** : TanStack Query · Zod
+- **Framework** : Next.js (App Router) - React - TypeScript (strict)
+- **UI** : Tailwind CSS - shadcn/ui (Radix) - dnd-kit (Kanban)
+- **Donnees** : Prisma - PostgreSQL - stockage **S3-compatible** (MinIO en local)
+- **Etat & validation** : TanStack Query - Zod
 - **Auth** : Auth.js (RBAC)
-- **Qualité** : Vitest · Playwright · ESLint · Prettier
-- **Déploiement** : Dokploy (Docker) sur `apps.rakoon.io` (comme les autres applis Rakoon)
+- **Qualite** : Vitest - Playwright - ESLint - Prettier
+- **Deploiement** : Dokploy (Docker) sur `apps.rakoon.io`
 
-Détails, couches et **modèle de données** → [`.ai/architecture.md`](./.ai/architecture.md).
+## Demarrage rapide
 
-## Structure du dépôt
-
-```
-artemis/
-├── AGENTS.md            # garde-fou "à lire avant toute modif" (pilote l'agent)
-├── SPEC.md              # cible produit détaillée (v1)
-├── README.md           # ce fichier - présentation & démarrage rapide
-├── DEPLOY.md           # guide de déploiement Dokploy (apps.rakoon.io)
-└── .ai/                 # ── Memory Bank ──
-    ├── vision.md        # North Star (à lire en premier)
-    ├── context.md       # état courant / récents / prochaines étapes
-    ├── architecture.md  # patterns, conventions, structure, modèle de données
-    ├── rules.md         # règles DO / DON'T de génération de code
-    ├── decisions/       # ADR (Architecture Decision Records)
-    └── specs/           # spécifications par fonctionnalité
-```
-
-Le **Memory Bank** (`.ai/`) est la source de vérité documentaire qui **pilote la génération de
-code** ; [`AGENTS.md`](./AGENTS.md) est le garde-fou à lire avant toute modification, qui renvoie
-vers ce Memory Bank et impose le workflow.
-
-> ℹ️ Le code applicatif (`src/`, `prisma/`…) est **désormais en place** ; sa structure est décrite
-> dans [`.ai/architecture.md`](./.ai/architecture.md#structure-des-dossiers-cible).
-
-## ▶️ Démarrage rapide
-
-> Gestionnaire de paquets : **npm** (`package-lock.json`), aligné sur les autres applis Rakoon.
+> Gestionnaire de paquets : **npm** (`package-lock.json`).
 
 ```bash
-# Prérequis : Node.js LTS + npm + une base PostgreSQL (ou Docker)
-npm install                  # installer les dépendances
+# Prerequis : Node.js LTS + npm + une base PostgreSQL (ou Docker)
+npm install                  # installer les dependances
 cp .env.example .env         # configurer les variables d'environnement
-npx prisma migrate dev       # créer / mettre à jour le schéma de base
-npm run db:seed              # jeu de données de démo (comptes ci-dessous)
-npm run dev                  # démarrer le serveur (http://localhost:3000)
+npx prisma migrate dev       # creer / mettre a jour le schema de base
+npm run db:seed              # jeu de donnees de demo (comptes ci-dessous)
+npm run dev                  # demarrer le serveur (http://localhost:3000)
 ```
 
-**Comptes de démo** (créés par le seed) :
+**Comptes de demo** (crees par le seed) :
 
 - **Admin** - `admin@rakoon.io` / `admin1234`
 - **Rapporteur** - `rapporteur@rakoon.io` / `rapporteur1234`
 
 ```bash
-# Qualité
+# Qualite
 npm run typecheck            # tsc --noEmit
 npm run lint                 # ESLint
 npm test                     # Vitest (unit)
+npm run build                # build de production
 ```
 
-**Qualité vérifiée** (v1) : `typecheck`, `lint`, `build` de production, **tests** unitaires (Vitest),
-**migration** Prisma, **seed** et **smoke test** runtime - tous OK.
-
-## Méthode AIDD
-
-**AIDD** (*AI-Driven Development*) : la **documentation pilote le développement**. Le Memory Bank
-(`.ai/`) décrit la vision, l'architecture et les règles ; un agent IA génère puis vérifie le code
-en suivant un **workflow en phases** ponctué de **points de validation humaine**.
-
-**Workflow 7 phases :**
+## Structure du depot
 
 ```
-Idéation → Plan → [validation] → Implémentation → Vérification (typecheck/tests/lint) →
-[validation] Commit → Revue finale
+artemis/
+├── src/            # application Next.js (App Router)
+│   ├── app/        # routes (RSC), API et layouts
+│   ├── components/ # composants UI
+│   ├── server/     # services, actions et acces donnees
+│   └── lib/        # utilitaires, policies RBAC, validateurs Zod
+├── prisma/         # schema, migrations et seed
+├── SPEC.md         # cible produit detaillee
+└── DEPLOY.md       # guide de deploiement
 ```
 
-- **Ne rien coder tant que le plan n'est pas validé.**
-- La **Vérification** exécute `typecheck` + `lint` + `test` avant tout commit.
-- Chaque décision structurante ⇒ un **ADR** dans [`.ai/decisions/`](./.ai/decisions/) ; chaque
-  fonctionnalité ⇒ une **spec** dans [`.ai/specs/`](./.ai/specs/).
+## Deploiement
 
-À lire pour démarrer : [`AGENTS.md`](./AGENTS.md), [`SPEC.md`](./SPEC.md) et
-[`.ai/vision.md`](./.ai/vision.md).
-
-## Déploiement
-
-**Dokploy** (Docker) sur `apps.rakoon.io`, comme les autres applis Rakoon. Voir le guide → [`DEPLOY.md`](./DEPLOY.md).
+**Dokploy** (Docker) sur `apps.rakoon.io`. Voir le guide -> [`DEPLOY.md`](./DEPLOY.md).
 
 ## Contribution
 
-- Respecter les **règles DO / DON'T** de [`.ai/rules.md`](./.ai/rules.md).
-- Suivre le **workflow 7 phases** (ci-dessus) : pas de code avant validation du plan.
 - Messages de commit au format
   [**Conventional Commits**](https://www.conventionalcommits.org) (`feat:`, `fix:`, `docs:`,
-  `refactor:`, `test:`, `chore:`…).
-- Toute décision structurante ⇒ un ADR dans [`.ai/decisions/`](./.ai/decisions/) ; après un
-  changement notable, mettre à jour [`.ai/context.md`](./.ai/context.md).
+  `refactor:`, `test:`, `chore:`).
+- Avant tout commit : `typecheck`, `lint` et `test` doivent passer.
+- Regle d'or de securite : **l'UI masque, le serveur impose**. Toute mutation passe par une
+  autorisation cote serveur.
 
 ## Licence
 
-Distribué sous licence **MIT** - voir [`LICENSE`](./LICENSE). Contributions bienvenues.
+Distribue sous licence **MIT** - voir [`LICENSE`](./LICENSE). Contributions bienvenues.

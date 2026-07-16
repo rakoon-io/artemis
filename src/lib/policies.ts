@@ -1,7 +1,7 @@
 import { Role } from "@prisma/client";
 
 /**
- * RBAC centralisé (voir ADR-0003). « L'UI masque, le serveur impose. »
+ * RBAC centralisé. « L'UI masque, le serveur impose. »
  * Toute mutation serveur DOIT appeler ces fonctions avant d'agir.
  */
 

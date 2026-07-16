@@ -15,7 +15,7 @@ import type { BoardColumnData, BoardTicket, CurrentUser } from "./kanban-board";
 /**
  * Colonne du tableau : zone de dépôt (droppable) + liste triable de cartes.
  * L'en-tête affiche le compteur et, si défini, un badge de limite WIP -
- * signalé visuellement en cas de dépassement mais **non bloquant** (ADR-0002).
+ * signalé visuellement en cas de dépassement mais **non bloquant**.
  */
 export function BoardColumn({
   column,

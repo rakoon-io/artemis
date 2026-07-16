@@ -1,16 +1,12 @@
 # Déploiement - Artemis
 
 > Déploiement **« comme les autres applis Rakoon »** : serveur **OVH + Dokploy**, reverse-proxy
-> **Traefik** sur le wildcard **`*.apps.rakoon.io`**. Décision tracée dans
-> [`ADR-0005`](./.ai/decisions/0005-deploiement-dokploy-ovh.md).
+> **Traefik** sur le wildcard **`*.apps.rakoon.io`**.
 >
-> ℹ️ **L'application v1 est implémentée** (Next.js, **npm**) : `package.json` + `package-lock.json`,
-> `src/`, `prisma/` (schéma + migration) et un **`Dockerfile` multi-stage** sont à la racine. Le
-> déploiement reste à réaliser - bloqué sur l'**accès serveur / Dokploy** (voir
-> [`.ai/context.md`](./.ai/context.md)).
+> L'application (Next.js, **npm**) fournit `package.json` + `package-lock.json`, `src/`,
+> `prisma/` (schéma + migrations) et un **`Dockerfile` multi-stage** à la racine.
 
-Vue produit → [`README.md`](./README.md) · architecture & modèle de données →
-[`.ai/architecture.md`](./.ai/architecture.md).
+Vue produit -> [`README.md`](./README.md) - schéma de données -> [`prisma/schema.prisma`](./prisma/schema.prisma).
 
 ## 1. Cible & modèle
 

@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db";
 
 /**
  * Service Projet - accès données pur (aucune autorisation ici : voir les actions).
- * Un projet neuf reçoit 5 colonnes Kanban par défaut (ADR-0002).
+ * Un projet neuf reçoit 5 colonnes Kanban par défaut.
  */
 
 /** Colonnes créées automatiquement à la naissance d'un projet (order 0..4). */

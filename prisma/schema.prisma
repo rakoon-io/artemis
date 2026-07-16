@@ -1,5 +1,4 @@
 // Artemis - schéma de données (canonique).
-// Voir .ai/architecture.md#modèle-de-données-canonique
 generator client {
   provider = "prisma-client-js"
 }
@@ -55,7 +54,7 @@ model Project {
   members          ProjectMember[]
 }
 
-// Appartenance d'un utilisateur à un projet : contrôle l'accès (voir ADR-0003).
+// Appartenance d'un utilisateur à un projet : contrôle l'accès.
 // Les administrateurs accèdent à tous les projets sans ligne ici ; cette table
 // n'accorde l'accès qu'aux Rapporteurs projet par projet.
 model ProjectMember {
@@ -83,7 +82,7 @@ model Column {
   @@index([projectId])
 }
 
-// Type de ticket - configurable par projet (voir ADR-0002 : personnalisation).
+// Type de ticket - configurable par projet.
 model TicketType {
   id        String   @id @default(cuid())
   projectId String

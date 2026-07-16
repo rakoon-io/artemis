@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Artemis - image de production (voir DEPLOY.md / ADR-0005).
+# Artemis - image de production (voir DEPLOY.md).
 
 # ---- Builder ----
 FROM node:20-bookworm AS builder
