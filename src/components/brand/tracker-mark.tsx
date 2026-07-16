@@ -1,9 +1,10 @@
 import type { SVGProps } from "react";
 
 /**
- * Emblème d'Artemis : un arc bandé pointé vers le haut (45°), flèche prête à
- * décocher, et un croissant de lune - Artemis, déesse de la chasse et de la lune.
- * Monochrome via `currentColor` : s'adapte au thème (pas besoin de `dark:invert`).
+ * Emblème d'Artemis : un croissant de lune (en haut à droite, dos vers le coin)
+ * et une flèche de la chasse décochée vers la lune - Artemis, déesse de la chasse
+ * et de la lune. Même motif que l'icône de l'application (marque unifiée).
+ * Monochrome via `currentColor` : s'adapte au thème.
  */
 export function TrackerMark(props: SVGProps<SVGSVGElement>) {
   return (
@@ -15,27 +16,22 @@ export function TrackerMark(props: SVGProps<SVGSVGElement>) {
       aria-label="Artemis"
       {...props}
     >
+      {/* Croissant de lune en haut à droite, dos (bord convexe) vers le coin */}
+      <path
+        d="M50.31 13.66 A26 26 0 1 1 86.34 49.69 A27 27 0 0 0 50.31 13.66 Z"
+        fill="currentColor"
+      />
+      {/* Flèche de la chasse, décochée vers la lune */}
       <g
         transform="rotate(-45 50 50)"
         stroke="currentColor"
-        strokeWidth={8}
+        strokeWidth={9}
         strokeLinecap="round"
         strokeLinejoin="round"
       >
-        {/* Arc (branche) */}
-        <path d="M42 16 Q78 50 42 84" />
-        {/* Corde bandée, tirée jusqu'à l'encoche */}
-        <path d="M42 16 L32 50 L42 84" />
-        {/* Flèche : fût */}
-        <path d="M24 50 H80" />
-        {/* Flèche : pointe */}
-        <path d="M70 41 L86 50 L70 59" />
-        {/* Flèche : empennage (plumes) au talon */}
-        <path d="M24 50 L33 43" />
-        <path d="M24 50 L33 57" />
+        <path d="M30 50 H78" />
+        <path d="M68 42 L84 50 L68 58" />
       </g>
-      {/* Croissant de lune (en haut à gauche) */}
-      <path d="M23 15 A9 9 0 0 0 23 33 A13.5 13.5 0 0 1 23 15 Z" fill="currentColor" />
     </svg>
   );
 }
