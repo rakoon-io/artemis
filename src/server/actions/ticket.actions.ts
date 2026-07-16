@@ -10,6 +10,7 @@ import {
   getTicketOwnership,
   updateTicket,
 } from "@/server/services/ticket.service";
+import { notifyTicketAssigned } from "@/server/notifications";
 import { revalidateBoardAndList, withUser } from "./helpers";
 import type { ActionResult } from "./types";
 
@@ -34,6 +35,8 @@ export async function createTicketAction(
       },
       user.id,
     );
+    // Notifie l'assigne si le ticket est cree avec un assigne (autre que le createur).
+    void notifyTicketAssigned(ticket.id, data.assigneeId ?? null, user.id);
     revalidateBoardAndList();
     return { ok: true, data: { id: ticket.id, key: ticket.key } };
   });
@@ -49,6 +52,9 @@ export async function updateTicketAction(
     if (!ticket) return { ok: false, error: "Ticket introuvable." };
     await assertProjectAccess(user, ticket.projectId);
     assert(canEditTicket(user, ticket), "Modification de ce ticket non autorisée.");
+    // L'assignation a-t-elle change vers une nouvelle personne ?
+    const assigneeChanged =
+      data.assigneeId !== undefined && data.assigneeId !== ticket.assigneeId;
     await updateTicket({
       id: data.id,
       title: data.title,
@@ -59,6 +65,9 @@ export async function updateTicketAction(
       sprintId: data.sprintId,
       labelIds: data.labelIds,
     });
+    if (assigneeChanged) {
+      void notifyTicketAssigned(data.id, data.assigneeId ?? null, user.id);
+    }
     revalidateBoardAndList();
     return { ok: true, data: { id: data.id } };
   });

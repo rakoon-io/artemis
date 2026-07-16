@@ -21,6 +21,14 @@ const schema = z.object({
   S3_ACCESS_KEY_ID: z.string().optional(),
   S3_SECRET_ACCESS_KEY: z.string().optional(),
   S3_REGION: z.string().default("us-east-1"),
+  // Notifications par e-mail (Mailjet) - optionnel : desactive proprement si absent.
+  MAILJET_API_KEY: z.string().optional(),
+  MAILJET_API_SECRET: z.string().optional(),
+  EMAIL_FROM: z.string().optional(),
+  EMAIL_FROM_NAME: z.string().optional(),
+  MAILJET_API_URL: z.string().optional(),
+  // URL publique de l'application (liens dans les e-mails).
+  APP_URL: z.string().optional(),
 });
 
 const parsed = schema.safeParse(process.env);

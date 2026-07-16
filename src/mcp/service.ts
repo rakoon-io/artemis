@@ -6,6 +6,7 @@ import { createComment } from "@/server/services/comment.service";
 import { listAccessibleProjectIds } from "@/server/services/membership.service";
 import { getProjectByKey, listProjects } from "@/server/services/project.service";
 import { moveTicket, updateTicket } from "@/server/services/ticket.service";
+import { notifyNewComment } from "@/server/notifications";
 import type { Actor } from "./actor";
 import {
   findUserIdByEmail,
@@ -223,6 +224,7 @@ export async function mcpCommentTicket(actor: Actor, key: string, body: string) 
   const trimmed = body.trim();
   if (!trimmed) throw new Error("Le commentaire est vide.");
   const c = await createComment(t.id, actor.id, trimmed);
+  void notifyNewComment(t.id, actor.id, trimmed);
   return { ok: true, key, message: `Commentaire ajoute sur ${key}.`, commentId: c.id };
 }
 
