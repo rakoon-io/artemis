@@ -83,6 +83,11 @@ export function getTicketKeys(projectId: string) {
   return wikiService.listTicketKeys(projectId);
 }
 
+/** Références de tickets (id, clé, titre) pour l'autocomplétion « @ » du wiki. */
+export function getTicketRefs(projectId: string) {
+  return wikiService.listTicketRefs(projectId);
+}
+
 export function getLabels(projectId: string) {
   return labelService.listLabels(projectId);
 }

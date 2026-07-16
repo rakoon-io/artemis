@@ -1,9 +1,10 @@
 /**
- * Transforme les citations de tickets (« RKN-123 », « #RKN-123 ») en liens
- * Markdown vers le ticket, quand la clé existe dans le projet. On saute les blocs
- * de code (```) et le code en ligne (`) pour ne pas altérer le code.
+ * Transforme les citations de tickets en liens Markdown vers le ticket, quand la
+ * clé existe dans le projet. Syntaxes reconnues : « @RKN-123 » (mention, recommandé),
+ * « #RKN-123 » et « RKN-123 ». On saute les blocs de code (```) et le code en ligne
+ * (`) pour ne pas altérer le code. Une mention « @ » conserve le « @ » dans le lien.
  */
-const TICKET_RE = /#?\b([A-Z][A-Z0-9]{1,9}-\d+)\b/g;
+const TICKET_RE = /(@|#)?\b([A-Z][A-Z0-9]{1,9}-\d+)\b/g;
 
 export function linkifyTicketKeys(
   markdown: string,
@@ -19,10 +20,15 @@ export function linkifyTicketKeys(
         .split(/(`[^`]*`)/g)
         .map((span, spanIndex) => {
           if (spanIndex % 2 === 1) return span; // code en ligne : inchangé
-          return span.replace(TICKET_RE, (full, key: string) => {
-            const id = ticketMap[key.toUpperCase()];
-            return id ? `[${key}](/projects/${projectKey}/tickets/${id})` : full;
-          });
+          return span.replace(
+            TICKET_RE,
+            (full, prefix: string | undefined, key: string) => {
+              const id = ticketMap[key.toUpperCase()];
+              if (!id) return full;
+              const label = prefix === "@" ? `@${key}` : key;
+              return `[${label}](/projects/${projectKey}/tickets/${id})`;
+            },
+          );
         })
         .join("");
     })

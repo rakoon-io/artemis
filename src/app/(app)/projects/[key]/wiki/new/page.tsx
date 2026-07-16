@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
-import { getProjectByKey, getTicketKeys } from "@/server/queries";
+import { getProjectByKey, getTicketRefs } from "@/server/queries";
 import { Button } from "@/components/ui/button";
 import { WikiPageForm } from "@/components/wiki/wiki-page-form";
 
@@ -16,10 +16,7 @@ export default async function NewWikiPage({
   const project = await getProjectByKey(key);
   if (!project) notFound();
 
-  const ticketKeys = await getTicketKeys(project.id);
-  const ticketMap: Record<string, string> = Object.fromEntries(
-    ticketKeys.map((t) => [t.key.toUpperCase(), t.id]),
-  );
+  const tickets = await getTicketRefs(project.id);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -37,7 +34,7 @@ export default async function NewWikiPage({
       <WikiPageForm
         projectId={project.id}
         projectKey={project.key}
-        ticketMap={ticketMap}
+        tickets={tickets}
       />
     </div>
   );

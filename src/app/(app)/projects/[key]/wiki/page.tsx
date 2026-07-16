@@ -83,8 +83,8 @@ export default async function WikiPage({
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Wiki</h1>
           <p className="text-sm text-muted-foreground">
-            Documentation du projet en Markdown. Citez des tickets avec leur clé
-            (ex. RKN-3).
+            Documentation du projet en Markdown. Citez une tâche avec @ (ex.
+            @RKN-3).
           </p>
         </div>
         {createButton}

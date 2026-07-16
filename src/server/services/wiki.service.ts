@@ -88,3 +88,12 @@ export function listTicketKeys(projectId: string) {
     select: { id: true, key: true },
   });
 }
+
+/** Références (id, clé, titre) des tickets du projet - pour l'autocomplétion « @ ». */
+export function listTicketRefs(projectId: string) {
+  return prisma.ticket.findMany({
+    where: { projectId },
+    orderBy: { number: "desc" },
+    select: { id: true, key: true, title: true },
+  });
+}
