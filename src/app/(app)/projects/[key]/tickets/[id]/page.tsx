@@ -82,7 +82,7 @@ export default async function TicketDetailPage({
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 p-6">
+    <div className="mx-auto w-full max-w-7xl space-y-6 p-4 md:p-6">
       <Button asChild variant="ghost" size="sm" className="-ml-2">
         <Link href={`/projects/${key}/tickets`}>
           <ArrowLeft />
@@ -137,8 +137,8 @@ export default async function TicketDetailPage({
         )}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+        <div className="min-w-0 flex-1 space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Description</CardTitle>
@@ -167,7 +167,7 @@ export default async function TicketDetailPage({
               {ticket.attachments.length > 0 ? (
                 <div className="space-y-3">
                   {imageAttachments.length > 0 && (
-                    <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
                       {imageAttachments.map((att) => (
                         <li key={att.id}>
                           <a
@@ -234,7 +234,7 @@ export default async function TicketDetailPage({
           </Card>
         </div>
 
-        <aside className="space-y-4">
+        <aside className="space-y-4 lg:sticky lg:top-16 lg:w-80 lg:shrink-0">
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Détails</CardTitle>
@@ -273,13 +273,15 @@ export default async function TicketDetailPage({
                 </div>
               </div>
               <Separator />
-              <div>
-                <p className="text-xs text-muted-foreground">Créé le</p>
-                <p className="mt-0.5">{formatDate(ticket.createdAt)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Mis à jour le</p>
-                <p className="mt-0.5">{formatDate(ticket.updatedAt)}</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs text-muted-foreground">Créé le</p>
+                  <p className="mt-0.5">{formatDate(ticket.createdAt)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Mis à jour le</p>
+                  <p className="mt-0.5">{formatDate(ticket.updatedAt)}</p>
+                </div>
               </div>
             </CardContent>
           </Card>
