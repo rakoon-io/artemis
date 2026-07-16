@@ -5,7 +5,7 @@
 FROM node:20-bookworm AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1 HUSKY=0
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json .npmrc ./
 RUN npm ci --no-audit --no-fund
 COPY . .
 RUN npx prisma generate
