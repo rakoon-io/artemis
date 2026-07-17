@@ -202,22 +202,20 @@ export function SprintTicketItem({
 
 /**
  * Carte d'un sprint / lot : en-tête (état, objectif, dates), liste de ses tickets
- * (chacun déplaçable vers un autre sprint ou le backlog), et actions d'administration
- * (Démarrer / Clôturer / Rouvrir / Supprimer) réservées à l'admin. Le serveur impose
- * l'autorisation dans tous les cas.
+ * (chacun déplaçable vers un autre sprint ou le backlog), et actions de planification
+ * (Démarrer / Clôturer / Rouvrir / Supprimer) ouvertes aux membres du projet. Le
+ * serveur impose l'autorisation (accès au projet) dans tous les cas.
  */
 export function SprintCard({
   sprint,
   tickets,
   projectKey,
   sprintOptions,
-  isAdmin,
 }: {
   sprint: Sprint;
   tickets: SprintTicketRow[];
   projectKey: string;
   sprintOptions: SprintChoice[];
-  isAdmin: boolean;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -307,8 +305,7 @@ export function SprintCard({
           </ul>
         )}
       </CardContent>
-      {isAdmin && (
-        <CardFooter className="gap-2">
+      <CardFooter className="gap-2">
           {sprint.state === SprintState.PLANNED && (
             <Button
               type="button"
@@ -402,7 +399,6 @@ export function SprintCard({
             </DialogContent>
           </Dialog>
         </CardFooter>
-      )}
     </Card>
   );
 }

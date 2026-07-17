@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import { SprintState } from "@prisma/client";
 
 import { auth } from "@/auth";
-import { isAdmin } from "@/lib/policies";
 import { getAccessibleProjectByKey } from "@/server/access";
 import {
   getBacklogTickets,
@@ -38,7 +37,6 @@ export default async function SprintsPage({
     getSprintsWithTickets(project.id),
     getBacklogTickets(project.id),
   ]);
-  const admin = isAdmin(session?.user);
   const sprintOptions = sprints.map((s) => ({ id: s.id, name: s.name }));
 
   const isEmpty = sprints.length === 0 && backlog.length === 0;
@@ -55,13 +53,13 @@ export default async function SprintsPage({
             itération.
           </p>
         </div>
-        {admin && <CreateSprintDialog projectId={project.id} />}
+        <CreateSprintDialog projectId={project.id} />
       </div>
 
       {isEmpty ? (
         <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
-          Aucun sprint ni ticket pour l&apos;instant.
-          {admin ? " Créez un sprint pour commencer à planifier." : ""}
+          Aucun sprint ni ticket pour l&apos;instant. Créez un sprint pour
+          commencer à planifier.
         </div>
       ) : (
         <div className="space-y-8">
@@ -84,7 +82,6 @@ export default async function SprintsPage({
                       tickets={sprint.tickets}
                       projectKey={project.key}
                       sprintOptions={sprintOptions}
-                      isAdmin={admin}
                     />
                   ))}
                 </div>

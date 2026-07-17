@@ -10,6 +10,13 @@ export function listSprints(projectId: string) {
   });
 }
 
+/** Projet d'un sprint (pour la garde d'accès des actions). */
+export function getSprintProjectId(id: string): Promise<string | null> {
+  return prisma.sprint
+    .findUnique({ where: { id }, select: { projectId: true } })
+    .then((s) => s?.projectId ?? null);
+}
+
 /** Sprints du projet avec leurs tickets (pour la vue Sprints qui liste le contenu). */
 export function listSprintsWithTickets(projectId: string) {
   return prisma.sprint.findMany({
