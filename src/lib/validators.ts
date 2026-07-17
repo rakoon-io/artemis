@@ -35,8 +35,15 @@ export const updateProjectSchema = z.object({
 export const adminCreateUserSchema = z.object({
   name: z.string().min(1, "Nom requis").max(80),
   email: z.string().email("E-mail invalide"),
-  password: z.string().min(8, "8 caractères minimum").max(200),
+  // Optionnel : vide/absent => l'utilisateur definit son mot de passe via un lien.
+  password: z.string().min(8, "8 caractères minimum").max(200).optional(),
   role: z.nativeEnum(Role),
+});
+
+/** Definition du mot de passe via un lien de premiere connexion (jeton). */
+export const setPasswordSchema = z.object({
+  token: z.string().min(1),
+  password: z.string().min(8, "8 caractères minimum").max(200),
 });
 
 export const updateUserRoleSchema = z.object({

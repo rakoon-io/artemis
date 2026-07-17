@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { signOut } from "next-auth/react";
-import { LogOut, Users } from "lucide-react";
+import { LogOut, Mail, Users } from "lucide-react";
 import type { Role } from "@prisma/client";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -63,6 +63,12 @@ export function UserMenu({ user }: UserMenuProps) {
               <Link href="/users">
                 <Users />
                 Utilisateurs
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/emails">
+                <Mail />
+                E-mails
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />

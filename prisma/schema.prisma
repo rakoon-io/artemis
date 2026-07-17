@@ -19,6 +19,12 @@ enum SprintState {
   COMPLETED
 }
 
+enum EmailStatus {
+  SENT
+  FAILED
+  DISABLED
+}
+
 model User {
   id           String       @id @default(cuid())
   email        String       @unique
@@ -33,6 +39,33 @@ model User {
   attachments  Attachment[]
   wikiPages    WikiPage[]
   memberships  ProjectMember[]
+  setupToken   PasswordSetupToken?
+}
+
+// Jeton de premiere connexion / reinitialisation : lien a usage unique et date
+// permettant a un utilisateur de definir son mot de passe. Un seul jeton actif
+// par utilisateur (regenerer remplace le precedent). Seul le hash est stocke.
+model PasswordSetupToken {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+// Journal des e-mails : suivi de tous les envois (notifications, invitations,
+// reinitialisation). Statut DISABLED = envoi ignore car Mailjet non configure.
+model EmailLog {
+  id        String      @id @default(cuid())
+  to        String
+  subject   String
+  type      String // "comment" | "assignment" | "invite" | "reset"
+  status    EmailStatus
+  error     String?
+  createdAt DateTime    @default(now())
+
+  @@index([createdAt])
 }
 
 model Project {

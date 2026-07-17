@@ -13,6 +13,8 @@ export const authConfig = {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
       const path = nextUrl.pathname;
+      // Pages publiques (jeton de première connexion, demande de réinitialisation).
+      if (path === "/activer" || path === "/reset") return true;
       const isAuthRoute = path === "/login" || path === "/register";
       if (isAuthRoute) {
         if (isLoggedIn) return Response.redirect(new URL("/", nextUrl));

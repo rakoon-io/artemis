@@ -38,6 +38,9 @@ export default async function AppLayout({
         </div>
       </header>
       <main className="w-full flex-1">{children}</main>
+      <footer className="border-t py-4 text-center text-xs text-muted-foreground">
+        Développé par Thomas Broussard
+      </footer>
     </div>
   );
 }

@@ -1,11 +1,7 @@
 import { prisma } from "@/lib/db";
-import {
-  appBaseUrl,
-  isEmailConfigured,
-  sendEmail,
-  ticketEmailHtml,
-} from "@/lib/email";
+import { appBaseUrl, isEmailConfigured, ticketEmailHtml } from "@/lib/email";
 import { commentRecipients, truncate } from "@/lib/notify-recipients";
+import { deliver } from "@/server/mailer";
 
 /**
  * Notifications par e-mail (Mailjet) sur les evenements de ticket. Ces fonctions
@@ -54,11 +50,12 @@ export async function notifyNewComment(
     });
     await Promise.all(
       recipients.map((r) =>
-        sendEmail({
+        deliver({
           to: r.email!,
           toName: r.name ?? undefined,
           subject: `[${t.key}] Nouveau commentaire`,
           html,
+          type: "comment",
         }),
       ),
     );
@@ -94,11 +91,12 @@ export async function notifyTicketAssigned(
       ticketTitle: t.title,
       url,
     });
-    await sendEmail({
+    await deliver({
       to: t.assignee.email,
       toName: t.assignee.name ?? undefined,
       subject: `[${t.key}] Ticket assigne`,
       html,
+      type: "assignment",
     });
   } catch (error) {
     console.error("[notify] assignation:", error);

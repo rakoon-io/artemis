@@ -26,21 +26,37 @@ export function getUserById(id: string) {
   });
 }
 
+export function getUserByEmail(email: string) {
+  return prisma.user.findUnique({
+    where: { email },
+    select: publicUserSelect,
+  });
+}
+
 /** Nombre d'administrateurs (sert à garantir « au moins un admin »). */
 export function countAdmins(): Promise<number> {
   return prisma.user.count({ where: { role: Role.ADMIN } });
 }
 
+/** Vrai si l'utilisateur a déjà un mot de passe (compte actif) - jamais exposé au client. */
+export function userHasPassword(id: string): Promise<boolean> {
+  return prisma.user
+    .findUnique({ where: { id }, select: { passwordHash: true } })
+    .then((u) => !!u?.passwordHash);
+}
+
 export interface CreateUserServiceInput {
   name: string;
   email: string;
-  password: string;
+  /** Optionnel : absent => compte sans mot de passe (activation par lien). */
+  password?: string;
   role: Role;
 }
 
 /**
- * Crée un utilisateur (mot de passe haché en bcrypt 12). Lève une erreur claire
- * si l'e-mail est déjà pris (pré-vérification + garde anti-course sur P2002).
+ * Crée un utilisateur (mot de passe haché en bcrypt 12, ou aucun mot de passe si
+ * absent - l'utilisateur le définira via un lien de première connexion). Lève une
+ * erreur claire si l'e-mail est déjà pris (pré-vérification + garde P2002).
  */
 export async function createUser(input: CreateUserServiceInput) {
   const existing = await prisma.user.findUnique({
@@ -49,7 +65,9 @@ export async function createUser(input: CreateUserServiceInput) {
   });
   if (existing) throw new Error("Cet e-mail est déjà utilisé.");
 
-  const passwordHash = await bcrypt.hash(input.password, 12);
+  const passwordHash = input.password
+    ? await bcrypt.hash(input.password, 12)
+    : null;
   try {
     return await prisma.user.create({
       data: {
