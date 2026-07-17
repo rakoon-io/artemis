@@ -78,6 +78,33 @@ export const updateTicketSchema = z.object({
   labelIds: z.array(z.string()).optional(),
 });
 
+/** Génération de tickets à partir d'un texte libre collé (intégration Mistral). */
+export const generateTicketsFromTextSchema = z.object({
+  projectId: z.string().min(1),
+  text: z
+    .string()
+    .trim()
+    .min(1, "Collez un texte à analyser.")
+    .max(20000, "Texte trop long (20000 caractères maximum)."),
+});
+
+/** Un brouillon de ticket, tel que validé dans l'écran de revue (avant création). */
+export const ticketDraftSchema = z.object({
+  title: z.string().trim().min(1, "Titre requis").max(200),
+  description: z.string().max(20000).optional().nullable(),
+  typeId: z.string().min(1).optional().nullable(),
+  priorityId: z.string().min(1).optional().nullable(),
+});
+
+/** Création en lot des tickets validés depuis l'écran de revue. */
+export const createTicketsFromDraftsSchema = z.object({
+  projectId: z.string().min(1),
+  tickets: z
+    .array(ticketDraftSchema)
+    .min(1, "Sélectionnez au moins un ticket à créer.")
+    .max(50, "Trop de tickets à créer d'un seul coup."),
+});
+
 export const moveTicketSchema = z.object({
   ticketId: z.string().min(1),
   columnId: z.string().min(1),

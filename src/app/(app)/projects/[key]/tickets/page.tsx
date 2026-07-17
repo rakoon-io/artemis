@@ -12,8 +12,10 @@ import {
   getTicketTypes,
 } from "@/server/queries";
 import { CreateTicketDialog } from "@/components/ticket/create-ticket-dialog";
+import { GenerateTicketsDialog } from "@/components/ticket/generate-tickets-dialog";
 import { TicketFilters } from "@/components/ticket/ticket-filters";
 import { TicketTable } from "@/components/ticket/ticket-table";
+import { isMistralConfigured } from "@/lib/mistral";
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 
@@ -89,18 +91,31 @@ export default async function TicketsListPage({
   const from = list.total === 0 ? 0 : (list.page - 1) * list.pageSize + 1;
   const to = Math.min(list.total, list.page * list.pageSize);
 
+  // Bouton « Créer depuis un texte » affiché uniquement si l'intégration IA
+  // (Mistral) est configurée côté serveur (la clé n'atteint jamais le client).
+  const aiEnabled = isMistralConfigured();
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">Tickets</h1>
-        <CreateTicketDialog
-          projectId={project.id}
-          members={members}
-          sprints={sprints}
-          labels={labels}
-          types={types}
-          priorities={priorities}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          {aiEnabled && (
+            <GenerateTicketsDialog
+              projectId={project.id}
+              types={types}
+              priorities={priorities}
+            />
+          )}
+          <CreateTicketDialog
+            projectId={project.id}
+            members={members}
+            sprints={sprints}
+            labels={labels}
+            types={types}
+            priorities={priorities}
+          />
+        </div>
       </div>
 
       <TicketFilters

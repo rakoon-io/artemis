@@ -29,6 +29,16 @@ const schema = z.object({
   MAILJET_API_URL: z.string().optional(),
   // URL publique de l'application (liens dans les e-mails).
   APP_URL: z.string().optional(),
+  // Integration IA (Mistral) - optionnel : la generation de tickets depuis un
+  // texte colle se desactive proprement si la cle est absente. Lue cote serveur
+  // uniquement, jamais exposee au client. Modele par defaut : mistral-medium-3.5.
+  // Traitement par lot (Batch API) actif par defaut ; MISTRAL_USE_BATCH="false"
+  // bascule sur l'appel synchrone.
+  MISTRAL_API_KEY: z.string().optional(),
+  MISTRAL_MODEL: z.string().optional(),
+  MISTRAL_USE_BATCH: z.string().optional(),
+  MISTRAL_BATCH_TIMEOUT_MS: z.string().optional(),
+  MISTRAL_API_URL: z.string().optional(),
 });
 
 const parsed = schema.safeParse(process.env);
