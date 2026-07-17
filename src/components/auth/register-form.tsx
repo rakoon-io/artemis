@@ -95,7 +95,7 @@ export function RegisterForm() {
               name="email"
               type="email"
               autoComplete="email"
-              placeholder="vous@rakoon.io"
+              placeholder="vous@exemple.com"
               required
             />
           </div>

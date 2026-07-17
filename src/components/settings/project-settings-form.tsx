@@ -19,7 +19,7 @@ export interface ProjectSettingsFormProps {
   };
 }
 
-/** Couleur d'accent par défaut (charte Rakoon, bordeaux) affichée quand aucune
+/** Couleur d'accent par défaut (accent Artemis) affichée quand aucune
  *  couleur personnalisée n'est définie. */
 const DEFAULT_ACCENT = "#5f4ec2";
 
@@ -110,7 +110,7 @@ export function ProjectSettingsForm({ project }: ProjectSettingsFormProps) {
         </div>
         <p className="text-xs text-muted-foreground">
           Personnalise la couleur principale des boutons et surbrillances du
-          projet. « Réinitialiser » rétablit la charte Rakoon.
+          projet. « Réinitialiser » rétablit l&apos;accent par défaut.
         </p>
       </div>
       <div>
