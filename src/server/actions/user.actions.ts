@@ -15,8 +15,9 @@ import {
 import { withUser } from "./helpers";
 import type { ActionResult } from "./types";
 
-/** Revalide les vues dépendant des comptes (settings projet, listes). */
+/** Revalide les vues dépendant des comptes (page Utilisateurs, listes projet). */
 function revalidateUsers(): void {
+  revalidatePath("/users");
   revalidatePath("/projects", "layout");
 }
 
