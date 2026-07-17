@@ -1,5 +1,6 @@
 import { isAdmin, type PolicyUser } from "@/lib/policies";
 import * as columnService from "./services/column.service";
+import * as emailLogService from "./services/email-log.service";
 import * as labelService from "./services/label.service";
 import * as membershipService from "./services/membership.service";
 import * as projectService from "./services/project.service";
@@ -45,6 +46,11 @@ export function getProjectByKey(key: string) {
 /** Tous les utilisateurs avec leur appartenance au projet (onglet Membres). */
 export function getProjectMembersView(projectId: string) {
   return membershipService.listProjectMembersView(projectId);
+}
+
+/** Journal des e-mails (suivi des envois), plus récents d'abord. */
+export function getEmailLog(limit = 200) {
+  return emailLogService.listEmails(limit);
 }
 
 /** Colonnes ordonnées + leurs tickets ordonnés par rang (avec assignee/labels). */

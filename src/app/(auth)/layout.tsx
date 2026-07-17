@@ -11,6 +11,9 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           <span>Artemis</span>
         </div>
         {children}
+        <p className="text-center text-xs text-muted-foreground">
+          Développé par Thomas Broussard
+        </p>
       </div>
     </div>
   );

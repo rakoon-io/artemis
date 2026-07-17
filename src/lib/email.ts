@@ -125,6 +125,33 @@ export function ticketEmailHtml(args: TicketEmailArgs): string {
   </div></body></html>`;
 }
 
+export interface InviteEmailArgs {
+  name: string | null;
+  url: string;
+  /** true = reinitialisation d'un compte existant ; false = premiere connexion. */
+  reset?: boolean;
+}
+
+/** Gabarit HTML de marque Artemis pour un lien de premiere connexion / reinitialisation. */
+export function inviteEmailHtml(args: InviteEmailArgs): string {
+  const hello = args.name ? `Bonjour ${esc(args.name)},` : "Bonjour,";
+  const intro = args.reset
+    ? "Voici votre lien pour redefinir votre mot de passe Artemis."
+    : "Un compte Artemis a ete cree pour vous. Definissez votre mot de passe pour l'activer.";
+  return `<!DOCTYPE html><html lang="fr"><body style="margin:0;background:#f1f5f9;font-family:-apple-system,system-ui,Segoe UI,Roboto,sans-serif;color:#0f172a;">
+  <div style="max-width:540px;margin:0 auto;padding:32px 20px;">
+    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:28px;">
+      <p style="font-size:18px;font-weight:700;margin:0 0 2px;color:#5f4ec2;">Artemis</p>
+      <p style="font-size:15px;line-height:1.5;margin:16px 0 6px;color:#334155;">${hello}</p>
+      <p style="font-size:15px;line-height:1.5;margin:0 0 14px;color:#334155;">${esc(intro)}</p>
+      <p style="margin:22px 0 0;">
+        <a href="${esc(args.url)}" style="display:inline-block;background:#5f4ec2;color:#fff;text-decoration:none;font-weight:600;padding:11px 22px;border-radius:9px;font-size:14px;">Definir mon mot de passe</a>
+      </p>
+      <p style="font-size:12px;color:#94a3b8;margin:22px 0 0;line-height:1.5;">Ce lien est valable 7 jours. Si vous n'attendiez pas ce message, ignorez-le.</p>
+    </div>
+  </div></body></html>`;
+}
+
 /** URL de base de l'application, pour construire les liens des e-mails. */
 export function appBaseUrl(): string {
   const base =

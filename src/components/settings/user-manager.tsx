@@ -3,11 +3,12 @@
 import { type FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2, UserPlus } from "lucide-react";
+import { Check, Copy, KeyRound, Loader2, Plus, Trash2, UserPlus } from "lucide-react";
 import { Role } from "@prisma/client";
 import {
   createUserAction,
   deleteUserAction,
+  resendSetupLinkAction,
   updateUserRoleAction,
 } from "@/server/actions/user.actions";
 import { Badge } from "@/components/ui/badge";
@@ -40,15 +41,22 @@ export interface MemberRow {
   role: Role;
 }
 
+/** Etat d'un lien de première connexion à présenter (copie / envoi). */
+interface SetupLink {
+  url: string;
+  email: string;
+  emailSent: boolean;
+}
+
 const ROLE_LABELS: Record<Role, string> = {
   [Role.ADMIN]: "Administrateur",
   [Role.REPORTER]: "Rapporteur",
 };
 
 /**
- * Gestion des utilisateurs & rôles (Admin) : liste (nom, e-mail, badge rôle),
- * changement de rôle et suppression par ligne, ajout via un dialogue. Les gardes
- * (dernier admin, auto-suppression) sont reflétées en UI mais imposées serveur.
+ * Gestion des utilisateurs & rôles (Admin) : liste, changement de rôle,
+ * suppression, et **lien de première connexion** (à la création ou relancé plus
+ * tard). Les gardes serveur restent la source de vérité.
  */
 export function UserManager({
   users,
@@ -57,10 +65,12 @@ export function UserManager({
   users: MemberRow[];
   currentUserId: string;
 }) {
+  const [link, setLink] = useState<SetupLink | null>(null);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-end">
-        <AddUserDialog />
+        <AddUserDialog onLink={setLink} />
       </div>
 
       {users.length === 0 ? (
@@ -74,18 +84,30 @@ export function UserManager({
               key={member.id}
               member={member}
               isSelf={member.id === currentUserId}
+              onLink={setLink}
             />
           ))}
         </ul>
       )}
+
+      <SetupLinkDialog link={link} onClose={() => setLink(null)} />
     </div>
   );
 }
 
-/** Une ligne : identité, badge rôle, sélecteur de rôle et suppression. */
-function UserRow({ member, isSelf }: { member: MemberRow; isSelf: boolean }) {
+/** Une ligne : identité, badge rôle, sélecteur de rôle, lien de connexion, suppression. */
+function UserRow({
+  member,
+  isSelf,
+  onLink,
+}: {
+  member: MemberRow;
+  isSelf: boolean;
+  onLink: (link: SetupLink) => void;
+}) {
   const router = useRouter();
   const [updating, setUpdating] = useState(false);
+  const [sending, setSending] = useState(false);
   const displayName = member.name?.trim() || member.email;
 
   async function handleRoleChange(next: string) {
@@ -99,6 +121,26 @@ function UserRow({ member, isSelf }: { member: MemberRow; isSelf: boolean }) {
     }
     toast.success("Rôle mis à jour.");
     router.refresh();
+  }
+
+  async function handleResend() {
+    setSending(true);
+    const res = await resendSetupLinkAction(member.id);
+    setSending(false);
+    if (!res.ok) {
+      toast.error(res.error);
+      return;
+    }
+    onLink({
+      url: res.data!.setupUrl,
+      email: res.data!.email,
+      emailSent: res.data!.emailSent,
+    });
+    toast.success(
+      res.data!.emailSent
+        ? "Lien envoyé par e-mail."
+        : "Lien généré (à copier).",
+    );
   }
 
   return (
@@ -119,10 +161,7 @@ function UserRow({ member, isSelf }: { member: MemberRow; isSelf: boolean }) {
         onValueChange={handleRoleChange}
         disabled={updating}
       >
-        <SelectTrigger
-          className="w-44"
-          aria-label={`Rôle de ${displayName}`}
-        >
+        <SelectTrigger className="w-44" aria-label={`Rôle de ${displayName}`}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -131,12 +170,83 @@ function UserRow({ member, isSelf }: { member: MemberRow; isSelf: boolean }) {
         </SelectContent>
       </Select>
 
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={handleResend}
+        disabled={sending}
+        aria-label={`Lien de connexion pour ${displayName}`}
+        title="Envoyer un lien de première connexion / réinitialisation"
+      >
+        {sending ? <Loader2 className="animate-spin" /> : <KeyRound />}
+      </Button>
+
       <DeleteUserDialog
         userId={member.id}
         displayName={displayName}
         isSelf={isSelf}
       />
     </li>
+  );
+}
+
+/** Dialogue affichant un lien de première connexion (copie + statut d'envoi). */
+function SetupLinkDialog({
+  link,
+  onClose,
+}: {
+  link: SetupLink | null;
+  onClose: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    if (!link) return;
+    try {
+      await navigator.clipboard.writeText(link.url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast.error("Copie impossible. Sélectionnez le lien manuellement.");
+    }
+  }
+
+  return (
+    <Dialog open={!!link} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Lien de première connexion</DialogTitle>
+          <DialogDescription>
+            {link?.emailSent
+              ? `Un e-mail a été envoyé à ${link.email}. Vous pouvez aussi copier le lien.`
+              : `Copiez ce lien et transmettez-le à ${link?.email}. L'envoi d'e-mail n'est pas configuré.`}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex items-center gap-2">
+          <Input
+            readOnly
+            value={link?.url ?? ""}
+            onFocus={(e) => e.currentTarget.select()}
+            className="font-mono text-xs"
+          />
+          <Button type="button" variant="outline" onClick={copy} className="shrink-0">
+            {copied ? <Check /> : <Copy />}
+            {copied ? "Copié" : "Copier"}
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Ce lien est valable 7 jours et à usage unique.
+        </p>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button type="button" variant="outline">
+              Fermer
+            </Button>
+          </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -216,8 +326,8 @@ function DeleteUserDialog({
   );
 }
 
-/** Dialogue de création d'un utilisateur (nom, e-mail, mot de passe, rôle). */
-function AddUserDialog() {
+/** Dialogue de création d'un utilisateur (mot de passe optionnel = lien de connexion). */
+function AddUserDialog({ onLink }: { onLink: (link: SetupLink) => void }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -230,24 +340,40 @@ function AddUserDialog() {
     const name = String(formData.get("name") ?? "").trim();
     const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
-    if (!name || !email || password.length < 8) {
-      toast.error(
-        "Renseignez un nom, un e-mail et un mot de passe (8 caractères minimum).",
-      );
+    if (!name || !email) {
+      toast.error("Renseignez un nom et un e-mail.");
+      return;
+    }
+    if (password && password.length < 8) {
+      toast.error("Le mot de passe doit faire 8 caractères minimum.");
       return;
     }
 
     setSubmitting(true);
-    const res = await createUserAction({ name, email, password, role });
+    const res = await createUserAction({
+      name,
+      email,
+      role,
+      ...(password ? { password } : {}),
+    });
     setSubmitting(false);
     if (!res.ok) {
       toast.error(res.error);
       return;
     }
-    toast.success(`Utilisateur « ${name} » créé.`);
     form.reset();
     setRole(Role.REPORTER);
     setOpen(false);
+    if (res.data?.setupUrl) {
+      onLink({
+        url: res.data.setupUrl,
+        email: res.data.email,
+        emailSent: !!res.data.emailSent,
+      });
+      toast.success(`« ${name} » créé. Lien de première connexion généré.`);
+    } else {
+      toast.success(`Utilisateur « ${name} » créé.`);
+    }
     router.refresh();
   }
 
@@ -290,10 +416,10 @@ function AddUserDialog() {
               autoComplete="new-password"
               minLength={8}
               maxLength={200}
-              required
             />
             <p className="text-xs text-muted-foreground">
-              8 caractères minimum.
+              Laissez vide pour envoyer un lien de première connexion (l&apos;utilisateur
+              choisit son mot de passe).
             </p>
           </div>
           <div className="grid gap-2">
