@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { signOut } from "next-auth/react";
-import { LogOut } from "lucide-react";
+import { LogOut, Users } from "lucide-react";
 import type { Role } from "@prisma/client";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -56,6 +57,17 @@ export function UserMenu({ user }: UserMenuProps) {
           </Badge>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        {user.role === "ADMIN" && (
+          <>
+            <DropdownMenuItem asChild>
+              <Link href="/users">
+                <Users />
+                Utilisateurs
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
         <DropdownMenuItem onSelect={() => signOut({ redirectTo: "/login" })}>
           <LogOut />
           Se déconnecter

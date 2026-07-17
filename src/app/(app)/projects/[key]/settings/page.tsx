@@ -5,7 +5,6 @@ import { isAdmin } from "@/lib/policies";
 import {
   getBoardData,
   getLabels,
-  getMembers,
   getProjectByKey,
   getProjectMembersView,
   getTicketPriorities,
@@ -25,7 +24,6 @@ import { PriorityManager } from "@/components/settings/priority-manager";
 import { MemberManager } from "@/components/settings/member-manager";
 import { ProjectSettingsForm } from "@/components/settings/project-settings-form";
 import { TypeManager } from "@/components/settings/type-manager";
-import { UserManager } from "@/components/settings/user-manager";
 
 /**
  * Paramètres du projet (RSC) : personnalisation du workflow (colonnes) et des
@@ -59,11 +57,10 @@ export default async function SettingsPage({
   const project = await getProjectByKey(key);
   if (!project) notFound();
 
-  const [{ columns }, labels, members, membersView, types, priorities] =
+  const [{ columns }, labels, membersView, types, priorities] =
     await Promise.all([
       getBoardData(project.id),
       getLabels(project.id),
-      getMembers(),
       getProjectMembersView(project.id),
       getTicketTypes(project.id),
       getTicketPriorities(project.id),
@@ -84,8 +81,8 @@ export default async function SettingsPage({
           {project.name} - Paramètres
         </h1>
         <p className="text-sm text-muted-foreground">
-          Éditez le projet, personnalisez le workflow (colonnes, labels) et gérez
-          les utilisateurs.
+          Éditez le projet, personnalisez le workflow (colonnes, labels, types,
+          priorités) et gérez ses membres.
         </p>
       </div>
 
@@ -97,7 +94,6 @@ export default async function SettingsPage({
           <TabsTrigger value="types">Types</TabsTrigger>
           <TabsTrigger value="priorities">Priorités</TabsTrigger>
           <TabsTrigger value="members">Membres</TabsTrigger>
-          <TabsTrigger value="users">Utilisateurs</TabsTrigger>
         </TabsList>
 
         <TabsContent value="project" className="mt-4">
@@ -195,21 +191,6 @@ export default async function SettingsPage({
             </CardHeader>
             <CardContent>
               <MemberManager projectId={project.id} users={membersView} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="users" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Utilisateurs &amp; rôles</CardTitle>
-              <CardDescription>
-                Ajoutez des comptes, changez les rôles (Administrateur /
-                Rapporteur) ou supprimez des utilisateurs.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <UserManager users={members} currentUserId={session.user.id} />
             </CardContent>
           </Card>
         </TabsContent>
