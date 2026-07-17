@@ -6,11 +6,15 @@
     </linearGradient>
   </defs>
   <rect width="100" height="100" rx="24" fill="url(#bg)"/>
-  <!-- Croissant de lune en haut a droite, dos (bord convexe) oriente vers le coin -->
+  <!-- Croissant de lune en haut a droite, dos (bord convexe) vers le coin -->
   <path d="M50.31 13.66 A26 26 0 1 1 86.34 49.69 A27 27 0 0 0 50.31 13.66 Z" fill="#f8f5ee"/>
-  <!-- Fleche de la chasse, decochee vers la lune (haut-droite) -->
-  <g transform="rotate(-45 50 50)" stroke="#ffffff" stroke-width="9" fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M30 50 H78"/>
-    <path d="M68 42 L84 50 L68 58"/>
+  <!-- Arc bande et fleche decochee vers la lune (haut-droite) -->
+  <g transform="rotate(-45 50 50)" stroke="#ffffff" stroke-width="8.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M38 20 Q62 50 38 80"/>
+    <path d="M38 20 L28 50 L38 80"/>
+    <path d="M24 50 H72"/>
+    <path d="M63 43 L76 50 L63 57"/>
+    <path d="M24 50 L33 44"/>
+    <path d="M24 50 L33 56"/>
   </g>
 </svg>
