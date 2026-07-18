@@ -2,10 +2,13 @@
 
 > Suivi de tickets sobre, moderne et personnalisable, adapté à l'agile.
 
-[![Licence : MIT](https://img.shields.io/badge/licence-MIT-green.svg)](./LICENSE)
+[![Demo en ligne](https://img.shields.io/badge/demo-en_ligne-5f4ec2.svg)](https://artemis.apps.rakoon.io)
+&nbsp;[![Licence : MIT](https://img.shields.io/badge/licence-MIT-green.svg)](./LICENSE)
 &nbsp;![Next.js 16](https://img.shields.io/badge/Next.js-16-black.svg)
 &nbsp;![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6.svg)
 &nbsp;![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Prisma-4169e1.svg)
+
+**Demo en ligne** : https://artemis.apps.rakoon.io (comptes de demonstration ci-dessous).
 
 Artemis est un outil de suivi de tickets pour equipes agiles : creation de ticket
 sans friction, tableau Kanban configurable, sprints et lots, wiki de projet, le
