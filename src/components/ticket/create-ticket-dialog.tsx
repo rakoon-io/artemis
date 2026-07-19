@@ -37,6 +37,8 @@ import {
   type SprintOption,
   type TicketTypeOption,
 } from "./ticket-fields";
+import { useDict } from "@/i18n/provider";
+import { fmt } from "@/i18n";
 
 /**
  * Création rapide « paste-first » - le titre suffit ; on peut coller une image
@@ -60,6 +62,7 @@ export function CreateTicketDialog({
   priorities: PriorityOption[];
 }) {
   const router = useRouter();
+  const t = useDict();
   const attachments = usePendingAttachments();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -92,7 +95,7 @@ export function CreateTicketDialog({
     event.preventDefault();
     const trimmed = title.trim();
     if (!trimmed) {
-      toast.error("Le titre est requis.");
+      toast.error(t.ticketForm.titleRequired);
       return;
     }
 
@@ -115,14 +118,14 @@ export function CreateTicketDialog({
     }
     const created = result.data;
     if (!created) {
-      toast.error("Réponse inattendue du serveur.");
+      toast.error(t.ticketForm.unexpectedResponse);
       setSubmitting(false);
       return;
     }
 
     if (attachments.hasPending) await attachments.uploadAll(created.id);
 
-    toast.success(`Ticket ${created.key} créé.`);
+    toast.success(fmt(t.ticketForm.createdToast, { key: created.key }));
     router.refresh();
     setSubmitting(false);
     setOpen(false);
@@ -134,51 +137,48 @@ export function CreateTicketDialog({
       <DialogTrigger asChild>
         <Button>
           <Plus />
-          Nouveau ticket
+          {t.ticketForm.newTicket}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Nouveau ticket</DialogTitle>
-          <DialogDescription>
-            Un titre suffit. Collez une capture ou un log directement : ils
-            deviennent des pièces jointes.
-          </DialogDescription>
+          <DialogTitle>{t.ticketForm.newTicket}</DialogTitle>
+          <DialogDescription>{t.ticketForm.createDescription}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="ticket-title">
-              Titre <span className="text-destructive">*</span>
+              {t.ticketForm.titleLabel} <span className="text-destructive">*</span>
             </Label>
             <Input
               id="ticket-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Résumé court du ticket"
+              placeholder={t.ticketForm.titlePlaceholder}
               autoFocus
               required
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="ticket-description">Description</Label>
+            <Label htmlFor="ticket-description">{t.ticketForm.descriptionLabel}</Label>
             <Textarea
               id="ticket-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               onPaste={(e) => attachments.pasteImages(e)}
-              placeholder="Détails (facultatif). Coller une image ici l'ajoute en pièce jointe."
+              placeholder={t.ticketForm.descriptionPlaceholderCreate}
               rows={4}
             />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="ticket-type">Type</Label>
+              <Label htmlFor="ticket-type">{t.ticketForm.typeLabel}</Label>
               <Select value={typeId} onValueChange={setTypeId}>
-                <SelectTrigger id="ticket-type" aria-label="Type">
-                  <SelectValue placeholder="Sélectionner…" />
+                <SelectTrigger id="ticket-type" aria-label={t.ticketForm.typeLabel}>
+                  <SelectValue placeholder={t.ticketForm.selectPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
                   {types.map((o) => (
@@ -198,10 +198,10 @@ export function CreateTicketDialog({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="ticket-priority">Priorité</Label>
+              <Label htmlFor="ticket-priority">{t.ticketForm.priorityLabel}</Label>
               <Select value={priorityId} onValueChange={setPriorityId}>
-                <SelectTrigger id="ticket-priority" aria-label="Priorité">
-                  <SelectValue placeholder="Sélectionner…" />
+                <SelectTrigger id="ticket-priority" aria-label={t.ticketForm.priorityLabel}>
+                  <SelectValue placeholder={t.ticketForm.selectPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
                   {priorities.map((o) => (
@@ -221,13 +221,13 @@ export function CreateTicketDialog({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="ticket-assignee">Assigné à</Label>
+              <Label htmlFor="ticket-assignee">{t.ticketForm.assigneeLabel}</Label>
               <Select value={assigneeId} onValueChange={setAssigneeId}>
-                <SelectTrigger id="ticket-assignee" aria-label="Assigné à">
+                <SelectTrigger id="ticket-assignee" aria-label={t.ticketForm.assigneeLabel}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={NO_ASSIGNEE}>Personne</SelectItem>
+                  <SelectItem value={NO_ASSIGNEE}>{t.ticketForm.noAssignee}</SelectItem>
                   {members.map((m) => (
                     <SelectItem key={m.id} value={m.id}>
                       {m.name ?? m.email}
@@ -238,13 +238,13 @@ export function CreateTicketDialog({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="ticket-sprint">Sprint</Label>
+              <Label htmlFor="ticket-sprint">{t.ticketForm.sprintLabel}</Label>
               <Select value={sprintId} onValueChange={setSprintId}>
-                <SelectTrigger id="ticket-sprint" aria-label="Sprint">
+                <SelectTrigger id="ticket-sprint" aria-label={t.ticketForm.sprintLabel}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={NO_SPRINT}>Backlog (aucun sprint)</SelectItem>
+                  <SelectItem value={NO_SPRINT}>{t.ticketForm.backlogOption}</SelectItem>
                   {sprints.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
                       {s.name}
@@ -256,7 +256,7 @@ export function CreateTicketDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label>Labels</Label>
+            <Label>{t.ticketForm.labelsLabel}</Label>
             <LabelMultiSelect
               labels={labels}
               selected={labelIds}
@@ -275,12 +275,12 @@ export function CreateTicketDialog({
           <DialogFooter>
             <DialogClose asChild>
               <Button type="button" variant="outline" disabled={submitting}>
-                Annuler
+                {t.common.cancel}
               </Button>
             </DialogClose>
             <Button type="submit" disabled={submitting}>
               {submitting && <Loader2 className="animate-spin" />}
-              Créer le ticket
+              {t.ticketForm.submitCreate}
             </Button>
           </DialogFooter>
         </form>

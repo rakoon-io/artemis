@@ -40,6 +40,7 @@ import {
   createWikiPageAction,
   updateWikiPageAction,
 } from "@/server/actions/wiki.actions";
+import { useDict } from "@/i18n/provider";
 
 // Propriétés à copier sur le div miroir pour retrouver la position du curseur.
 const CARET_PROPS = [
@@ -106,6 +107,7 @@ export function WikiPageForm({
   defaultParentId?: string | null;
   page?: { id: string; title: string; content: string; parentId: string | null };
 }) {
+  const t = useDict();
   const router = useRouter();
   const isEdit = Boolean(page);
   const wikiHref = `/projects/${projectKey}/wiki`;
@@ -228,22 +230,22 @@ export function WikiPageForm({
   }
 
   const tools = [
-    { icon: Bold, label: "Gras", run: () => wrap("**") },
-    { icon: Italic, label: "Italique", run: () => wrap("_") },
-    { icon: Heading2, label: "Titre", run: () => prefixLine("## ") },
-    { icon: List, label: "Liste", run: () => prefixLine("- ") },
-    { icon: ListChecks, label: "Case à cocher", run: () => prefixLine("- [ ] ") },
-    { icon: Quote, label: "Citation", run: () => prefixLine("> ") },
-    { icon: Code, label: "Code", run: () => wrap("`") },
-    { icon: Link2, label: "Lien", run: () => wrap("[", "](url)") },
-    { icon: AtSign, label: "Citer une tâche", run: triggerMention },
+    { icon: Bold, label: t.wiki.form.tools.bold, run: () => wrap("**") },
+    { icon: Italic, label: t.wiki.form.tools.italic, run: () => wrap("_") },
+    { icon: Heading2, label: t.wiki.form.tools.heading, run: () => prefixLine("## ") },
+    { icon: List, label: t.wiki.form.tools.list, run: () => prefixLine("- ") },
+    { icon: ListChecks, label: t.wiki.form.tools.checkbox, run: () => prefixLine("- [ ] ") },
+    { icon: Quote, label: t.wiki.form.tools.quote, run: () => prefixLine("> ") },
+    { icon: Code, label: t.wiki.form.tools.code, run: () => wrap("`") },
+    { icon: Link2, label: t.wiki.form.tools.link, run: () => wrap("[", "](url)") },
+    { icon: AtSign, label: t.wiki.form.tools.mention, run: triggerMention },
   ];
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     const trimmed = title.trim();
     if (!trimmed) {
-      toast.error("Le titre est requis.");
+      toast.error(t.wiki.form.titleRequired);
       return;
     }
     setSubmitting(true);
@@ -255,7 +257,7 @@ export function WikiPageForm({
       toast.error(res.error);
       return;
     }
-    toast.success(isEdit ? "Page mise à jour." : "Page créée.");
+    toast.success(isEdit ? t.wiki.form.updated : t.wiki.form.created);
     const id = isEdit ? page!.id : res.data?.id;
     router.push(`${wikiHref}?page=${id ?? ""}`);
   }
@@ -264,20 +266,20 @@ export function WikiPageForm({
     <form onSubmit={handleSubmit} className="space-y-5">
       <div className="space-y-1.5">
         <Label htmlFor="wiki-title">
-          Titre <span className="text-destructive">*</span>
+          {t.wiki.form.titleLabel} <span className="text-destructive">*</span>
         </Label>
         <Input
           id="wiki-title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Nom de la page"
+          placeholder={t.wiki.form.titlePlaceholder}
           autoFocus
           required
         />
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="wiki-parent">Page parente</Label>
+        <Label htmlFor="wiki-parent">{t.wiki.form.parentLabel}</Label>
         <Select
           value={parentId ?? ROOT_VALUE}
           onValueChange={(v) => setParentId(v === ROOT_VALUE ? null : v)}
@@ -286,7 +288,7 @@ export function WikiPageForm({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ROOT_VALUE}>Aucune (page racine)</SelectItem>
+            <SelectItem value={ROOT_VALUE}>{t.wiki.form.parentNone}</SelectItem>
             {parents.map((p) => (
               <SelectItem key={p.id} value={p.id}>
                 <span style={{ paddingLeft: `${p.depth * 14}px` }}>
@@ -297,16 +299,16 @@ export function WikiPageForm({
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground">
-          Rangez cette page sous une autre pour organiser le wiki en arborescence.
+          {t.wiki.form.parentHelp}
         </p>
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="wiki-content">Contenu (Markdown)</Label>
+        <Label htmlFor="wiki-content">{t.wiki.form.contentLabel}</Label>
         <Tabs defaultValue="write">
           <TabsList>
-            <TabsTrigger value="write">Écrire</TabsTrigger>
-            <TabsTrigger value="preview">Aperçu</TabsTrigger>
+            <TabsTrigger value="write">{t.wiki.form.tabWrite}</TabsTrigger>
+            <TabsTrigger value="preview">{t.wiki.form.tabPreview}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="write" className="space-y-2">
@@ -336,7 +338,7 @@ export function WikiPageForm({
                 }}
                 onClick={(e) => updateMention(e.currentTarget)}
                 onKeyDown={handleKeyDown}
-                placeholder="Écrivez en Markdown. Tapez @ pour citer une tâche (ex. @RKN-3)."
+                placeholder={t.wiki.form.contentPlaceholder}
                 rows={20}
                 className="font-mono text-sm"
               />
@@ -346,7 +348,7 @@ export function WikiPageForm({
                   style={{ top: mentionPos.top, left: mentionPos.left }}
                 >
                   <p className="px-2 py-1 text-xs text-muted-foreground">
-                    Citer une tâche
+                    {t.wiki.form.tools.mention}
                   </p>
                   {mentionResults.map((t, i) => (
                     <button
@@ -373,9 +375,9 @@ export function WikiPageForm({
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              Markdown étendu (GFM) : titres, gras, listes, cases à cocher, tableaux,
-              code. Tapez <span className="font-medium text-foreground">@</span> pour
-              citer une tâche (elle devient un lien).
+              {t.wiki.form.markdownHelpBefore}
+              <span className="font-medium text-foreground">@</span>
+              {t.wiki.form.markdownHelpAfter}
             </p>
           </TabsContent>
 
@@ -389,7 +391,7 @@ export function WikiPageForm({
                 />
               ) : (
                 <p className="text-sm italic text-muted-foreground">
-                  Rien à prévisualiser pour l&apos;instant.
+                  {t.wiki.form.nothingToPreview}
                 </p>
               )}
             </div>
@@ -399,11 +401,11 @@ export function WikiPageForm({
 
       <div className="flex items-center justify-end gap-2">
         <Button asChild type="button" variant="outline">
-          <Link href={wikiHref}>Annuler</Link>
+          <Link href={wikiHref}>{t.common.cancel}</Link>
         </Button>
         <Button type="submit" disabled={submitting}>
           {submitting && <Loader2 className="animate-spin" />}
-          {isEdit ? "Enregistrer" : "Créer la page"}
+          {isEdit ? t.common.save : t.wiki.form.createSubmit}
         </Button>
       </div>
     </form>

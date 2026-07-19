@@ -32,6 +32,8 @@ import { CommentForm } from "@/components/ticket/comment-form";
 import { CommentList } from "@/components/ticket/comment-list";
 import { DeleteTicketButton } from "@/components/ticket/delete-ticket-button";
 import { EditTicketDialog } from "@/components/ticket/edit-ticket-dialog";
+import { fmt } from "@/i18n";
+import { getDictionary } from "@/i18n/server";
 
 export default async function TicketDetailPage({
   params,
@@ -39,6 +41,7 @@ export default async function TicketDetailPage({
   params: Promise<{ key: string; id: string }>;
 }) {
   const { key, id } = await params;
+  const t = await getDictionary();
   const user = await currentUser();
   const [project, ticket] = await Promise.all([
     getAccessibleProjectByKey(user, key),
@@ -86,7 +89,7 @@ export default async function TicketDetailPage({
       <Button asChild variant="ghost" size="sm" className="-ml-2">
         <Link href={`/projects/${key}/tickets`}>
           <ArrowLeft />
-          Retour aux tickets
+          {t.ticketDetail.backToTickets}
         </Link>
       </Button>
 
@@ -141,7 +144,9 @@ export default async function TicketDetailPage({
         <div className="min-w-0 flex-1 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Description</CardTitle>
+              <CardTitle className="text-base">
+                {t.ticketDetail.description}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {ticket.description ? (
@@ -150,7 +155,7 @@ export default async function TicketDetailPage({
                 </p>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Aucune description.
+                  {t.ticketDetail.noDescription}
                 </p>
               )}
             </CardContent>
@@ -160,7 +165,9 @@ export default async function TicketDetailPage({
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Paperclip className="size-4" />
-                Pièces jointes ({ticket.attachments.length})
+                {fmt(t.ticketDetail.attachments, {
+                  count: ticket.attachments.length,
+                })}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -214,7 +221,7 @@ export default async function TicketDetailPage({
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Aucune pièce jointe.
+                  {t.ticketDetail.noAttachments}
                 </p>
               )}
             </CardContent>
@@ -223,7 +230,9 @@ export default async function TicketDetailPage({
           <Card>
             <CardHeader>
               <CardTitle className="text-base">
-                Commentaires ({ticket.comments.length})
+                {fmt(t.ticketDetail.comments, {
+                  count: ticket.comments.length,
+                })}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -237,15 +246,17 @@ export default async function TicketDetailPage({
         <aside className="space-y-4 lg:sticky lg:top-16 lg:w-80 lg:shrink-0">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Détails</CardTitle>
+              <CardTitle className="text-base">
+                {t.ticketDetail.details}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-sm">
               <MetaPerson
-                label="Rapporteur"
+                label={t.ticketDetail.reporter}
                 name={ticket.reporter.name ?? ticket.reporter.email}
               />
               <MetaPerson
-                label="Assigné à"
+                label={t.ticketDetail.assignee}
                 name={
                   ticket.assignee
                     ? (ticket.assignee.name ?? ticket.assignee.email)
@@ -253,11 +264,17 @@ export default async function TicketDetailPage({
                 }
               />
               <div>
-                <p className="text-xs text-muted-foreground">Sprint</p>
-                <p className="mt-0.5">{ticket.sprint?.name ?? "Backlog"}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t.ticketDetail.sprint}
+                </p>
+                <p className="mt-0.5">
+                  {ticket.sprint?.name ?? t.ticketDetail.backlog}
+                </p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Labels</p>
+                <p className="text-xs text-muted-foreground">
+                  {t.ticketDetail.labels}
+                </p>
                 <div className="mt-1 flex flex-wrap gap-1">
                   {ticket.labels.length > 0 ? (
                     ticket.labels.map((l) => (
@@ -268,18 +285,24 @@ export default async function TicketDetailPage({
                       />
                     ))
                   ) : (
-                    <span className="text-muted-foreground">Aucun</span>
+                    <span className="text-muted-foreground">
+                      {t.ticketDetail.noLabels}
+                    </span>
                   )}
                 </div>
               </div>
               <Separator />
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <p className="text-xs text-muted-foreground">Créé le</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t.ticketDetail.createdAt}
+                  </p>
                   <p className="mt-0.5">{formatDate(ticket.createdAt)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Mis à jour le</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t.ticketDetail.updatedAt}
+                  </p>
                   <p className="mt-0.5">{formatDate(ticket.updatedAt)}</p>
                 </div>
               </div>
@@ -291,13 +314,14 @@ export default async function TicketDetailPage({
   );
 }
 
-function MetaPerson({
+async function MetaPerson({
   label,
   name,
 }: {
   label: string;
   name: string | null;
 }) {
+  const t = await getDictionary();
   return (
     <div>
       <p className="text-xs text-muted-foreground">{label}</p>
@@ -311,7 +335,9 @@ function MetaPerson({
           <span className="truncate">{name}</span>
         </span>
       ) : (
-        <p className="mt-0.5 text-muted-foreground">Non assigné</p>
+        <p className="mt-0.5 text-muted-foreground">
+          {t.ticketDetail.unassigned}
+        </p>
       )}
     </div>
   );

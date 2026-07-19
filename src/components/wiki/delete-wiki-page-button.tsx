@@ -16,6 +16,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { deleteWikiPageAction } from "@/server/actions/wiki.actions";
+import { fmt } from "@/i18n";
+import { useDict } from "@/i18n/provider";
 
 /** Supprime une page de wiki (confirmation). Réservé aux administrateurs. */
 export function DeleteWikiPageButton({
@@ -27,6 +29,7 @@ export function DeleteWikiPageButton({
   pageTitle: string;
   projectKey: string;
 }) {
+  const t = useDict();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
@@ -39,7 +42,7 @@ export function DeleteWikiPageButton({
       setPending(false);
       return;
     }
-    toast.success("Page supprimée.");
+    toast.success(t.wiki.remove.success);
     setOpen(false);
     setPending(false);
     router.push(`/projects/${projectKey}/wiki`);
@@ -55,21 +58,20 @@ export function DeleteWikiPageButton({
           className="text-muted-foreground hover:text-destructive"
         >
           <Trash2 />
-          Supprimer
+          {t.common.delete}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Supprimer « {pageTitle} » ?</DialogTitle>
-          <DialogDescription>
-            La page et ses éventuelles sous-pages seront définitivement
-            supprimées. Cette action est irréversible.
-          </DialogDescription>
+          <DialogTitle>
+            {fmt(t.wiki.remove.title, { title: pageTitle })}
+          </DialogTitle>
+          <DialogDescription>{t.wiki.remove.description}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <DialogClose asChild>
             <Button type="button" variant="outline" disabled={pending}>
-              Annuler
+              {t.common.cancel}
             </Button>
           </DialogClose>
           <Button
@@ -79,7 +81,7 @@ export function DeleteWikiPageButton({
             disabled={pending}
           >
             {pending && <Loader2 className="animate-spin" />}
-            Supprimer
+            {t.common.delete}
           </Button>
         </DialogFooter>
       </DialogContent>

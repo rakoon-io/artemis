@@ -12,6 +12,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useDict } from "@/i18n/provider";
+import { fmt } from "@/i18n";
 
 /**
  * Gestion des labels d'un projet (Admin) : liste (pastille de couleur + nom),
@@ -25,6 +27,7 @@ export function LabelManager({
   projectId: string;
 }) {
   const router = useRouter();
+  const t = useDict();
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [color, setColor] = useState("#7c3aed");
@@ -34,7 +37,7 @@ export function LabelManager({
     const form = event.currentTarget;
     const name = String(new FormData(form).get("name") ?? "").trim();
     if (!name) {
-      toast.error("Le nom est requis.");
+      toast.error(t.taxonomy.nameRequired);
       return;
     }
 
@@ -45,7 +48,7 @@ export function LabelManager({
       toast.error(res.error);
       return;
     }
-    toast.success(`Label « ${name} » créé.`);
+    toast.success(fmt(t.taxonomy.labels.created, { name }));
     form.reset();
     router.refresh();
   }
@@ -58,7 +61,7 @@ export function LabelManager({
       setDeletingId(null);
       return;
     }
-    toast.success(`Label « ${name} » supprimé.`);
+    toast.success(fmt(t.taxonomy.labels.deleted, { name }));
     setDeletingId(null);
     router.refresh();
   }
@@ -67,7 +70,7 @@ export function LabelManager({
     <div className="space-y-6">
       {labels.length === 0 ? (
         <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-          Aucun label pour l&apos;instant.
+          {t.taxonomy.labels.empty}
         </p>
       ) : (
         <ul className="space-y-2">
@@ -90,7 +93,9 @@ export function LabelManager({
                 variant="ghost"
                 size="icon"
                 className="text-muted-foreground hover:text-destructive"
-                aria-label={`Supprimer le label ${label.name}`}
+                aria-label={fmt(t.taxonomy.labels.deleteAria, {
+                  name: label.name,
+                })}
                 disabled={deletingId === label.id}
                 onClick={() => handleDelete(label.id, label.name)}
               >
@@ -110,17 +115,17 @@ export function LabelManager({
         className="flex flex-wrap items-end gap-3 rounded-lg border border-dashed p-3"
       >
         <div className="grid flex-1 gap-2">
-          <Label htmlFor="new-label-name">Nouveau label</Label>
+          <Label htmlFor="new-label-name">{t.taxonomy.labels.newLabel}</Label>
           <Input
             id="new-label-name"
             name="name"
             maxLength={30}
-            placeholder="ex : Urgent"
+            placeholder={t.taxonomy.labels.newPlaceholder}
             required
           />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="new-label-color">Couleur</Label>
+          <Label htmlFor="new-label-color">{t.taxonomy.color}</Label>
           <input
             id="new-label-color"
             name="color"
@@ -128,12 +133,12 @@ export function LabelManager({
             value={color}
             onChange={(event) => setColor(event.target.value)}
             className="h-9 w-12 cursor-pointer rounded-md border border-input bg-transparent p-1"
-            aria-label="Couleur du label"
+            aria-label={t.taxonomy.labels.colorAria}
           />
         </div>
         <Button type="submit" disabled={submitting}>
           {submitting ? <Loader2 className="animate-spin" /> : <Plus />}
-          Ajouter
+          {t.taxonomy.add}
         </Button>
       </form>
     </div>

@@ -11,6 +11,8 @@ import {
 } from "@/server/actions/membership.actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useDict } from "@/i18n/provider";
+import { fmt } from "@/i18n";
 
 /** Utilisateur listé avec son appartenance au projet. */
 export interface MemberViewRow {
@@ -33,6 +35,7 @@ export function MemberManager({
   projectId: string;
   users: MemberViewRow[];
 }) {
+  const t = useDict();
   const admins = users.filter((u) => u.role === Role.ADMIN);
   const others = users.filter((u) => u.role !== Role.ADMIN);
   const memberCount = others.filter((u) => u.isMember).length;
@@ -40,14 +43,19 @@ export function MemberManager({
   return (
     <div className="space-y-6">
       <p className="text-sm text-muted-foreground">
-        {memberCount} rapporteur{memberCount > 1 ? "s" : ""} avec accès, plus{" "}
-        {admins.length} administrateur{admins.length > 1 ? "s" : ""} (accès à tous
-        les projets).
+        {fmt(t.taxonomy.members.summary, {
+          reporters: memberCount,
+          rs: memberCount > 1 ? "s" : "",
+          admins: admins.length,
+          as: admins.length > 1 ? "s" : "",
+        })}
       </p>
 
       {others.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-sm font-medium">Rapporteurs</h3>
+          <h3 className="text-sm font-medium">
+            {t.taxonomy.members.reportersHeading}
+          </h3>
           <ul className="space-y-2">
             {others.map((u) => (
               <MemberRow key={u.id} projectId={projectId} user={u} />
@@ -57,7 +65,9 @@ export function MemberManager({
       )}
 
       <div className="space-y-2">
-        <h3 className="text-sm font-medium">Administrateurs</h3>
+        <h3 className="text-sm font-medium">
+          {t.taxonomy.members.adminsHeading}
+        </h3>
         <ul className="space-y-2">
           {admins.map((u) => (
             <li
@@ -74,7 +84,7 @@ export function MemberManager({
               </div>
               <Badge variant="secondary" className="gap-1">
                 <ShieldCheck className="size-3.5" />
-                Accès total
+                {t.taxonomy.members.fullAccess}
               </Badge>
             </li>
           ))}
@@ -93,6 +103,7 @@ function MemberRow({
   user: MemberViewRow;
 }) {
   const router = useRouter();
+  const t = useDict();
   const [pending, setPending] = useState(false);
   const displayName = user.name?.trim() || user.email;
 
@@ -108,8 +119,8 @@ function MemberRow({
     }
     toast.success(
       user.isMember
-        ? `Accès retiré à « ${displayName} ».`
-        : `Accès accordé à « ${displayName} ».`,
+        ? fmt(t.taxonomy.members.accessRevoked, { name: displayName })
+        : fmt(t.taxonomy.members.accessGranted, { name: displayName }),
     );
     router.refresh();
   }
@@ -126,7 +137,7 @@ function MemberRow({
       {user.isMember && (
         <Badge variant="secondary" className="gap-1">
           <Check className="size-3.5" />
-          Membre
+          {t.taxonomy.members.member}
         </Badge>
       )}
 
@@ -139,18 +150,18 @@ function MemberRow({
         className="w-32"
         aria-label={
           user.isMember
-            ? `Retirer l'accès de ${displayName}`
-            : `Donner l'accès à ${displayName}`
+            ? fmt(t.taxonomy.members.revokeAria, { name: displayName })
+            : fmt(t.taxonomy.members.grantAria, { name: displayName })
         }
       >
         {pending ? (
           <Loader2 className="animate-spin" />
         ) : user.isMember ? (
-          "Retirer l'accès"
+          t.taxonomy.members.revoke
         ) : (
           <>
             <Plus />
-            Donner l&apos;accès
+            {t.taxonomy.members.grant}
           </>
         )}
       </Button>

@@ -17,6 +17,8 @@ import { Button } from "@/components/ui/button";
 import { WikiContent } from "@/components/wiki/wiki-content";
 import { WikiSearch } from "@/components/wiki/wiki-search";
 import { DeleteWikiPageButton } from "@/components/wiki/delete-wiki-page-button";
+import { getDictionary } from "@/i18n/server";
+import { fmt } from "@/i18n";
 
 interface WikiListItem {
   id: string;
@@ -50,6 +52,7 @@ export default async function WikiPage({
     getTicketKeys(project.id),
   ]);
   const admin = isAdmin(session?.user);
+  const t = await getDictionary();
 
   const results = q ? await searchWikiPages(project.id, q) : null;
   const list: WikiListItem[] =
@@ -72,7 +75,7 @@ export default async function WikiPage({
     <Button asChild>
       <Link href={`/projects/${project.key}/wiki/new`}>
         <Plus />
-        Nouvelle page
+        {t.wiki.newPage}
       </Link>
     </Button>
   );
@@ -86,10 +89,11 @@ export default async function WikiPage({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Wiki</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {t.wiki.title}
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Documentation du projet en Markdown. Citez une tâche avec @ (ex.
-            @RKN-3).
+            {t.wiki.index.subtitle}
           </p>
         </div>
         {createButton}
@@ -99,9 +103,9 @@ export default async function WikiPage({
         <div className="flex flex-col items-center gap-4 rounded-lg border border-dashed p-12 text-center">
           <FileText className="size-8 text-muted-foreground" />
           <div className="space-y-1">
-            <p className="font-medium">Aucune page pour l&apos;instant</p>
+            <p className="font-medium">{t.wiki.index.emptyTitle}</p>
             <p className="text-sm text-muted-foreground">
-              Créez la première page de documentation de ce projet.
+              {t.wiki.index.emptyDescription}
             </p>
           </div>
           {createButton}
@@ -112,16 +116,20 @@ export default async function WikiPage({
             <WikiSearch projectKey={project.key} initialQuery={q} />
             {q && (
               <p className="px-1 text-xs text-muted-foreground">
-                {list.length} résultat{list.length > 1 ? "s" : ""} pour «&nbsp;{q}
-                &nbsp;»
+                {list.length} {t.wiki.index.result}
+                {list.length > 1 ? "s" : ""}{" "}
+                {fmt(t.wiki.index.forQuery, { q })}
               </p>
             )}
-            <nav className="flex flex-col gap-0.5" aria-label="Pages du wiki">
+            <nav
+              className="flex flex-col gap-0.5"
+              aria-label={t.wiki.index.pagesNavLabel}
+            >
               {q ? (
                 // Résultats de recherche : liste plate avec extraits.
                 list.length === 0 ? (
                   <p className="px-3 py-2 text-sm text-muted-foreground">
-                    Aucune page trouvée.
+                    {t.wiki.index.noPagesFound}
                   </p>
                 ) : (
                   list.map((p) => (
@@ -176,7 +184,7 @@ export default async function WikiPage({
                   <div className="space-y-1">
                     {trail.length > 0 && (
                       <nav
-                        aria-label="Fil d'Ariane"
+                        aria-label={t.wiki.index.breadcrumbLabel}
                         className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground"
                       >
                         {trail.map((a) => (
@@ -196,8 +204,10 @@ export default async function WikiPage({
                       {current.title}
                     </h2>
                     <p className="text-xs text-muted-foreground">
-                      {current.author?.name ?? current.author?.email ?? "Inconnu"}
-                      {" - modifiée le "}
+                      {current.author?.name ??
+                        current.author?.email ??
+                        t.wiki.index.unknownAuthor}
+                      {t.wiki.index.editedOn}
                       {formatDate(current.updatedAt)}
                     </p>
                   </div>
@@ -207,7 +217,7 @@ export default async function WikiPage({
                         href={`/projects/${project.key}/wiki/new?parent=${current.id}`}
                       >
                         <Plus />
-                        Sous-page
+                        {t.wiki.index.subpage}
                       </Link>
                     </Button>
                     <Button asChild variant="outline" size="sm">
@@ -215,7 +225,7 @@ export default async function WikiPage({
                         href={`/projects/${project.key}/wiki/${current.id}/edit`}
                       >
                         <Pencil />
-                        Éditer
+                        {t.common.edit}
                       </Link>
                     </Button>
                     {admin && (
@@ -236,13 +246,15 @@ export default async function WikiPage({
                   />
                 ) : (
                   <p className="text-sm italic text-muted-foreground">
-                    Cette page est vide. Cliquez sur « Éditer » pour la remplir.
+                    {fmt(t.wiki.index.emptyContentHint, {
+                      action: t.common.edit,
+                    })}
                   </p>
                 )}
               </article>
             ) : (
               <p className="text-sm text-muted-foreground">
-                Sélectionnez une page dans la liste.
+                {t.wiki.index.selectPagePrompt}
               </p>
             )}
           </div>

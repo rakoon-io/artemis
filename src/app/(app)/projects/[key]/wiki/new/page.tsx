@@ -8,6 +8,7 @@ import { getAccessibleProjectByKey } from "@/server/access";
 import { getTicketRefs, getWikiPages } from "@/server/queries";
 import { Button } from "@/components/ui/button";
 import { WikiPageForm } from "@/components/wiki/wiki-page-form";
+import { getDictionary } from "@/i18n/server";
 
 /** Création d'une page de wiki, pleine page (RSC + formulaire client). */
 export default async function NewWikiPage({
@@ -22,6 +23,7 @@ export default async function NewWikiPage({
   const session = await auth();
   const project = await getAccessibleProjectByKey(session?.user, key);
   if (!project) notFound();
+  const t = await getDictionary();
 
   const [tickets, pages] = await Promise.all([
     getTicketRefs(project.id),
@@ -42,11 +44,11 @@ export default async function NewWikiPage({
         <Button asChild variant="ghost" size="sm" className="-ml-2">
           <Link href={`/projects/${key}/wiki`}>
             <ArrowLeft />
-            Wiki
+            {t.wiki.title}
           </Link>
         </Button>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight">
-          Nouvelle page
+          {t.wiki.newPage}
         </h1>
       </div>
       <WikiPageForm

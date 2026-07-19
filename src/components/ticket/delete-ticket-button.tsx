@@ -16,6 +16,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { deleteTicketAction } from "@/server/actions/ticket.actions";
+import { fmt } from "@/i18n";
+import { useDict } from "@/i18n/provider";
 
 /** Suppression d'un ticket (réservée à l'Admin ; confirmation obligatoire). */
 export function DeleteTicketButton({
@@ -27,6 +29,7 @@ export function DeleteTicketButton({
   ticketKey: string;
   projectKey: string;
 }) {
+  const t = useDict();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -39,7 +42,7 @@ export function DeleteTicketButton({
       setSubmitting(false);
       return;
     }
-    toast.success(`Ticket ${ticketKey} supprimé.`);
+    toast.success(fmt(t.ticketDetail.deleteSuccess, { key: ticketKey }));
     setOpen(false);
     router.push(`/projects/${projectKey}/tickets`);
     router.refresh();
@@ -50,21 +53,20 @@ export function DeleteTicketButton({
       <DialogTrigger asChild>
         <Button variant="destructive">
           <Trash2 />
-          Supprimer
+          {t.common.delete}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Supprimer ce ticket ?</DialogTitle>
+          <DialogTitle>{t.ticketDetail.deleteTitle}</DialogTitle>
           <DialogDescription>
-            Le ticket {ticketKey} et ses commentaires/pièces jointes seront
-            définitivement supprimés. Cette action est irréversible.
+            {fmt(t.ticketDetail.deleteDescription, { key: ticketKey })}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <DialogClose asChild>
             <Button type="button" variant="outline" disabled={submitting}>
-              Annuler
+              {t.common.cancel}
             </Button>
           </DialogClose>
           <Button
@@ -74,7 +76,7 @@ export function DeleteTicketButton({
             disabled={submitting}
           >
             {submitting && <Loader2 className="animate-spin" />}
-            Supprimer définitivement
+            {t.ticketDetail.deleteConfirm}
           </Button>
         </DialogFooter>
       </DialogContent>

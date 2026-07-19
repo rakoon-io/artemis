@@ -30,6 +30,8 @@ import {
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { rankBetween } from "@/lib/rank";
+import { useDict } from "@/i18n/provider";
+import { fmt } from "@/i18n";
 import { moveTicketAction } from "@/server/actions/board.actions";
 import { createTicketAction } from "@/server/actions/ticket.actions";
 import type { getBoardData } from "@/server/queries";
@@ -107,6 +109,7 @@ export function KanbanBoard({
   /** Élément affiché à droite de la barre de filtres (ex. « Nouveau ticket »). */
   action?: ReactNode;
 }) {
+  const t = useDict();
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [columns, setColumns] = useState<BoardColumnData[]>(initialColumns);
@@ -153,10 +156,10 @@ export function KanbanBoard({
 
   const assigneeOptions = useMemo(
     () => [
-      { value: UNASSIGNED, label: "Non assigné" },
+      { value: UNASSIGNED, label: t.board.unassigned },
       ...members.map((m) => ({ value: m.id, label: m.name ?? m.email })),
     ],
-    [members],
+    [members, t],
   );
 
   const hasFilters =
@@ -168,22 +171,29 @@ export function KanbanBoard({
   const announcements: Announcements = useMemo(() => {
     const label = (id: string | number) => {
       const ticket = ticketsById.get(String(id));
-      return ticket ? `${ticket.key} ${ticket.title}` : "ticket";
+      return ticket ? `${ticket.key} ${ticket.title}` : t.board.ticketFallback;
     };
     return {
-      onDragStart: ({ active }) => `Déplacement du ticket ${label(active.id)} commencé.`,
+      onDragStart: ({ active }) =>
+        fmt(t.board.announceDragStart, { ticket: label(active.id) }),
       onDragOver: ({ active, over }) =>
         over
-          ? `Le ticket ${label(active.id)} est au-dessus de ${label(over.id)}.`
-          : `Le ticket ${label(active.id)} n'est au-dessus d'aucune cible.`,
+          ? fmt(t.board.announceDragOver, {
+              ticket: label(active.id),
+              over: label(over.id),
+            })
+          : fmt(t.board.announceDragOverNone, { ticket: label(active.id) }),
       onDragEnd: ({ active, over }) =>
         over
-          ? `Le ticket ${label(active.id)} a été déposé sur ${label(over.id)}.`
-          : `Le ticket ${label(active.id)} a été relâché.`,
+          ? fmt(t.board.announceDragEnd, {
+              ticket: label(active.id),
+              over: label(over.id),
+            })
+          : fmt(t.board.announceDragEndNone, { ticket: label(active.id) }),
       onDragCancel: ({ active }) =>
-        `Déplacement du ticket ${label(active.id)} annulé.`,
+        fmt(t.board.announceDragCancel, { ticket: label(active.id) }),
     };
-  }, [ticketsById]);
+  }, [ticketsById, t]);
 
   function handleDragStart(event: DragStartEvent) {
     setActiveId(String(event.active.id));
@@ -208,11 +218,11 @@ export function KanbanBoard({
         toast.error(result.error);
         return;
       }
-      toast.success("Ticket déplacé.");
+      toast.success(t.board.ticketMoved);
       startTransition(() => router.refresh());
     } catch {
       setColumns(snapshot);
-      toast.error("Le déplacement du ticket a échoué.");
+      toast.error(t.board.moveFailed);
     }
   }
 
@@ -282,7 +292,7 @@ export function KanbanBoard({
       toast.error(result.error);
       return false;
     }
-    toast.success(`Ticket ${result.data?.key ?? ""} créé.`.trim());
+    toast.success(fmt(t.board.ticketCreated, { key: result.data?.key ?? "" }).trim());
     startTransition(() => router.refresh());
     return true;
   }
@@ -295,13 +305,13 @@ export function KanbanBoard({
         {/* Barre de filtres */}
         <div className="flex flex-wrap items-center gap-2">
           <FilterMenu
-            label="Assigné"
+            label={t.board.filterAssignee}
             value={filters.assigneeId}
             options={assigneeOptions}
             onChange={(value) => setFilters((f) => ({ ...f, assigneeId: value }))}
           />
           <FilterMenu
-            label="Type"
+            label={t.board.filterType}
             value={filters.typeId}
             options={types.map((t) => ({
               value: t.id,
@@ -311,7 +321,7 @@ export function KanbanBoard({
             onChange={(value) => setFilters((f) => ({ ...f, typeId: value }))}
           />
           <FilterMenu
-            label="Priorité"
+            label={t.board.filterPriority}
             value={filters.priorityId}
             options={priorities.map((p) => ({
               value: p.id,
@@ -321,7 +331,7 @@ export function KanbanBoard({
             onChange={(value) => setFilters((f) => ({ ...f, priorityId: value }))}
           />
           <FilterMenu
-            label="Label"
+            label={t.board.filterLabel}
             value={filters.labelId}
             options={labelOptions}
             onChange={(value) => setFilters((f) => ({ ...f, labelId: value }))}
@@ -329,7 +339,7 @@ export function KanbanBoard({
           {hasFilters && (
             <Button variant="ghost" size="sm" onClick={() => setFilters({})}>
               <X />
-              Réinitialiser
+              {t.board.reset}
             </Button>
           )}
           {action && <div className="ml-auto">{action}</div>}
@@ -380,6 +390,7 @@ function FilterMenu<T extends string>({
   options: { value: T; label: string; color?: string }[];
   onChange: (value?: T) => void;
 }) {
+  const t = useDict();
   const current = options.find((o) => o.value === value);
   return (
     <DropdownMenu>
@@ -399,7 +410,7 @@ function FilterMenu<T extends string>({
           checked={!value}
           onCheckedChange={() => onChange(undefined)}
         >
-          Tous
+          {t.board.all}
         </DropdownMenuCheckboxItem>
         {options.length > 0 && <DropdownMenuSeparator />}
         {options.map((option) => (

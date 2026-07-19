@@ -1,4 +1,14 @@
 import type { Messages } from "./fr";
+import { account } from "./en/account";
+import { board } from "./en/board";
+import { tickets } from "./en/tickets";
+import { ticketForm } from "./en/ticketForm";
+import { ticketDetail } from "./en/ticketDetail";
+import { sprints } from "./en/sprints";
+import { wiki } from "./en/wiki";
+import { settings } from "./en/settings";
+import { taxonomy } from "./en/taxonomy";
+import { admin } from "./en/admin";
 
 /**
  * Dictionnaire anglais. Type `Messages` : toute clef manquante ou en trop par
@@ -51,4 +61,14 @@ export const en: Messages = {
     sprintOne: "sprint",
     sprintOther: "sprints",
   },
+  account,
+  board,
+  tickets,
+  ticketForm,
+  ticketDetail,
+  sprints,
+  wiki,
+  settings,
+  taxonomy,
+  admin,
 };

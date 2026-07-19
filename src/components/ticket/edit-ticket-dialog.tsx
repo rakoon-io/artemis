@@ -37,6 +37,7 @@ import {
   type SprintOption,
   type TicketTypeOption,
 } from "./ticket-fields";
+import { useDict } from "@/i18n/provider";
 
 export interface EditableTicket {
   id: string;
@@ -66,6 +67,7 @@ export function EditTicketDialog({
   priorities: PriorityOption[];
 }) {
   const router = useRouter();
+  const t = useDict();
   const attachments = usePendingAttachments();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState(ticket.title);
@@ -102,7 +104,7 @@ export function EditTicketDialog({
     event.preventDefault();
     const trimmed = title.trim();
     if (!trimmed) {
-      toast.error("Le titre est requis.");
+      toast.error(t.ticketForm.titleRequired);
       return;
     }
     setSubmitting(true);
@@ -125,7 +127,7 @@ export function EditTicketDialog({
     if (attachments.hasPending) await attachments.uploadAll(ticket.id);
     attachments.clear();
     setSubmitting(false);
-    toast.success("Ticket mis à jour.");
+    toast.success(t.ticketForm.updatedToast);
     router.refresh();
     setOpen(false);
   }
@@ -135,21 +137,19 @@ export function EditTicketDialog({
       <DialogTrigger asChild>
         <Button variant="outline">
           <Pencil />
-          Éditer
+          {t.ticketForm.edit}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Éditer le ticket</DialogTitle>
-          <DialogDescription>
-            Modifiez les champs puis enregistrez.
-          </DialogDescription>
+          <DialogTitle>{t.ticketForm.editTitle}</DialogTitle>
+          <DialogDescription>{t.ticketForm.editDescription}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="edit-title">
-              Titre <span className="text-destructive">*</span>
+              {t.ticketForm.titleLabel} <span className="text-destructive">*</span>
             </Label>
             <Input
               id="edit-title"
@@ -160,23 +160,23 @@ export function EditTicketDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="edit-description">Description</Label>
+            <Label htmlFor="edit-description">{t.ticketForm.descriptionLabel}</Label>
             <Textarea
               id="edit-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               onPaste={(e) => attachments.pasteImages(e)}
-              placeholder="Coller une image ici l'ajoute en pièce jointe."
+              placeholder={t.ticketForm.descriptionPlaceholderEdit}
               rows={4}
             />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="edit-type">Type</Label>
+              <Label htmlFor="edit-type">{t.ticketForm.typeLabel}</Label>
               <Select value={typeId} onValueChange={setTypeId}>
-                <SelectTrigger id="edit-type" aria-label="Type">
-                  <SelectValue placeholder="Sélectionner…" />
+                <SelectTrigger id="edit-type" aria-label={t.ticketForm.typeLabel}>
+                  <SelectValue placeholder={t.ticketForm.selectPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
                   {types.map((o) => (
@@ -196,10 +196,10 @@ export function EditTicketDialog({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="edit-priority">Priorité</Label>
+              <Label htmlFor="edit-priority">{t.ticketForm.priorityLabel}</Label>
               <Select value={priorityId} onValueChange={setPriorityId}>
-                <SelectTrigger id="edit-priority" aria-label="Priorité">
-                  <SelectValue placeholder="Sélectionner…" />
+                <SelectTrigger id="edit-priority" aria-label={t.ticketForm.priorityLabel}>
+                  <SelectValue placeholder={t.ticketForm.selectPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
                   {priorities.map((o) => (
@@ -219,13 +219,13 @@ export function EditTicketDialog({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="edit-assignee">Assigné à</Label>
+              <Label htmlFor="edit-assignee">{t.ticketForm.assigneeLabel}</Label>
               <Select value={assigneeId} onValueChange={setAssigneeId}>
-                <SelectTrigger id="edit-assignee" aria-label="Assigné à">
+                <SelectTrigger id="edit-assignee" aria-label={t.ticketForm.assigneeLabel}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={NO_ASSIGNEE}>Personne</SelectItem>
+                  <SelectItem value={NO_ASSIGNEE}>{t.ticketForm.noAssignee}</SelectItem>
                   {members.map((m) => (
                     <SelectItem key={m.id} value={m.id}>
                       {m.name ?? m.email}
@@ -236,13 +236,13 @@ export function EditTicketDialog({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="edit-sprint">Sprint</Label>
+              <Label htmlFor="edit-sprint">{t.ticketForm.sprintLabel}</Label>
               <Select value={sprintId} onValueChange={setSprintId}>
-                <SelectTrigger id="edit-sprint" aria-label="Sprint">
+                <SelectTrigger id="edit-sprint" aria-label={t.ticketForm.sprintLabel}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={NO_SPRINT}>Backlog (aucun sprint)</SelectItem>
+                  <SelectItem value={NO_SPRINT}>{t.ticketForm.backlogOption}</SelectItem>
                   {sprints.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
                       {s.name}
@@ -254,7 +254,7 @@ export function EditTicketDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label>Labels</Label>
+            <Label>{t.ticketForm.labelsLabel}</Label>
             <LabelMultiSelect
               labels={labels}
               selected={labelIds}
@@ -273,12 +273,12 @@ export function EditTicketDialog({
           <DialogFooter>
             <DialogClose asChild>
               <Button type="button" variant="outline" disabled={submitting}>
-                Annuler
+                {t.common.cancel}
               </Button>
             </DialogClose>
             <Button type="submit" disabled={submitting}>
               {submitting && <Loader2 className="animate-spin" />}
-              Enregistrer
+              {t.common.save}
             </Button>
           </DialogFooter>
         </form>

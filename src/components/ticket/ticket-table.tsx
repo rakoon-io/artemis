@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { cn, formatDate, initials } from "@/lib/utils";
+import { getDictionary } from "@/i18n/server";
 import {
   ColorBadge,
   LabelChip,
@@ -13,7 +14,7 @@ import {
  * Vue liste des tickets (tableau). Rendu serveur : purement présentationnel.
  * `sprints` sert à résoudre le nom du sprint (la query liste ne l'inclut pas).
  */
-export function TicketTable({
+export async function TicketTable({
   items,
   projectKey,
   sprints,
@@ -24,18 +25,18 @@ export function TicketTable({
   sprints: SprintOption[];
   hasFilters: boolean;
 }) {
+  const t = await getDictionary();
+
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed py-16 text-center">
         <p className="text-sm text-muted-foreground">
-          {hasFilters
-            ? "Aucun ticket ne correspond à ces filtres."
-            : "Aucun ticket pour le moment."}
+          {hasFilters ? t.tickets.emptyFiltered : t.tickets.emptyNone}
         </p>
         {hasFilters && (
           <Button asChild variant="outline" size="sm">
             <Link href={`/projects/${projectKey}/tickets`}>
-              Réinitialiser les filtres
+              {t.tickets.resetFilters}
             </Link>
           </Button>
         )}
@@ -50,15 +51,15 @@ export function TicketTable({
       <table className="w-full text-sm">
         <thead className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
           <tr>
-            <th scope="col" className="px-3 py-2 font-medium">Clé</th>
-            <th scope="col" className="px-3 py-2 font-medium">Titre</th>
-            <th scope="col" className="px-3 py-2 font-medium">Type</th>
-            <th scope="col" className="px-3 py-2 font-medium">Priorité</th>
-            <th scope="col" className="px-3 py-2 font-medium">Statut</th>
-            <th scope="col" className="px-3 py-2 font-medium">Assigné</th>
-            <th scope="col" className="px-3 py-2 font-medium">Sprint</th>
-            <th scope="col" className="px-3 py-2 font-medium">Labels</th>
-            <th scope="col" className="px-3 py-2 font-medium">Mis à jour</th>
+            <th scope="col" className="px-3 py-2 font-medium">{t.tickets.colKey}</th>
+            <th scope="col" className="px-3 py-2 font-medium">{t.tickets.colTitle}</th>
+            <th scope="col" className="px-3 py-2 font-medium">{t.tickets.colType}</th>
+            <th scope="col" className="px-3 py-2 font-medium">{t.tickets.colPriority}</th>
+            <th scope="col" className="px-3 py-2 font-medium">{t.tickets.colStatus}</th>
+            <th scope="col" className="px-3 py-2 font-medium">{t.tickets.colAssignee}</th>
+            <th scope="col" className="px-3 py-2 font-medium">{t.tickets.colSprint}</th>
+            <th scope="col" className="px-3 py-2 font-medium">{t.tickets.colLabels}</th>
+            <th scope="col" className="px-3 py-2 font-medium">{t.tickets.colUpdated}</th>
           </tr>
         </thead>
         <tbody>

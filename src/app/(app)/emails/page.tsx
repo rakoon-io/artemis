@@ -3,6 +3,7 @@ import type { EmailStatus } from "@prisma/client";
 
 import { auth } from "@/auth";
 import { isAdmin } from "@/lib/policies";
+import { getDictionary } from "@/i18n/server";
 import { getEmailLog } from "@/server/queries";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -15,38 +16,22 @@ import {
 
 export const metadata: Metadata = { title: "E-mails · Artemis" };
 
-const STATUS: Record<
-  EmailStatus,
-  { label: string; variant: "default" | "secondary" | "destructive" }
-> = {
-  SENT: { label: "Envoyé", variant: "default" },
-  FAILED: { label: "Échec", variant: "destructive" },
-  DISABLED: { label: "Désactivé", variant: "secondary" },
-};
-
-const TYPE_LABELS: Record<string, string> = {
-  comment: "Commentaire",
-  assignment: "Assignation",
-  invite: "Invitation",
-  reset: "Réinitialisation",
-};
-
 /**
  * Journal des e-mails (RSC), réservé aux administrateurs : suivi de tous les
  * envois (notifications, invitations, réinitialisations), avec leur statut.
  */
 export default async function EmailsPage() {
   const session = await auth();
+  const t = await getDictionary();
 
   if (!session?.user || !isAdmin(session.user)) {
     return (
       <div className="mx-auto max-w-2xl p-4 md:p-6">
         <Card>
           <CardHeader>
-            <CardTitle>Accès réservé aux administrateurs</CardTitle>
+            <CardTitle>{t.admin.restrictedTitle}</CardTitle>
             <CardDescription>
-              Le journal des e-mails n&apos;est accessible qu&apos;aux
-              administrateurs.
+              {t.admin.emails.restrictedDescription}
             </CardDescription>
           </CardHeader>
         </Card>
@@ -56,33 +41,57 @@ export default async function EmailsPage() {
 
   const emails = await getEmailLog(200);
 
+  const STATUS: Record<
+    EmailStatus,
+    { label: string; variant: "default" | "secondary" | "destructive" }
+  > = {
+    SENT: { label: t.admin.emails.statusSent, variant: "default" },
+    FAILED: { label: t.admin.emails.statusFailed, variant: "destructive" },
+    DISABLED: { label: t.admin.emails.statusDisabled, variant: "secondary" },
+  };
+
+  const typeLabels: Record<string, string> = {
+    comment: t.admin.emails.typeComment,
+    assignment: t.admin.emails.typeAssignment,
+    invite: t.admin.emails.typeInvite,
+    reset: t.admin.emails.typeReset,
+  };
+
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-4 md:p-6">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">E-mails</h1>
-        <p className="text-sm text-muted-foreground">
-          Suivi de tous les e-mails envoyés par Artemis. Le statut «&nbsp;Désactivé&nbsp;»
-          signifie que Mailjet n&apos;est pas configuré : l&apos;e-mail aurait été
-          envoyé une fois les clés renseignées.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {t.admin.emails.title}
+        </h1>
+        <p className="text-sm text-muted-foreground">{t.admin.emails.subtitle}</p>
       </div>
 
       <Card>
         <CardContent className="p-0">
           {emails.length === 0 ? (
             <p className="p-6 text-center text-sm text-muted-foreground">
-              Aucun e-mail pour l&apos;instant.
+              {t.admin.emails.empty}
             </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left text-xs text-muted-foreground">
-                    <th className="px-4 py-2 font-medium">Date</th>
-                    <th className="px-4 py-2 font-medium">Destinataire</th>
-                    <th className="px-4 py-2 font-medium">Sujet</th>
-                    <th className="px-4 py-2 font-medium">Type</th>
-                    <th className="px-4 py-2 font-medium">Statut</th>
+                    <th className="px-4 py-2 font-medium">
+                      {t.admin.emails.colDate}
+                    </th>
+                    <th className="px-4 py-2 font-medium">
+                      {t.admin.emails.colRecipient}
+                    </th>
+                    <th className="px-4 py-2 font-medium">
+                      {t.admin.emails.colSubject}
+                    </th>
+                    <th className="px-4 py-2 font-medium">
+                      {t.admin.emails.colType}
+                    </th>
+                    <th className="px-4 py-2 font-medium">
+                      {t.admin.emails.colStatus}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -101,7 +110,7 @@ export default async function EmailsPage() {
                         {email.subject}
                       </td>
                       <td className="whitespace-nowrap px-4 py-2 text-muted-foreground">
-                        {TYPE_LABELS[email.type] ?? email.type}
+                        {typeLabels[email.type] ?? email.type}
                       </td>
                       <td className="whitespace-nowrap px-4 py-2">
                         <Badge variant={STATUS[email.status].variant}>

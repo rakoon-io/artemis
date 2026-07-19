@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useDict } from "@/i18n/provider";
+import { fmt } from "@/i18n";
 
 /** Colonne de tableau enrichie de son nombre de tickets (calculé en amont). */
 export interface ColumnSummary {
@@ -57,6 +59,7 @@ export function ColumnManager({
   projectId: string;
 }) {
   const router = useRouter();
+  const t = useDict();
   const [reordering, setReordering] = useState(false);
 
   async function move(index: number, direction: -1 | 1) {
@@ -75,7 +78,7 @@ export function ColumnManager({
       toast.error(res.error);
       return;
     }
-    toast.success("Ordre des colonnes mis à jour.");
+    toast.success(t.taxonomy.columns.reordered);
     router.refresh();
   }
 
@@ -93,7 +96,9 @@ export function ColumnManager({
                 variant="ghost"
                 size="icon"
                 className="size-6"
-                aria-label={`Monter la colonne ${column.name}`}
+                aria-label={fmt(t.taxonomy.columns.moveUp, {
+                  name: column.name,
+                })}
                 disabled={index === 0 || reordering}
                 onClick={() => move(index, -1)}
               >
@@ -104,7 +109,9 @@ export function ColumnManager({
                 variant="ghost"
                 size="icon"
                 className="size-6"
-                aria-label={`Descendre la colonne ${column.name}`}
+                aria-label={fmt(t.taxonomy.columns.moveDown, {
+                  name: column.name,
+                })}
                 disabled={index === columns.length - 1 || reordering}
                 onClick={() => move(index, 1)}
               >
@@ -122,11 +129,15 @@ export function ColumnManager({
                       : "secondary"
                   }
                 >
-                  WIP {column.ticketCount}/{column.wipLimit}
+                  {fmt(t.taxonomy.columns.wipBadge, {
+                    count: column.ticketCount,
+                    limit: column.wipLimit,
+                  })}
                 </Badge>
               )}
               <span className="text-xs text-muted-foreground">
-                {column.ticketCount} ticket{column.ticketCount > 1 ? "s" : ""}
+                {column.ticketCount} {t.taxonomy.ticket}
+                {column.ticketCount > 1 ? "s" : ""}
               </span>
             </div>
 
@@ -147,6 +158,7 @@ export function ColumnManager({
 /** Dialogue d'édition d'une colonne (nom + limite WIP). */
 function EditColumnDialog({ column }: { column: ColumnSummary }) {
   const router = useRouter();
+  const t = useDict();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -155,12 +167,12 @@ function EditColumnDialog({ column }: { column: ColumnSummary }) {
     const formData = new FormData(event.currentTarget);
     const name = String(formData.get("name") ?? "").trim();
     if (!name) {
-      toast.error("Le nom est requis.");
+      toast.error(t.taxonomy.nameRequired);
       return;
     }
     const wip = parseWip(String(formData.get("wip") ?? ""));
     if (!wip.ok) {
-      toast.error("La limite WIP doit être un entier positif.");
+      toast.error(t.taxonomy.columns.wipInvalid);
       return;
     }
 
@@ -176,7 +188,7 @@ function EditColumnDialog({ column }: { column: ColumnSummary }) {
       toast.error(res.error);
       return;
     }
-    toast.success("Colonne mise à jour.");
+    toast.success(t.taxonomy.columns.updated);
     setOpen(false);
     router.refresh();
   }
@@ -188,21 +200,21 @@ function EditColumnDialog({ column }: { column: ColumnSummary }) {
           type="button"
           variant="ghost"
           size="icon"
-          aria-label={`Modifier la colonne ${column.name}`}
+          aria-label={fmt(t.taxonomy.columns.editAria, { name: column.name })}
         >
           <Pencil />
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Modifier la colonne</DialogTitle>
+          <DialogTitle>{t.taxonomy.columns.editTitle}</DialogTitle>
           <DialogDescription>
-            Renommez la colonne ou ajustez sa limite d&apos;en-cours (WIP).
+            {t.taxonomy.columns.editDescription}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor={`col-name-${column.id}`}>Nom</Label>
+            <Label htmlFor={`col-name-${column.id}`}>{t.taxonomy.name}</Label>
             <Input
               id={`col-name-${column.id}`}
               name="name"
@@ -213,7 +225,7 @@ function EditColumnDialog({ column }: { column: ColumnSummary }) {
           </div>
           <div className="grid gap-2">
             <Label htmlFor={`col-wip-${column.id}`}>
-              Limite WIP (optionnel)
+              {t.taxonomy.columns.wipLabel}
             </Label>
             <Input
               id={`col-wip-${column.id}`}
@@ -222,21 +234,21 @@ function EditColumnDialog({ column }: { column: ColumnSummary }) {
               min={1}
               max={999}
               defaultValue={column.wipLimit ?? ""}
-              placeholder="Aucune"
+              placeholder={t.taxonomy.columns.wipPlaceholderNone}
             />
             <p className="text-xs text-muted-foreground">
-              Laissez vide pour retirer la limite.
+              {t.taxonomy.columns.wipHint}
             </p>
           </div>
           <DialogFooter>
             <DialogClose asChild>
               <Button type="button" variant="outline" disabled={submitting}>
-                Annuler
+                {t.common.cancel}
               </Button>
             </DialogClose>
             <Button type="submit" disabled={submitting}>
               {submitting && <Loader2 className="animate-spin" />}
-              Enregistrer
+              {t.common.save}
             </Button>
           </DialogFooter>
         </form>
@@ -254,6 +266,7 @@ function DeleteColumnDialog({
   canDelete: boolean;
 }) {
   const router = useRouter();
+  const t = useDict();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -265,7 +278,7 @@ function DeleteColumnDialog({
       setSubmitting(false);
       return;
     }
-    toast.success(`Colonne « ${column.name} » supprimée.`);
+    toast.success(fmt(t.taxonomy.columns.deleted, { name: column.name }));
     setOpen(false);
     setSubmitting(false);
     router.refresh();
@@ -280,29 +293,30 @@ function DeleteColumnDialog({
           size="icon"
           className="text-muted-foreground hover:text-destructive"
           disabled={!canDelete}
-          aria-label={`Supprimer la colonne ${column.name}`}
-          title={
-            canDelete ? undefined : "Impossible de supprimer l'unique colonne."
-          }
+          aria-label={fmt(t.taxonomy.columns.deleteAria, { name: column.name })}
+          title={canDelete ? undefined : t.taxonomy.columns.deleteDisabledTitle}
         >
           <Trash2 />
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Supprimer « {column.name} » ?</DialogTitle>
+          <DialogTitle>
+            {fmt(t.taxonomy.columns.deleteTitle, { name: column.name })}
+          </DialogTitle>
           <DialogDescription>
             {column.ticketCount > 0
-              ? `Les ${column.ticketCount} ticket${
-                  column.ticketCount > 1 ? "s" : ""
-                } de cette colonne seront réaffectés à la première colonne du tableau.`
-              : "Les tickets qui s'y trouveraient seraient réaffectés à la première colonne du tableau."}
+              ? fmt(t.taxonomy.columns.deleteTickets, {
+                  count: column.ticketCount,
+                  s: column.ticketCount > 1 ? "s" : "",
+                })
+              : t.taxonomy.columns.deleteNoTickets}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <DialogClose asChild>
             <Button type="button" variant="outline" disabled={submitting}>
-              Annuler
+              {t.common.cancel}
             </Button>
           </DialogClose>
           <Button
@@ -312,7 +326,7 @@ function DeleteColumnDialog({
             disabled={submitting}
           >
             {submitting && <Loader2 className="animate-spin" />}
-            Supprimer
+            {t.common.delete}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -323,6 +337,7 @@ function DeleteColumnDialog({
 /** Formulaire d'ajout d'une colonne (placée en fin de tableau). */
 function AddColumnForm({ projectId }: { projectId: string }) {
   const router = useRouter();
+  const t = useDict();
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -331,12 +346,12 @@ function AddColumnForm({ projectId }: { projectId: string }) {
     const formData = new FormData(form);
     const name = String(formData.get("name") ?? "").trim();
     if (!name) {
-      toast.error("Le nom est requis.");
+      toast.error(t.taxonomy.nameRequired);
       return;
     }
     const wip = parseWip(String(formData.get("wip") ?? ""));
     if (!wip.ok) {
-      toast.error("La limite WIP doit être un entier positif.");
+      toast.error(t.taxonomy.columns.wipInvalid);
       return;
     }
 
@@ -351,7 +366,7 @@ function AddColumnForm({ projectId }: { projectId: string }) {
       toast.error(res.error);
       return;
     }
-    toast.success(`Colonne « ${name} » ajoutée.`);
+    toast.success(fmt(t.taxonomy.columns.created, { name }));
     form.reset();
     router.refresh();
   }
@@ -362,17 +377,17 @@ function AddColumnForm({ projectId }: { projectId: string }) {
       className="flex flex-wrap items-end gap-3 rounded-lg border border-dashed p-3"
     >
       <div className="grid flex-1 gap-2">
-        <Label htmlFor="new-col-name">Nouvelle colonne</Label>
+        <Label htmlFor="new-col-name">{t.taxonomy.columns.newLabel}</Label>
         <Input
           id="new-col-name"
           name="name"
           maxLength={40}
-          placeholder="ex : En test"
+          placeholder={t.taxonomy.columns.newPlaceholder}
           required
         />
       </div>
       <div className="grid w-24 gap-2">
-        <Label htmlFor="new-col-wip">WIP</Label>
+        <Label htmlFor="new-col-wip">{t.taxonomy.columns.wipShort}</Label>
         <Input
           id="new-col-wip"
           name="wip"
@@ -384,7 +399,7 @@ function AddColumnForm({ projectId }: { projectId: string }) {
       </div>
       <Button type="submit" disabled={submitting}>
         {submitting ? <Loader2 className="animate-spin" /> : <Plus />}
-        Ajouter
+        {t.taxonomy.add}
       </Button>
     </form>
   );

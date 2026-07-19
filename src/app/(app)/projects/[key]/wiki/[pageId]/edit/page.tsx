@@ -8,6 +8,7 @@ import { getAccessibleProjectByKey } from "@/server/access";
 import { getTicketRefs, getWikiPage, getWikiPages } from "@/server/queries";
 import { Button } from "@/components/ui/button";
 import { WikiPageForm } from "@/components/wiki/wiki-page-form";
+import { getDictionary } from "@/i18n/server";
 
 /** Édition d'une page de wiki, pleine page. */
 export default async function EditWikiPage({
@@ -19,6 +20,7 @@ export default async function EditWikiPage({
   const session = await auth();
   const project = await getAccessibleProjectByKey(session?.user, key);
   if (!project) notFound();
+  const t = await getDictionary();
 
   const [page, tickets, pages] = await Promise.all([
     getWikiPage(pageId),
@@ -40,11 +42,11 @@ export default async function EditWikiPage({
         <Button asChild variant="ghost" size="sm" className="-ml-2">
           <Link href={`/projects/${key}/wiki?page=${page.id}`}>
             <ArrowLeft />
-            Retour
+            {t.wiki.form.back}
           </Link>
         </Button>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight">
-          Éditer la page
+          {t.wiki.form.editTitle}
         </h1>
       </div>
       <WikiPageForm

@@ -4,6 +4,8 @@ import { type FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { fmt } from "@/i18n";
+import { useDict } from "@/i18n/provider";
 import { createSprintAction } from "@/server/actions/sprint.actions";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
  * Les dates vont par paire : les deux, ou aucune (validé aussi côté serveur).
  */
 export function CreateSprintDialog({ projectId }: { projectId: string }) {
+  const t = useDict();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -53,7 +56,7 @@ export function CreateSprintDialog({ projectId }: { projectId: string }) {
       return;
     }
 
-    toast.success(`Sprint « ${name} » créé.`);
+    toast.success(fmt(t.sprints.toastCreated, { name }));
     setOpen(false);
     setStartDate("");
     setEndDate("");
@@ -66,20 +69,19 @@ export function CreateSprintDialog({ projectId }: { projectId: string }) {
       <DialogTrigger asChild>
         <Button>
           <Plus />
-          Nouveau sprint
+          {t.sprints.newSprint}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Nouveau sprint</DialogTitle>
+          <DialogTitle>{t.sprints.newSprint}</DialogTitle>
           <DialogDescription>
-            Sans dates, c&apos;est un simple lot ; ajoutez un objectif et des
-            dates pour en faire une itération.
+            {t.sprints.createDescription}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="sprint-name">Nom</Label>
+            <Label htmlFor="sprint-name">{t.sprints.nameLabel}</Label>
             <Input
               id="sprint-name"
               name="name"
@@ -89,17 +91,17 @@ export function CreateSprintDialog({ projectId }: { projectId: string }) {
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="sprint-goal">Objectif (optionnel)</Label>
+            <Label htmlFor="sprint-goal">{t.sprints.goalLabel}</Label>
             <Textarea
               id="sprint-goal"
               name="goal"
               maxLength={500}
-              placeholder="But de l'itération…"
+              placeholder={t.sprints.goalPlaceholder}
             />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
-              <Label htmlFor="sprint-start">Début</Label>
+              <Label htmlFor="sprint-start">{t.sprints.startDateLabel}</Label>
               <Input
                 id="sprint-start"
                 name="startDate"
@@ -111,7 +113,7 @@ export function CreateSprintDialog({ projectId }: { projectId: string }) {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="sprint-end">Fin</Label>
+              <Label htmlFor="sprint-end">{t.sprints.endDateLabel}</Label>
               <Input
                 id="sprint-end"
                 name="endDate"
@@ -124,17 +126,17 @@ export function CreateSprintDialog({ projectId }: { projectId: string }) {
             </div>
           </div>
           <p className="text-xs text-muted-foreground">
-            Renseignez les deux dates, ou aucune.
+            {t.sprints.datesHint}
           </p>
           <DialogFooter>
             <DialogClose asChild>
               <Button type="button" variant="outline" disabled={submitting}>
-                Annuler
+                {t.common.cancel}
               </Button>
             </DialogClose>
             <Button type="submit" disabled={submitting}>
               {submitting && <Loader2 className="animate-spin" />}
-              Créer le sprint
+              {t.sprints.createSubmit}
             </Button>
           </DialogFooter>
         </form>

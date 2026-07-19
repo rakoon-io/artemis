@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { toast } from "sonner";
+import { useDict } from "@/i18n/provider";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -19,6 +20,7 @@ import { Label } from "@/components/ui/label";
 
 /** Formulaire d'inscription : crée le compte via /api/register puis connecte. */
 export function RegisterForm() {
+  const t = useDict();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -41,7 +43,7 @@ export function RegisterForm() {
         .catch(() => ({}));
 
       if (!res.ok) {
-        toast.error(data.error ?? "Inscription impossible.");
+        toast.error(data.error ?? t.account.register.errorFailed);
         return;
       }
 
@@ -51,16 +53,16 @@ export function RegisterForm() {
         redirect: false,
       });
       if (signInRes?.error) {
-        toast.success("Compte créé. Connectez-vous pour continuer.");
+        toast.success(t.account.register.successCreated);
         router.push("/login");
         return;
       }
 
-      toast.success("Bienvenue sur Artemis !");
+      toast.success(t.account.register.successWelcome);
       router.push("/projects");
       router.refresh();
     } catch {
-      toast.error("Une erreur est survenue. Réessayez.");
+      toast.error(t.common.genericError);
     } finally {
       setIsLoading(false);
     }
@@ -69,38 +71,38 @@ export function RegisterForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl">Créer un compte</CardTitle>
+        <CardTitle className="text-xl">{t.account.register.title}</CardTitle>
         <CardDescription>
-          Rejoignez votre espace Artemis.
+          {t.account.register.description}
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="name">Nom</Label>
+            <Label htmlFor="name">{t.account.register.nameLabel}</Label>
             <Input
               id="name"
               name="name"
               type="text"
               autoComplete="name"
               maxLength={80}
-              placeholder="Prénom Nom"
+              placeholder={t.account.register.namePlaceholder}
               required
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="email">E-mail</Label>
+            <Label htmlFor="email">{t.account.emailLabel}</Label>
             <Input
               id="email"
               name="email"
               type="email"
               autoComplete="email"
-              placeholder="vous@exemple.com"
+              placeholder={t.account.emailPlaceholder}
               required
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="password">Mot de passe</Label>
+            <Label htmlFor="password">{t.account.register.passwordLabel}</Label>
             <Input
               id="password"
               name="password"
@@ -111,21 +113,21 @@ export function RegisterForm() {
               aria-describedby="password-hint"
             />
             <p id="password-hint" className="text-xs text-muted-foreground">
-              8 caractères minimum.
+              {t.account.passwordMinHint}
             </p>
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Création…" : "Créer mon compte"}
+            {isLoading ? t.account.register.submitting : t.account.register.submit}
           </Button>
           <p className="text-center text-sm text-muted-foreground">
-            Déjà un compte ?{" "}
+            {t.account.register.haveAccount}{" "}
             <Link
               href="/login"
               className="font-medium text-foreground underline underline-offset-4"
             >
-              Se connecter
+              {t.account.register.signIn}
             </Link>
           </p>
         </CardFooter>

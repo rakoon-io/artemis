@@ -1,15 +1,17 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { formatDate, initials } from "@/lib/utils";
+import { getDictionary } from "@/i18n/server";
 import type { TicketDetail } from "./ticket-fields";
 
 type CommentItem = TicketDetail["comments"][number];
 
 /** Liste des commentaires d'un ticket (présentationnel, rendu serveur). */
-export function CommentList({ comments }: { comments: CommentItem[] }) {
+export async function CommentList({ comments }: { comments: CommentItem[] }) {
+  const t = await getDictionary();
   if (comments.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
-        Aucun commentaire pour l&apos;instant.
+        {t.ticketDetail.noComments}
       </p>
     );
   }

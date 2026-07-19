@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 
 import { auth } from "@/auth";
+import { getDictionary } from "@/i18n/server";
+import { fmt } from "@/i18n";
 import { isAdmin } from "@/lib/policies";
 import {
   getBoardData,
@@ -37,16 +39,16 @@ export default async function SettingsPage({
 }) {
   const { key } = await params;
   const session = await auth();
+  const t = await getDictionary();
 
   if (!session?.user || !isAdmin(session.user)) {
     return (
       <div className="mx-auto max-w-2xl">
         <Card>
           <CardHeader>
-            <CardTitle>Accès réservé aux administrateurs</CardTitle>
+            <CardTitle>{t.settings.adminOnlyTitle}</CardTitle>
             <CardDescription>
-              Les paramètres du projet ne sont accessibles qu&apos;aux
-              administrateurs.
+              {t.settings.adminOnlyDescription}
             </CardDescription>
           </CardHeader>
         </Card>
@@ -78,30 +80,31 @@ export default async function SettingsPage({
       <div className="space-y-1">
         <p className="font-mono text-xs text-muted-foreground">{project.key}</p>
         <h1 className="text-2xl font-semibold tracking-tight">
-          {project.name} - Paramètres
+          {fmt(t.settings.pageTitle, { name: project.name })}
         </h1>
         <p className="text-sm text-muted-foreground">
-          Éditez le projet, personnalisez le workflow (colonnes, labels, types,
-          priorités) et gérez ses membres.
+          {t.settings.pageSubtitle}
         </p>
       </div>
 
       <Tabs defaultValue="project">
         <TabsList>
-          <TabsTrigger value="project">Projet</TabsTrigger>
-          <TabsTrigger value="columns">Colonnes</TabsTrigger>
-          <TabsTrigger value="labels">Labels</TabsTrigger>
-          <TabsTrigger value="types">Types</TabsTrigger>
-          <TabsTrigger value="priorities">Priorités</TabsTrigger>
-          <TabsTrigger value="members">Membres</TabsTrigger>
+          <TabsTrigger value="project">{t.settings.tabs.project}</TabsTrigger>
+          <TabsTrigger value="columns">{t.settings.tabs.columns}</TabsTrigger>
+          <TabsTrigger value="labels">{t.settings.tabs.labels}</TabsTrigger>
+          <TabsTrigger value="types">{t.settings.tabs.types}</TabsTrigger>
+          <TabsTrigger value="priorities">
+            {t.settings.tabs.priorities}
+          </TabsTrigger>
+          <TabsTrigger value="members">{t.settings.tabs.members}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="project" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>Projet</CardTitle>
+              <CardTitle>{t.settings.projectCardTitle}</CardTitle>
               <CardDescription>
-                Modifiez le nom et la description du projet.
+                {t.settings.projectCardDescription}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -120,10 +123,9 @@ export default async function SettingsPage({
         <TabsContent value="columns" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>Colonnes du workflow</CardTitle>
+              <CardTitle>{t.settings.columnsCardTitle}</CardTitle>
               <CardDescription>
-                Réordonnez, renommez, limitez l&apos;en-cours (WIP) ou supprimez
-                les colonnes du tableau Kanban.
+                {t.settings.columnsCardDescription}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -135,10 +137,9 @@ export default async function SettingsPage({
         <TabsContent value="labels" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>Labels</CardTitle>
+              <CardTitle>{t.settings.labelsCardTitle}</CardTitle>
               <CardDescription>
-                Créez des labels colorés pour catégoriser les tickets, ou
-                supprimez ceux qui ne servent plus.
+                {t.settings.labelsCardDescription}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -150,10 +151,9 @@ export default async function SettingsPage({
         <TabsContent value="types" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>Types de ticket</CardTitle>
+              <CardTitle>{t.settings.typesCardTitle}</CardTitle>
               <CardDescription>
-                Définissez les types de ticket (nom + couleur), réordonnez-les ou
-                supprimez ceux qui ne servent plus.
+                {t.settings.typesCardDescription}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -165,10 +165,9 @@ export default async function SettingsPage({
         <TabsContent value="priorities" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>Priorités</CardTitle>
+              <CardTitle>{t.settings.prioritiesCardTitle}</CardTitle>
               <CardDescription>
-                Définissez les priorités (nom + couleur), réordonnez-les ou
-                supprimez celles qui ne servent plus.
+                {t.settings.prioritiesCardDescription}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -183,10 +182,9 @@ export default async function SettingsPage({
         <TabsContent value="members" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>Membres du projet</CardTitle>
+              <CardTitle>{t.settings.membersCardTitle}</CardTitle>
               <CardDescription>
-                Donnez ou retirez l&apos;accès à ce projet, utilisateur par
-                utilisateur. Les administrateurs accèdent à tous les projets.
+                {t.settings.membersCardDescription}
               </CardDescription>
             </CardHeader>
             <CardContent>

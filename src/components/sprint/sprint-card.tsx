@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { fmt } from "@/i18n";
+import { useDict } from "@/i18n/provider";
 import {
   ArrowRight,
   CalendarRange,
@@ -72,11 +74,14 @@ export interface SprintChoice {
 /** Métadonnées d'affichage par état de sprint. */
 const STATE_META: Record<
   SprintState,
-  { label: string; variant: "default" | "secondary" | "outline" }
+  {
+    labelKey: "statePlanned" | "stateActive" | "stateCompleted";
+    variant: "default" | "secondary" | "outline";
+  }
 > = {
-  [SprintState.PLANNED]: { label: "Planifié", variant: "secondary" },
-  [SprintState.ACTIVE]: { label: "Actif", variant: "default" },
-  [SprintState.COMPLETED]: { label: "Terminé", variant: "outline" },
+  [SprintState.PLANNED]: { labelKey: "statePlanned", variant: "secondary" },
+  [SprintState.ACTIVE]: { labelKey: "stateActive", variant: "default" },
+  [SprintState.COMPLETED]: { labelKey: "stateCompleted", variant: "outline" },
 };
 
 /** Menu de déplacement d'un ticket vers un sprint (ou le backlog). */
@@ -89,6 +94,7 @@ function TicketSprintMenu({
   currentSprintId: string | null;
   sprintOptions: SprintChoice[];
 }) {
+  const t = useDict();
   const router = useRouter();
   const [pending, setPending] = useState(false);
 
@@ -101,7 +107,9 @@ function TicketSprintMenu({
       toast.error(res.error);
       return;
     }
-    toast.success(sprintId ? "Ticket ajouté au sprint." : "Ticket renvoyé au backlog.");
+    toast.success(
+      sprintId ? t.sprints.ticketAddedToSprint : t.sprints.ticketMovedToBacklog,
+    );
     router.refresh();
   }
 
@@ -112,7 +120,7 @@ function TicketSprintMenu({
           variant="ghost"
           size="icon"
           className="size-7 shrink-0 text-muted-foreground"
-          aria-label="Déplacer le ticket vers un sprint"
+          aria-label={t.sprints.moveTicketAria}
           disabled={pending}
         >
           {pending ? <Loader2 className="animate-spin" /> : <FolderInput />}
@@ -120,11 +128,11 @@ function TicketSprintMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">
-          Déplacer vers
+          {t.sprints.moveTo}
         </DropdownMenuLabel>
         {sprintOptions.length === 0 && (
           <p className="px-2 py-1.5 text-xs text-muted-foreground">
-            Aucun sprint. Créez-en un.
+            {t.sprints.noSprintCreateOne}
           </p>
         )}
         {sprintOptions.map((s) => (
@@ -141,7 +149,7 @@ function TicketSprintMenu({
         ))}
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => move(null)} className="gap-2">
-          <span className="flex-1">Backlog (aucun sprint)</span>
+          <span className="flex-1">{t.sprints.backlogNoSprint}</span>
           {currentSprintId === null && (
             <Check className="size-4 shrink-0 text-primary" />
           )}
@@ -217,6 +225,7 @@ export function SprintCard({
   projectKey: string;
   sprintOptions: SprintChoice[];
 }) {
+  const t = useDict();
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -244,7 +253,7 @@ export function SprintCard({
       setPending(false);
       return;
     }
-    toast.success(`Sprint « ${sprint.name} » supprimé.`);
+    toast.success(fmt(t.sprints.toastDeleted, { name: sprint.name }));
     setDeleteOpen(false);
     setPending(false);
     router.refresh();
@@ -257,23 +266,24 @@ export function SprintCard({
           <CardTitle className="text-base">{sprint.name}</CardTitle>
           <div className="flex items-center gap-2">
             <Badge variant="secondary">
-              {tickets.length} ticket{tickets.length > 1 ? "s" : ""}
+              {tickets.length}{" "}
+              {tickets.length > 1 ? t.sprints.ticketOther : t.sprints.ticketOne}
             </Badge>
-            <Badge variant={meta.variant}>{meta.label}</Badge>
+            <Badge variant={meta.variant}>{t.sprints[meta.labelKey]}</Badge>
           </div>
         </div>
         {sprint.goal ? (
           <CardDescription>{sprint.goal}</CardDescription>
         ) : (
           <CardDescription className="italic">
-            Sans objectif défini.
+            {t.sprints.noGoal}
           </CardDescription>
         )}
         <p className="flex flex-wrap items-center gap-1.5 pt-1 text-sm text-muted-foreground">
           {isLot ? (
             <>
               <Flag className="size-4 shrink-0" />
-              Lot, sans dates
+              {t.sprints.lotNoDates}
             </>
           ) : (
             <>
@@ -288,7 +298,7 @@ export function SprintCard({
       <CardContent className="flex-1">
         {tickets.length === 0 ? (
           <p className="rounded-md border border-dashed px-3 py-4 text-center text-sm text-muted-foreground">
-            Aucun ticket dans ce sprint.
+            {t.sprints.noTicketsInSprint}
           </p>
         ) : (
           <ul className="divide-y rounded-md border">
@@ -313,13 +323,13 @@ export function SprintCard({
               onClick={() =>
                 changeState(
                   SprintState.ACTIVE,
-                  `Sprint « ${sprint.name} » démarré.`,
+                  fmt(t.sprints.toastStarted, { name: sprint.name }),
                 )
               }
               disabled={pending}
             >
               {pending ? <Loader2 className="animate-spin" /> : <Play />}
-              Démarrer
+              {t.sprints.startAction}
             </Button>
           )}
           {sprint.state === SprintState.ACTIVE && (
@@ -330,13 +340,13 @@ export function SprintCard({
               onClick={() =>
                 changeState(
                   SprintState.COMPLETED,
-                  `Sprint « ${sprint.name} » clôturé.`,
+                  fmt(t.sprints.toastCompleted, { name: sprint.name }),
                 )
               }
               disabled={pending}
             >
               {pending ? <Loader2 className="animate-spin" /> : <Flag />}
-              Clôturer
+              {t.sprints.closeAction}
             </Button>
           )}
           {sprint.state === SprintState.COMPLETED && (
@@ -347,13 +357,13 @@ export function SprintCard({
               onClick={() =>
                 changeState(
                   SprintState.ACTIVE,
-                  `Sprint « ${sprint.name} » rouvert.`,
+                  fmt(t.sprints.toastReopened, { name: sprint.name }),
                 )
               }
               disabled={pending}
             >
               {pending ? <Loader2 className="animate-spin" /> : <RotateCcw />}
-              Rouvrir
+              {t.sprints.reopen}
             </Button>
           )}
           <Dialog
@@ -366,24 +376,25 @@ export function SprintCard({
                 size="sm"
                 variant="ghost"
                 className="ml-auto text-muted-foreground hover:text-destructive"
-                aria-label={`Supprimer le sprint ${sprint.name}`}
+                aria-label={fmt(t.sprints.deleteSprintAria, { name: sprint.name })}
               >
                 <Trash2 />
-                Supprimer
+                {t.common.delete}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Supprimer « {sprint.name} » ?</DialogTitle>
+                <DialogTitle>
+                  {fmt(t.sprints.deleteTitle, { name: sprint.name })}
+                </DialogTitle>
                 <DialogDescription>
-                  Le sprint sera supprimé et ses tickets en seront détachés (ils
-                  ne sont pas supprimés). Cette action est irréversible.
+                  {t.sprints.deleteDescription}
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>
                 <DialogClose asChild>
                   <Button type="button" variant="outline" disabled={pending}>
-                    Annuler
+                    {t.common.cancel}
                   </Button>
                 </DialogClose>
                 <Button
@@ -393,7 +404,7 @@ export function SprintCard({
                   disabled={pending}
                 >
                   {pending && <Loader2 className="animate-spin" />}
-                  Supprimer
+                  {t.common.delete}
                 </Button>
               </DialogFooter>
             </DialogContent>
