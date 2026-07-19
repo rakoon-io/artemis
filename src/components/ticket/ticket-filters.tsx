@@ -21,6 +21,7 @@ import {
   type SprintOption,
   type TicketTypeOption,
 } from "./ticket-fields";
+import { useDict } from "@/i18n/provider";
 
 /**
  * Barre de filtres de la vue liste : recherche `q` + selects (assigné / type /
@@ -44,6 +45,7 @@ export function TicketFilters({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [q, setQ] = useState(searchParams.get("q") ?? "");
+  const t = useDict();
 
   function pushWith(mutate: (params: URLSearchParams) => void) {
     const params = new URLSearchParams(searchParams.toString());
@@ -82,31 +84,31 @@ export function TicketFilters({
     <div className="flex flex-wrap items-end gap-3">
       <form onSubmit={submitSearch} className="flex items-end gap-2">
         <div className="space-y-1.5">
-          <Label htmlFor="ticket-search">Recherche</Label>
+          <Label htmlFor="ticket-search">{t.tickets.searchLabel}</Label>
           <div className="relative">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               id="ticket-search"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Titre ou description…"
+              placeholder={t.tickets.searchPlaceholder}
               className="w-56 pl-8"
             />
           </div>
         </div>
         <Button type="submit" variant="secondary">
-          Rechercher
+          {t.common.search}
         </Button>
       </form>
 
       <div className="space-y-1.5">
-        <Label htmlFor="filter-type">Type</Label>
+        <Label htmlFor="filter-type">{t.tickets.typeLabel}</Label>
         <Select value={currentType} onValueChange={(v) => setParam("typeId", v)}>
-          <SelectTrigger id="filter-type" className="w-40" aria-label="Filtrer par type">
+          <SelectTrigger id="filter-type" className="w-40" aria-label={t.tickets.typeFilterAria}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL}>Tous les types</SelectItem>
+            <SelectItem value={ALL}>{t.tickets.allTypes}</SelectItem>
             {types.map((o) => (
               <SelectItem key={o.id} value={o.id}>
                 <span className="flex items-center gap-2">
@@ -124,16 +126,16 @@ export function TicketFilters({
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="filter-priority">Priorité</Label>
+        <Label htmlFor="filter-priority">{t.tickets.priorityLabel}</Label>
         <Select
           value={currentPriority}
           onValueChange={(v) => setParam("priorityId", v)}
         >
-          <SelectTrigger id="filter-priority" className="w-40" aria-label="Filtrer par priorité">
+          <SelectTrigger id="filter-priority" className="w-40" aria-label={t.tickets.priorityFilterAria}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL}>Toutes priorités</SelectItem>
+            <SelectItem value={ALL}>{t.tickets.allPriorities}</SelectItem>
             {priorities.map((o) => (
               <SelectItem key={o.id} value={o.id}>
                 <span className="flex items-center gap-2">
@@ -151,16 +153,16 @@ export function TicketFilters({
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="filter-assignee">Assigné</Label>
+        <Label htmlFor="filter-assignee">{t.tickets.assigneeLabel}</Label>
         <Select
           value={currentAssignee}
           onValueChange={(v) => setParam("assigneeId", v)}
         >
-          <SelectTrigger id="filter-assignee" className="w-44" aria-label="Filtrer par assigné">
+          <SelectTrigger id="filter-assignee" className="w-44" aria-label={t.tickets.assigneeFilterAria}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL}>Tous les assignés</SelectItem>
+            <SelectItem value={ALL}>{t.tickets.allAssignees}</SelectItem>
             {members.map((m) => (
               <SelectItem key={m.id} value={m.id}>
                 {m.name ?? m.email}
@@ -171,16 +173,16 @@ export function TicketFilters({
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="filter-sprint">Sprint</Label>
+        <Label htmlFor="filter-sprint">{t.tickets.sprintLabel}</Label>
         <Select
           value={currentSprint}
           onValueChange={(v) => setParam("sprintId", v)}
         >
-          <SelectTrigger id="filter-sprint" className="w-44" aria-label="Filtrer par sprint">
+          <SelectTrigger id="filter-sprint" className="w-44" aria-label={t.tickets.sprintFilterAria}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL}>Tous les sprints</SelectItem>
+            <SelectItem value={ALL}>{t.tickets.allSprints}</SelectItem>
             {sprints.map((s) => (
               <SelectItem key={s.id} value={s.id}>
                 {s.name}
@@ -191,16 +193,16 @@ export function TicketFilters({
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="filter-label">Label</Label>
+        <Label htmlFor="filter-label">{t.tickets.labelLabel}</Label>
         <Select
           value={currentLabel}
           onValueChange={(v) => setParam("labelId", v)}
         >
-          <SelectTrigger id="filter-label" className="w-44" aria-label="Filtrer par label">
+          <SelectTrigger id="filter-label" className="w-44" aria-label={t.tickets.labelFilterAria}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL}>Tous les labels</SelectItem>
+            <SelectItem value={ALL}>{t.tickets.allLabels}</SelectItem>
             {labels.map((l) => (
               <SelectItem key={l.id} value={l.id}>
                 {l.name}
@@ -213,7 +215,7 @@ export function TicketFilters({
       {hasFilters && (
         <Button type="button" variant="ghost" onClick={resetAll}>
           <X />
-          Réinitialiser
+          {t.tickets.reset}
         </Button>
       )}
     </div>

@@ -16,6 +16,8 @@ import { GenerateTicketsDialog } from "@/components/ticket/generate-tickets-dial
 import { TicketFilters } from "@/components/ticket/ticket-filters";
 import { TicketTable } from "@/components/ticket/ticket-table";
 import { isMistralConfigured } from "@/lib/mistral";
+import { getDictionary } from "@/i18n/server";
+import { fmt } from "@/i18n";
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 
@@ -34,6 +36,7 @@ export default async function TicketsListPage({
 }) {
   const { key } = await params;
   const sp = await searchParams;
+  const t = await getDictionary();
 
   const session = await auth();
   const project = await getAccessibleProjectByKey(session?.user, key);
@@ -98,7 +101,7 @@ export default async function TicketsListPage({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Tickets</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t.tickets.title}</h1>
         <div className="flex flex-wrap items-center gap-2">
           {aiEnabled && (
             <GenerateTicketsDialog
@@ -136,8 +139,13 @@ export default async function TicketsListPage({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           {list.total > 0
-            ? `${from}–${to} sur ${list.total} ticket${list.total > 1 ? "s" : ""}`
-            : "Aucun ticket"}
+            ? fmt(t.tickets.countSummary, {
+                from,
+                to,
+                total: list.total,
+                noun: list.total > 1 ? t.tickets.ticketOther : t.tickets.ticketOne,
+              })
+            : t.tickets.noTickets}
         </p>
         {totalPages > 1 && (
           <div className="flex items-center gap-2">
@@ -148,13 +156,13 @@ export default async function TicketsListPage({
               disabled={list.page <= 1}
             >
               {list.page > 1 ? (
-                <Link href={pageHref(list.page - 1)}>Précédent</Link>
+                <Link href={pageHref(list.page - 1)}>{t.tickets.previous}</Link>
               ) : (
-                <span>Précédent</span>
+                <span>{t.tickets.previous}</span>
               )}
             </Button>
             <span className="text-sm text-muted-foreground">
-              Page {list.page} / {totalPages}
+              {fmt(t.tickets.pageOf, { current: list.page, total: totalPages })}
             </span>
             <Button
               asChild={list.page < totalPages}
@@ -163,9 +171,9 @@ export default async function TicketsListPage({
               disabled={list.page >= totalPages}
             >
               {list.page < totalPages ? (
-                <Link href={pageHref(list.page + 1)}>Suivant</Link>
+                <Link href={pageHref(list.page + 1)}>{t.tickets.next}</Link>
               ) : (
-                <span>Suivant</span>
+                <span>{t.tickets.next}</span>
               )}
             </Button>
           </div>

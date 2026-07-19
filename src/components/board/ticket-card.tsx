@@ -15,6 +15,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn, initials } from "@/lib/utils";
+import { useDict } from "@/i18n/provider";
+import { fmt } from "@/i18n";
 import { ColorBadge } from "@/components/ticket/ticket-fields";
 import type { BoardTicket, CurrentUser } from "./kanban-board";
 
@@ -132,6 +134,7 @@ export function TicketCard({
   projectKey: string;
   currentUser: CurrentUser;
 }) {
+  const t = useDict();
   const draggable = canDragTicket(currentUser, ticket);
   const {
     attributes,
@@ -160,7 +163,10 @@ export function TicketCard({
           draggable ? (
             <button
               type="button"
-              aria-label={`Déplacer le ticket ${ticket.key} : ${ticket.title}`}
+              aria-label={fmt(t.board.dragTicketLabel, {
+                key: ticket.key,
+                title: ticket.title,
+              })}
               className="mt-0.5 shrink-0 cursor-grab touch-none rounded-sm text-muted-foreground/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
               {...attributes}
               {...listeners}

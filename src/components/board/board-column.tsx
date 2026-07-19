@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useDict } from "@/i18n/provider";
+import { fmt } from "@/i18n";
 import { TicketCard } from "./ticket-card";
 import type { BoardColumnData, BoardTicket, CurrentUser } from "./kanban-board";
 
@@ -35,6 +37,7 @@ export function BoardColumn({
   /** Fourni uniquement pour la 1re colonne (ajout rapide). */
   onQuickAdd?: (title: string) => Promise<boolean>;
 }) {
+  const t = useDict();
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
   const overLimit = column.wipLimit != null && totalCount > column.wipLimit;
 
@@ -53,7 +56,7 @@ export function BoardColumn({
         {column.wipLimit != null && (
           <Badge
             variant={overLimit ? "destructive" : "outline"}
-            title={`Limite WIP : ${column.wipLimit}`}
+            title={fmt(t.board.wipLimit, { limit: column.wipLimit })}
             className="shrink-0"
           >
             {totalCount}/{column.wipLimit}
@@ -84,7 +87,7 @@ export function BoardColumn({
 
         {tickets.length === 0 && (
           <div className="flex h-24 items-center justify-center rounded-lg border border-dashed text-xs text-muted-foreground">
-            Déposer un ticket ici
+            {t.board.dropHere}
           </div>
         )}
       </div>
@@ -96,6 +99,7 @@ export function BoardColumn({
 
 /** Composeur d'ajout rapide (titre seul) affiché au pied de la 1re colonne. */
 function QuickAdd({ onSubmit }: { onSubmit: (title: string) => Promise<boolean> }) {
+  const t = useDict();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [busy, setBusy] = useState(false);
@@ -115,7 +119,7 @@ function QuickAdd({ onSubmit }: { onSubmit: (title: string) => Promise<boolean> 
           onClick={() => setOpen(true)}
         >
           <Plus />
-          Ajouter un ticket
+          {t.board.addTicket}
         </Button>
       </div>
     );
@@ -138,8 +142,8 @@ function QuickAdd({ onSubmit }: { onSubmit: (title: string) => Promise<boolean> 
         autoFocus
         value={title}
         onChange={(event) => setTitle(event.target.value)}
-        placeholder="Titre du ticket"
-        aria-label="Titre du nouveau ticket"
+        placeholder={t.board.ticketTitlePlaceholder}
+        aria-label={t.board.newTicketTitleLabel}
         disabled={busy}
         onKeyDown={(event) => {
           if (event.key === "Escape") close();
@@ -147,10 +151,10 @@ function QuickAdd({ onSubmit }: { onSubmit: (title: string) => Promise<boolean> 
       />
       <div className="flex gap-2">
         <Button type="submit" size="sm" disabled={busy || !title.trim()}>
-          Ajouter
+          {t.board.add}
         </Button>
         <Button type="button" size="sm" variant="ghost" onClick={close}>
-          Annuler
+          {t.common.cancel}
         </Button>
       </div>
     </form>

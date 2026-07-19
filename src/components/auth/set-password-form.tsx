@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { setPasswordAction } from "@/server/actions/account.actions";
+import { useDict } from "@/i18n/provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +18,7 @@ export function SetPasswordForm({
   token: string;
   email: string;
 }) {
+  const t = useDict();
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,11 +31,11 @@ export function SetPasswordForm({
     const password = String(data.get("password") ?? "");
     const confirm = String(data.get("confirm") ?? "");
     if (password.length < 8) {
-      setError("8 caractères minimum.");
+      setError(t.account.passwordMinHint);
       return;
     }
     if (password !== confirm) {
-      setError("Les mots de passe ne correspondent pas.");
+      setError(t.account.activate.errorMismatch);
       return;
     }
 
@@ -44,7 +46,7 @@ export function SetPasswordForm({
       setError(res.error);
       return;
     }
-    toast.success("Mot de passe défini. Vous pouvez vous connecter.");
+    toast.success(t.account.activate.successSet);
     router.push("/login");
   }
 
@@ -53,7 +55,7 @@ export function SetPasswordForm({
       {/* Aide les gestionnaires de mots de passe à associer le compte. */}
       <input type="hidden" name="email" value={email} autoComplete="username" />
       <div className="grid gap-2">
-        <Label htmlFor="password">Nouveau mot de passe</Label>
+        <Label htmlFor="password">{t.account.activate.newPasswordLabel}</Label>
         <Input
           id="password"
           name="password"
@@ -64,10 +66,10 @@ export function SetPasswordForm({
           required
           autoFocus
         />
-        <p className="text-xs text-muted-foreground">8 caractères minimum.</p>
+        <p className="text-xs text-muted-foreground">{t.account.passwordMinHint}</p>
       </div>
       <div className="grid gap-2">
-        <Label htmlFor="confirm">Confirmer le mot de passe</Label>
+        <Label htmlFor="confirm">{t.account.activate.confirmLabel}</Label>
         <Input
           id="confirm"
           name="confirm"
@@ -81,7 +83,7 @@ export function SetPasswordForm({
       {error && <p className="text-sm text-destructive">{error}</p>}
       <Button type="submit" disabled={submitting} className="w-full">
         {submitting && <Loader2 className="animate-spin" />}
-        Définir le mot de passe
+        {t.account.activate.submit}
       </Button>
     </form>
   );

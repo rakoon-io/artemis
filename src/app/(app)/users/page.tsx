@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { auth } from "@/auth";
 import { isAdmin } from "@/lib/policies";
+import { getDictionary } from "@/i18n/server";
 import { getMembers } from "@/server/queries";
 import {
   Card,
@@ -21,16 +22,16 @@ export const metadata: Metadata = { title: "Utilisateurs · Artemis" };
  */
 export default async function UsersPage() {
   const session = await auth();
+  const t = await getDictionary();
 
   if (!session?.user || !isAdmin(session.user)) {
     return (
       <div className="mx-auto max-w-2xl p-4 md:p-6">
         <Card>
           <CardHeader>
-            <CardTitle>Accès réservé aux administrateurs</CardTitle>
+            <CardTitle>{t.admin.restrictedTitle}</CardTitle>
             <CardDescription>
-              La gestion des utilisateurs n&apos;est accessible qu&apos;aux
-              administrateurs.
+              {t.admin.users.restrictedDescription}
             </CardDescription>
           </CardHeader>
         </Card>
@@ -43,19 +44,19 @@ export default async function UsersPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-4 md:p-6">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Utilisateurs</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {t.admin.users.title}
+        </h1>
         <p className="text-sm text-muted-foreground">
-          Comptes et rôles, valables sur l&apos;ensemble d&apos;Artemis. L&apos;accès
-          à chaque projet se règle dans ses paramètres, onglet Membres.
+          {t.admin.users.subtitle}
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Utilisateurs &amp; rôles</CardTitle>
+          <CardTitle>{t.admin.users.cardTitle}</CardTitle>
           <CardDescription>
-            Ajoutez des comptes, changez les rôles (Administrateur / Rapporteur)
-            ou supprimez des utilisateurs. Ces comptes sont globaux.
+            {t.admin.users.cardDescription}
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useDict } from "@/i18n/provider";
+import { fmt } from "@/i18n";
 
 /** Priorité de ticket configurable (déjà ordonnée par la query). */
 export interface TicketPriorityItem {
@@ -46,6 +48,7 @@ export function PriorityManager({
   projectId: string;
 }) {
   const router = useRouter();
+  const t = useDict();
   const [reordering, setReordering] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -65,7 +68,7 @@ export function PriorityManager({
       toast.error(res.error);
       return;
     }
-    toast.success("Ordre des priorités mis à jour.");
+    toast.success(t.taxonomy.priorities.reordered);
     router.refresh();
   }
 
@@ -77,7 +80,7 @@ export function PriorityManager({
       setDeletingId(null);
       return;
     }
-    toast.success(`Priorité « ${name} » supprimée.`);
+    toast.success(fmt(t.taxonomy.priorities.deleted, { name }));
     setDeletingId(null);
     router.refresh();
   }
@@ -86,7 +89,7 @@ export function PriorityManager({
     <div className="space-y-6">
       {priorities.length === 0 ? (
         <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-          Aucune priorité pour l&apos;instant.
+          {t.taxonomy.priorities.empty}
         </p>
       ) : (
         <ul className="space-y-2">
@@ -101,7 +104,9 @@ export function PriorityManager({
                   variant="ghost"
                   size="icon"
                   className="size-6"
-                  aria-label={`Monter la priorité ${priority.name}`}
+                  aria-label={fmt(t.taxonomy.priorities.moveUp, {
+                    name: priority.name,
+                  })}
                   disabled={index === 0 || reordering}
                   onClick={() => move(index, -1)}
                 >
@@ -112,7 +117,9 @@ export function PriorityManager({
                   variant="ghost"
                   size="icon"
                   className="size-6"
-                  aria-label={`Descendre la priorité ${priority.name}`}
+                  aria-label={fmt(t.taxonomy.priorities.moveDown, {
+                    name: priority.name,
+                  })}
                   disabled={index === priorities.length - 1 || reordering}
                   onClick={() => move(index, 1)}
                 >
@@ -136,7 +143,9 @@ export function PriorityManager({
                 variant="ghost"
                 size="icon"
                 className="text-muted-foreground hover:text-destructive"
-                aria-label={`Supprimer la priorité ${priority.name}`}
+                aria-label={fmt(t.taxonomy.priorities.deleteAria, {
+                  name: priority.name,
+                })}
                 disabled={deletingId === priority.id}
                 onClick={() => handleDelete(priority.id, priority.name)}
               >
@@ -159,6 +168,7 @@ export function PriorityManager({
 /** Dialogue d'édition d'une priorité (nom + couleur). */
 function EditPriorityDialog({ priority }: { priority: TicketPriorityItem }) {
   const router = useRouter();
+  const t = useDict();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [color, setColor] = useState(priority.color);
@@ -167,7 +177,7 @@ function EditPriorityDialog({ priority }: { priority: TicketPriorityItem }) {
     event.preventDefault();
     const name = String(new FormData(event.currentTarget).get("name") ?? "").trim();
     if (!name) {
-      toast.error("Le nom est requis.");
+      toast.error(t.taxonomy.nameRequired);
       return;
     }
 
@@ -178,7 +188,7 @@ function EditPriorityDialog({ priority }: { priority: TicketPriorityItem }) {
       toast.error(res.error);
       return;
     }
-    toast.success("Priorité mise à jour.");
+    toast.success(t.taxonomy.priorities.updated);
     setOpen(false);
     router.refresh();
   }
@@ -196,21 +206,25 @@ function EditPriorityDialog({ priority }: { priority: TicketPriorityItem }) {
           type="button"
           variant="ghost"
           size="icon"
-          aria-label={`Modifier la priorité ${priority.name}`}
+          aria-label={fmt(t.taxonomy.priorities.editAria, {
+            name: priority.name,
+          })}
         >
           <Pencil />
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Modifier la priorité</DialogTitle>
+          <DialogTitle>{t.taxonomy.priorities.editTitle}</DialogTitle>
           <DialogDescription>
-            Renommez la priorité ou changez sa couleur.
+            {t.taxonomy.priorities.editDescription}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor={`priority-name-${priority.id}`}>Nom</Label>
+            <Label htmlFor={`priority-name-${priority.id}`}>
+              {t.taxonomy.name}
+            </Label>
             <Input
               id={`priority-name-${priority.id}`}
               name="name"
@@ -220,25 +234,27 @@ function EditPriorityDialog({ priority }: { priority: TicketPriorityItem }) {
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor={`priority-color-${priority.id}`}>Couleur</Label>
+            <Label htmlFor={`priority-color-${priority.id}`}>
+              {t.taxonomy.color}
+            </Label>
             <input
               id={`priority-color-${priority.id}`}
               type="color"
               value={color}
               onChange={(event) => setColor(event.target.value)}
               className="h-9 w-12 cursor-pointer rounded-md border border-input bg-transparent p-1"
-              aria-label="Couleur de la priorité"
+              aria-label={t.taxonomy.priorities.colorAria}
             />
           </div>
           <DialogFooter>
             <DialogClose asChild>
               <Button type="button" variant="outline" disabled={submitting}>
-                Annuler
+                {t.common.cancel}
               </Button>
             </DialogClose>
             <Button type="submit" disabled={submitting}>
               {submitting && <Loader2 className="animate-spin" />}
-              Enregistrer
+              {t.common.save}
             </Button>
           </DialogFooter>
         </form>
@@ -250,6 +266,7 @@ function EditPriorityDialog({ priority }: { priority: TicketPriorityItem }) {
 /** Formulaire d'ajout d'une priorité (placée en fin de liste). */
 function AddPriorityForm({ projectId }: { projectId: string }) {
   const router = useRouter();
+  const t = useDict();
   const [submitting, setSubmitting] = useState(false);
   const [color, setColor] = useState("#f59e0b");
 
@@ -258,7 +275,7 @@ function AddPriorityForm({ projectId }: { projectId: string }) {
     const form = event.currentTarget;
     const name = String(new FormData(form).get("name") ?? "").trim();
     if (!name) {
-      toast.error("Le nom est requis.");
+      toast.error(t.taxonomy.nameRequired);
       return;
     }
 
@@ -269,7 +286,7 @@ function AddPriorityForm({ projectId }: { projectId: string }) {
       toast.error(res.error);
       return;
     }
-    toast.success(`Priorité « ${name} » créée.`);
+    toast.success(fmt(t.taxonomy.priorities.created, { name }));
     form.reset();
     router.refresh();
   }
@@ -280,29 +297,31 @@ function AddPriorityForm({ projectId }: { projectId: string }) {
       className="flex flex-wrap items-end gap-3 rounded-lg border border-dashed p-3"
     >
       <div className="grid flex-1 gap-2">
-        <Label htmlFor="new-priority-name">Nouvelle priorité</Label>
+        <Label htmlFor="new-priority-name">
+          {t.taxonomy.priorities.newLabel}
+        </Label>
         <Input
           id="new-priority-name"
           name="name"
           maxLength={30}
-          placeholder="ex : Haute"
+          placeholder={t.taxonomy.priorities.newPlaceholder}
           required
         />
       </div>
       <div className="grid gap-2">
-        <Label htmlFor="new-priority-color">Couleur</Label>
+        <Label htmlFor="new-priority-color">{t.taxonomy.color}</Label>
         <input
           id="new-priority-color"
           type="color"
           value={color}
           onChange={(event) => setColor(event.target.value)}
           className="h-9 w-12 cursor-pointer rounded-md border border-input bg-transparent p-1"
-          aria-label="Couleur de la priorité"
+          aria-label={t.taxonomy.priorities.colorAria}
         />
       </div>
       <Button type="submit" disabled={submitting}>
         {submitting ? <Loader2 className="animate-spin" /> : <Plus />}
-        Ajouter
+        {t.taxonomy.add}
       </Button>
     </form>
   );

@@ -19,6 +19,8 @@ import {
   uploadFilesToTicket,
   type PendingAttachment,
 } from "./attachment-upload";
+import { useDict } from "@/i18n/provider";
+import { fmt } from "@/i18n";
 
 /**
  * Gestion des pièces jointes « en attente » (avant enregistrement du ticket) -
@@ -26,6 +28,7 @@ import {
  * presse-papier, aperçus, et téléversement en parallèle à la sauvegarde.
  */
 export function usePendingAttachments() {
+  const t = useDict();
   const [pending, setPending] = useState<PendingAttachment[]>([]);
 
   // Ref sur l'état courant pour révoquer les object URLs au démontage / au nettoyage.
@@ -72,8 +75,8 @@ export function usePendingAttachments() {
     arr.forEach(addFile);
     toast.success(
       arr.length > 1
-        ? `${arr.length} pièces jointes ajoutées.`
-        : "Pièce jointe ajoutée.",
+        ? fmt(t.ticketForm.attachmentsAddedOther, { count: arr.length })
+        : t.ticketForm.attachmentsAddedOne,
     );
   }
 
@@ -85,7 +88,7 @@ export function usePendingAttachments() {
       ...prev,
       { id: crypto.randomUUID(), file, kind: "text" },
     ]);
-    toast.success("Texte ajouté en pièce jointe.");
+    toast.success(t.ticketForm.textAttached);
   }
 
   /** Colle les images du presse-papier ; renvoie `true` si des images ont été captées. */
@@ -96,8 +99,8 @@ export function usePendingAttachments() {
     images.forEach(addImage);
     toast.success(
       images.length > 1
-        ? `${images.length} images ajoutées.`
-        : "Image ajoutée en pièce jointe.",
+        ? fmt(t.ticketForm.imagesAddedOther, { count: images.length })
+        : t.ticketForm.imagesAddedOne,
     );
     return true;
   }
@@ -155,6 +158,7 @@ export function AttachmentField({
   onInsertText?: (text: string) => void;
   id?: string;
 }) {
+  const t = useDict();
   const [dragging, setDragging] = useState(false);
   const [pastedText, setPastedText] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -185,7 +189,7 @@ export function AttachmentField({
 
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={id}>Pièces jointes</Label>
+      <Label htmlFor={id}>{t.ticketForm.attachmentsLabel}</Label>
       <div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -200,12 +204,12 @@ export function AttachmentField({
           value=""
           onChange={() => {}}
           onPaste={handleZonePaste}
-          placeholder="Collez (Ctrl/Cmd + V) une image, un log ou du texte…"
-          aria-label="Zone de collage de pièces jointes"
+          placeholder={t.ticketForm.pastePlaceholder}
+          aria-label={t.ticketForm.pasteZoneAria}
           className="min-h-12 resize-none border-0 bg-transparent p-0 text-muted-foreground shadow-none focus-visible:ring-0"
         />
         <div className="mt-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">
-          <span>…ou glissez-déposez vos documents ici.</span>
+          <span>{t.ticketForm.dropHint}</span>
           <Button
             type="button"
             size="sm"
@@ -213,7 +217,7 @@ export function AttachmentField({
             onClick={() => fileInputRef.current?.click()}
           >
             <Paperclip />
-            Parcourir…
+            {t.ticketForm.browse}
           </Button>
         </div>
         <input
@@ -233,8 +237,12 @@ export function AttachmentField({
       {pastedText && (
         <div className="space-y-2 rounded-md border bg-muted/40 p-3 text-sm">
           <p>
-            Texte détecté ({pastedText.length}
-            {" "}caractère{pastedText.length > 1 ? "s" : ""}).
+            {fmt(
+              pastedText.length > 1
+                ? t.ticketForm.textDetectedOther
+                : t.ticketForm.textDetectedOne,
+              { count: pastedText.length },
+            )}
           </p>
           <div className="flex flex-wrap gap-2">
             <Button
@@ -247,7 +255,7 @@ export function AttachmentField({
               }}
             >
               <FileText />
-              En pièce jointe (.txt)
+              {t.ticketForm.attachAsTxt}
             </Button>
             {onInsertText && (
               <Button
@@ -259,7 +267,7 @@ export function AttachmentField({
                   setPastedText(null);
                 }}
               >
-                Insérer dans la description
+                {t.ticketForm.insertIntoDescription}
               </Button>
             )}
             <Button
@@ -268,7 +276,7 @@ export function AttachmentField({
               variant="ghost"
               onClick={() => setPastedText(null)}
             >
-              Ignorer
+              {t.ticketForm.ignore}
             </Button>
           </div>
         </div>
@@ -276,7 +284,7 @@ export function AttachmentField({
 
       {attachments.hasPending && (
         <div className="space-y-1.5">
-          <Label>Pièces jointes en attente ({attachments.pending.length})</Label>
+          <Label>{fmt(t.ticketForm.pendingAttachments, { count: attachments.pending.length })}</Label>
           <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {attachments.pending.map((p) => (
               <li
@@ -302,7 +310,7 @@ export function AttachmentField({
                 <button
                   type="button"
                   onClick={() => attachments.removePending(p.id)}
-                  aria-label={`Retirer ${p.file.name}`}
+                  aria-label={fmt(t.ticketForm.removeAttachment, { name: p.file.name })}
                   className="rounded-sm p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <X className="size-3.5" />

@@ -4,6 +4,7 @@ import { type FormEvent, useState } from "react";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { requestPasswordResetAction } from "@/server/actions/account.actions";
+import { useDict } from "@/i18n/provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +14,7 @@ import { Label } from "@/components/ui/label";
  * générique (on ne révèle pas si le compte existe).
  */
 export function RequestResetForm() {
+  const t = useDict();
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -29,11 +31,10 @@ export function RequestResetForm() {
     return (
       <div className="grid gap-4">
         <p className="text-sm text-muted-foreground">
-          Si un compte existe avec cet e-mail, un lien de réinitialisation vient
-          d&apos;être envoyé. Pensez à vérifier vos indésirables.
+          {t.account.reset.sentNotice}
         </p>
         <Button asChild variant="outline" className="w-full">
-          <Link href="/login">Retour à la connexion</Link>
+          <Link href="/login">{t.account.backToLogin}</Link>
         </Button>
       </div>
     );
@@ -42,27 +43,27 @@ export function RequestResetForm() {
   return (
     <form onSubmit={handleSubmit} className="grid gap-4">
       <div className="grid gap-2">
-        <Label htmlFor="email">E-mail</Label>
+        <Label htmlFor="email">{t.account.emailLabel}</Label>
         <Input
           id="email"
           name="email"
           type="email"
           autoComplete="email"
-          placeholder="vous@exemple.com"
+          placeholder={t.account.emailPlaceholder}
           required
           autoFocus
         />
       </div>
       <Button type="submit" className="w-full" disabled={submitting}>
         {submitting && <Loader2 className="animate-spin" />}
-        Envoyer le lien
+        {t.account.reset.submit}
       </Button>
       <p className="text-center text-sm text-muted-foreground">
         <Link
           href="/login"
           className="font-medium text-foreground underline underline-offset-4"
         >
-          Retour à la connexion
+          {t.account.backToLogin}
         </Link>
       </p>
     </form>

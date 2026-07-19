@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { fmt } from "@/i18n";
+import { getDictionary } from "@/i18n/server";
 import { getSetupContext } from "@/server/services/setup-token.service";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,20 +28,20 @@ export default async function ActivatePage({
 }) {
   const { token } = await searchParams;
   const context = token ? await getSetupContext(token) : null;
+  const t = await getDictionary();
 
   if (!token || !context) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Lien invalide ou expiré</CardTitle>
+          <CardTitle>{t.account.activate.invalidTitle}</CardTitle>
           <CardDescription>
-            Ce lien de première connexion n&apos;est plus valable. Demandez-en un
-            nouveau à un administrateur.
+            {t.account.activate.invalidDescription}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Button asChild variant="outline" className="w-full">
-            <Link href="/login">Retour à la connexion</Link>
+            <Link href="/login">{t.account.backToLogin}</Link>
           </Button>
         </CardContent>
       </Card>
@@ -49,9 +51,9 @@ export default async function ActivatePage({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Définir votre mot de passe</CardTitle>
+        <CardTitle>{t.account.activate.title}</CardTitle>
         <CardDescription>
-          Choisissez un mot de passe pour activer le compte {context.email}.
+          {fmt(t.account.activate.description, { email: context.email })}
         </CardDescription>
       </CardHeader>
       <CardContent>

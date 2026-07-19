@@ -11,6 +11,8 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import type { LabelOption } from "./ticket-fields";
+import { useDict } from "@/i18n/provider";
+import { fmt } from "@/i18n";
 
 /** Sélecteur de labels multiple (cases à cocher dans un menu déroulant). */
 export function LabelMultiSelect({
@@ -24,6 +26,7 @@ export function LabelMultiSelect({
   onChange: (ids: string[]) => void;
   disabled?: boolean;
 }) {
+  const t = useDict();
   const toggle = (id: string) => {
     onChange(
       selected.includes(id)
@@ -44,14 +47,19 @@ export function LabelMultiSelect({
         >
           <Tag className="opacity-60" />
           {labels.length === 0
-            ? "Aucun label disponible"
+            ? t.ticketForm.noLabelsAvailable
             : count === 0
-              ? "Sélectionner des labels…"
-              : `${count} label${count > 1 ? "s" : ""} sélectionné${count > 1 ? "s" : ""}`}
+              ? t.ticketForm.selectLabels
+              : fmt(
+                  count > 1
+                    ? t.ticketForm.labelsSelectedOther
+                    : t.ticketForm.labelsSelectedOne,
+                  { count },
+                )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="max-h-64 w-60 overflow-y-auto">
-        <DropdownMenuLabel>Labels</DropdownMenuLabel>
+        <DropdownMenuLabel>{t.ticketForm.labelsLabel}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {labels.map((label) => (
           <DropdownMenuCheckboxItem

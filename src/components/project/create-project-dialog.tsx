@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { createProjectAction } from "@/server/actions/project.actions";
+import { useDict } from "@/i18n/provider";
+import { fmt } from "@/i18n";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,6 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 /** Boîte de dialogue de création de projet (réservée aux admins côté UI). */
 export function CreateProjectDialog() {
   const router = useRouter();
+  const t = useDict();
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [key, setKey] = useState("");
@@ -47,7 +50,7 @@ export function CreateProjectDialog() {
       return;
     }
 
-    toast.success(`Projet ${res.data?.key ?? key} créé.`);
+    toast.success(fmt(t.settings.create.created, { key: res.data?.key ?? key }));
     setOpen(false);
     setKey("");
     form.reset();
@@ -59,19 +62,19 @@ export function CreateProjectDialog() {
       <DialogTrigger asChild>
         <Button>
           <Plus />
-          Nouveau projet
+          {t.settings.create.trigger}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Nouveau projet</DialogTitle>
+          <DialogTitle>{t.settings.create.title}</DialogTitle>
           <DialogDescription>
-            La clé préfixe les tickets du projet (ex : RKN-1).
+            {t.settings.create.description}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="project-name">Nom</Label>
+            <Label htmlFor="project-name">{t.settings.create.nameLabel}</Label>
             <Input
               id="project-name"
               name="name"
@@ -81,7 +84,7 @@ export function CreateProjectDialog() {
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="project-key">Clé</Label>
+            <Label htmlFor="project-key">{t.settings.create.keyLabel}</Label>
             <Input
               id="project-key"
               name="key"
@@ -102,26 +105,28 @@ export function CreateProjectDialog() {
               required
             />
             <p id="project-key-hint" className="text-xs text-muted-foreground">
-              2 à 6 lettres majuscules.
+              {t.settings.create.keyHint}
             </p>
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="project-description">Description (optionnel)</Label>
+            <Label htmlFor="project-description">
+              {t.settings.create.descriptionLabel}
+            </Label>
             <Textarea
               id="project-description"
               name="description"
               maxLength={500}
-              placeholder="Objet du projet…"
+              placeholder={t.settings.create.descriptionPlaceholder}
             />
           </div>
           <DialogFooter>
             <DialogClose asChild>
               <Button type="button" variant="outline">
-                Annuler
+                {t.common.cancel}
               </Button>
             </DialogClose>
             <Button type="submit" disabled={isSubmitting || key.length < 2}>
-              {isSubmitting ? "Création…" : "Créer le projet"}
+              {isSubmitting ? t.settings.create.submitting : t.settings.create.submit}
             </Button>
           </DialogFooter>
         </form>

@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useDict } from "@/i18n/provider";
+import { fmt } from "@/i18n";
 
 /** Type de ticket configurable (déjà ordonné par la query). */
 export interface TicketTypeItem {
@@ -46,6 +48,7 @@ export function TypeManager({
   projectId: string;
 }) {
   const router = useRouter();
+  const t = useDict();
   const [reordering, setReordering] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -65,7 +68,7 @@ export function TypeManager({
       toast.error(res.error);
       return;
     }
-    toast.success("Ordre des types mis à jour.");
+    toast.success(t.taxonomy.types.reordered);
     router.refresh();
   }
 
@@ -77,7 +80,7 @@ export function TypeManager({
       setDeletingId(null);
       return;
     }
-    toast.success(`Type « ${name} » supprimé.`);
+    toast.success(fmt(t.taxonomy.types.deleted, { name }));
     setDeletingId(null);
     router.refresh();
   }
@@ -86,7 +89,7 @@ export function TypeManager({
     <div className="space-y-6">
       {types.length === 0 ? (
         <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-          Aucun type pour l&apos;instant.
+          {t.taxonomy.types.empty}
         </p>
       ) : (
         <ul className="space-y-2">
@@ -101,7 +104,7 @@ export function TypeManager({
                   variant="ghost"
                   size="icon"
                   className="size-6"
-                  aria-label={`Monter le type ${type.name}`}
+                  aria-label={fmt(t.taxonomy.types.moveUp, { name: type.name })}
                   disabled={index === 0 || reordering}
                   onClick={() => move(index, -1)}
                 >
@@ -112,7 +115,9 @@ export function TypeManager({
                   variant="ghost"
                   size="icon"
                   className="size-6"
-                  aria-label={`Descendre le type ${type.name}`}
+                  aria-label={fmt(t.taxonomy.types.moveDown, {
+                    name: type.name,
+                  })}
                   disabled={index === types.length - 1 || reordering}
                   onClick={() => move(index, 1)}
                 >
@@ -136,7 +141,9 @@ export function TypeManager({
                 variant="ghost"
                 size="icon"
                 className="text-muted-foreground hover:text-destructive"
-                aria-label={`Supprimer le type ${type.name}`}
+                aria-label={fmt(t.taxonomy.types.deleteAria, {
+                  name: type.name,
+                })}
                 disabled={deletingId === type.id}
                 onClick={() => handleDelete(type.id, type.name)}
               >
@@ -159,6 +166,7 @@ export function TypeManager({
 /** Dialogue d'édition d'un type (nom + couleur). */
 function EditTypeDialog({ type }: { type: TicketTypeItem }) {
   const router = useRouter();
+  const t = useDict();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [color, setColor] = useState(type.color);
@@ -167,7 +175,7 @@ function EditTypeDialog({ type }: { type: TicketTypeItem }) {
     event.preventDefault();
     const name = String(new FormData(event.currentTarget).get("name") ?? "").trim();
     if (!name) {
-      toast.error("Le nom est requis.");
+      toast.error(t.taxonomy.nameRequired);
       return;
     }
 
@@ -178,7 +186,7 @@ function EditTypeDialog({ type }: { type: TicketTypeItem }) {
       toast.error(res.error);
       return;
     }
-    toast.success("Type mis à jour.");
+    toast.success(t.taxonomy.types.updated);
     setOpen(false);
     router.refresh();
   }
@@ -196,21 +204,21 @@ function EditTypeDialog({ type }: { type: TicketTypeItem }) {
           type="button"
           variant="ghost"
           size="icon"
-          aria-label={`Modifier le type ${type.name}`}
+          aria-label={fmt(t.taxonomy.types.editAria, { name: type.name })}
         >
           <Pencil />
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Modifier le type</DialogTitle>
+          <DialogTitle>{t.taxonomy.types.editTitle}</DialogTitle>
           <DialogDescription>
-            Renommez le type ou changez sa couleur.
+            {t.taxonomy.types.editDescription}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor={`type-name-${type.id}`}>Nom</Label>
+            <Label htmlFor={`type-name-${type.id}`}>{t.taxonomy.name}</Label>
             <Input
               id={`type-name-${type.id}`}
               name="name"
@@ -220,25 +228,25 @@ function EditTypeDialog({ type }: { type: TicketTypeItem }) {
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor={`type-color-${type.id}`}>Couleur</Label>
+            <Label htmlFor={`type-color-${type.id}`}>{t.taxonomy.color}</Label>
             <input
               id={`type-color-${type.id}`}
               type="color"
               value={color}
               onChange={(event) => setColor(event.target.value)}
               className="h-9 w-12 cursor-pointer rounded-md border border-input bg-transparent p-1"
-              aria-label="Couleur du type"
+              aria-label={t.taxonomy.types.colorAria}
             />
           </div>
           <DialogFooter>
             <DialogClose asChild>
               <Button type="button" variant="outline" disabled={submitting}>
-                Annuler
+                {t.common.cancel}
               </Button>
             </DialogClose>
             <Button type="submit" disabled={submitting}>
               {submitting && <Loader2 className="animate-spin" />}
-              Enregistrer
+              {t.common.save}
             </Button>
           </DialogFooter>
         </form>
@@ -250,6 +258,7 @@ function EditTypeDialog({ type }: { type: TicketTypeItem }) {
 /** Formulaire d'ajout d'un type (placé en fin de liste). */
 function AddTypeForm({ projectId }: { projectId: string }) {
   const router = useRouter();
+  const t = useDict();
   const [submitting, setSubmitting] = useState(false);
   const [color, setColor] = useState("#0ea5e9");
 
@@ -258,7 +267,7 @@ function AddTypeForm({ projectId }: { projectId: string }) {
     const form = event.currentTarget;
     const name = String(new FormData(form).get("name") ?? "").trim();
     if (!name) {
-      toast.error("Le nom est requis.");
+      toast.error(t.taxonomy.nameRequired);
       return;
     }
 
@@ -269,7 +278,7 @@ function AddTypeForm({ projectId }: { projectId: string }) {
       toast.error(res.error);
       return;
     }
-    toast.success(`Type « ${name} » créé.`);
+    toast.success(fmt(t.taxonomy.types.created, { name }));
     form.reset();
     router.refresh();
   }
@@ -280,29 +289,29 @@ function AddTypeForm({ projectId }: { projectId: string }) {
       className="flex flex-wrap items-end gap-3 rounded-lg border border-dashed p-3"
     >
       <div className="grid flex-1 gap-2">
-        <Label htmlFor="new-type-name">Nouveau type</Label>
+        <Label htmlFor="new-type-name">{t.taxonomy.types.newLabel}</Label>
         <Input
           id="new-type-name"
           name="name"
           maxLength={30}
-          placeholder="ex : Bug"
+          placeholder={t.taxonomy.types.newPlaceholder}
           required
         />
       </div>
       <div className="grid gap-2">
-        <Label htmlFor="new-type-color">Couleur</Label>
+        <Label htmlFor="new-type-color">{t.taxonomy.color}</Label>
         <input
           id="new-type-color"
           type="color"
           value={color}
           onChange={(event) => setColor(event.target.value)}
           className="h-9 w-12 cursor-pointer rounded-md border border-input bg-transparent p-1"
-          aria-label="Couleur du type"
+          aria-label={t.taxonomy.types.colorAria}
         />
       </div>
       <Button type="submit" disabled={submitting}>
         {submitting ? <Loader2 className="animate-spin" /> : <Plus />}
-        Ajouter
+        {t.taxonomy.add}
       </Button>
     </form>
   );

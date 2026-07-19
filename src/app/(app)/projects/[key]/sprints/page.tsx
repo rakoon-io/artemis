@@ -7,15 +7,16 @@ import {
   getBacklogTickets,
   getSprintsWithTickets,
 } from "@/server/queries";
+import { getDictionary } from "@/i18n/server";
 import { Badge } from "@/components/ui/badge";
 import { CreateSprintDialog } from "@/components/sprint/create-sprint-dialog";
 import { SprintCard, SprintTicketItem } from "@/components/sprint/sprint-card";
 
 /** Groupes affichés, dans l'ordre Actif, Planifiés, Terminés. */
 const GROUPS = [
-  { state: SprintState.ACTIVE, label: "Actif" },
-  { state: SprintState.PLANNED, label: "Planifiés" },
-  { state: SprintState.COMPLETED, label: "Terminés" },
+  { state: SprintState.ACTIVE, labelKey: "groupActive" },
+  { state: SprintState.PLANNED, labelKey: "groupPlanned" },
+  { state: SprintState.COMPLETED, labelKey: "groupCompleted" },
 ] as const;
 
 /**
@@ -29,6 +30,7 @@ export default async function SprintsPage({
   params: Promise<{ key: string }>;
 }) {
   const { key } = await params;
+  const t = await getDictionary();
   const session = await auth();
   const project = await getAccessibleProjectByKey(session?.user, key);
   if (!project) notFound();
@@ -45,12 +47,11 @@ export default async function SprintsPage({
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Sprints et lots</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t.sprints.title}</h1>
           <p className="max-w-prose text-sm text-muted-foreground">
-            Distribuez les tickets du backlog dans les sprints. Un{" "}
-            <strong className="font-medium text-foreground">lot</strong> est un
-            sprint sans dates ; ajoutez des dates et un objectif pour en faire une
-            itération.
+            {t.sprints.subtitleLead}{" "}
+            <strong className="font-medium text-foreground">{t.sprints.lot}</strong>{" "}
+            {t.sprints.subtitleTail}
           </p>
         </div>
         <CreateSprintDialog projectId={project.id} />
@@ -58,8 +59,7 @@ export default async function SprintsPage({
 
       {isEmpty ? (
         <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
-          Aucun sprint ni ticket pour l&apos;instant. Créez un sprint pour
-          commencer à planifier.
+          {t.sprints.emptyState}
         </div>
       ) : (
         <div className="space-y-8">
@@ -70,7 +70,7 @@ export default async function SprintsPage({
               <section key={group.state} className="space-y-3">
                 <div className="flex items-center gap-2">
                   <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                    {group.label}
+                    {t.sprints[group.labelKey]}
                   </h2>
                   <Badge variant="outline">{items.length}</Badge>
                 </div>
@@ -92,16 +92,16 @@ export default async function SprintsPage({
           <section className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Backlog
+                {t.sprints.backlog}
               </h2>
               <Badge variant="outline">{backlog.length}</Badge>
               <span className="text-xs text-muted-foreground">
-                tickets sans sprint
+                {t.sprints.ticketsWithoutSprint}
               </span>
             </div>
             {backlog.length === 0 ? (
               <p className="rounded-md border border-dashed px-3 py-4 text-sm text-muted-foreground">
-                Le backlog est vide : tous les tickets sont rattachés à un sprint.
+                {t.sprints.backlogEmpty}
               </p>
             ) : (
               <ul className="divide-y rounded-lg border">

@@ -11,6 +11,8 @@ import {
   resendSetupLinkAction,
   updateUserRoleAction,
 } from "@/server/actions/user.actions";
+import { fmt } from "@/i18n";
+import { useDict } from "@/i18n/provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -48,11 +50,6 @@ interface SetupLink {
   emailSent: boolean;
 }
 
-const ROLE_LABELS: Record<Role, string> = {
-  [Role.ADMIN]: "Administrateur",
-  [Role.REPORTER]: "Rapporteur",
-};
-
 /**
  * Gestion des utilisateurs & rôles (Admin) : liste, changement de rôle,
  * suppression, et **lien de première connexion** (à la création ou relancé plus
@@ -65,6 +62,7 @@ export function UserManager({
   users: MemberRow[];
   currentUserId: string;
 }) {
+  const t = useDict();
   const [link, setLink] = useState<SetupLink | null>(null);
 
   return (
@@ -75,7 +73,7 @@ export function UserManager({
 
       {users.length === 0 ? (
         <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-          Aucun utilisateur.
+          {t.admin.users.empty}
         </p>
       ) : (
         <ul className="space-y-2">
@@ -105,10 +103,15 @@ function UserRow({
   isSelf: boolean;
   onLink: (link: SetupLink) => void;
 }) {
+  const t = useDict();
   const router = useRouter();
   const [updating, setUpdating] = useState(false);
   const [sending, setSending] = useState(false);
   const displayName = member.name?.trim() || member.email;
+  const roleLabels: Record<Role, string> = {
+    [Role.ADMIN]: t.admin.users.roleAdmin,
+    [Role.REPORTER]: t.admin.users.roleReporter,
+  };
 
   async function handleRoleChange(next: string) {
     if (next === member.role) return;
@@ -119,7 +122,7 @@ function UserRow({
       toast.error(res.error);
       return;
     }
-    toast.success("Rôle mis à jour.");
+    toast.success(t.admin.users.roleUpdated);
     router.refresh();
   }
 
@@ -138,8 +141,8 @@ function UserRow({
     });
     toast.success(
       res.data!.emailSent
-        ? "Lien envoyé par e-mail."
-        : "Lien généré (à copier).",
+        ? t.admin.users.setupLinkSentToast
+        : t.admin.users.setupLinkGeneratedToast,
     );
   }
 
@@ -153,7 +156,7 @@ function UserRow({
       </div>
 
       <Badge variant={member.role === Role.ADMIN ? "default" : "secondary"}>
-        {ROLE_LABELS[member.role]}
+        {roleLabels[member.role]}
       </Badge>
 
       <Select
@@ -161,12 +164,17 @@ function UserRow({
         onValueChange={handleRoleChange}
         disabled={updating}
       >
-        <SelectTrigger className="w-44" aria-label={`Rôle de ${displayName}`}>
+        <SelectTrigger
+          className="w-44"
+          aria-label={fmt(t.admin.users.roleSelectLabel, { name: displayName })}
+        >
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={Role.REPORTER}>Rapporteur</SelectItem>
-          <SelectItem value={Role.ADMIN}>Administrateur</SelectItem>
+          <SelectItem value={Role.REPORTER}>
+            {roleLabels[Role.REPORTER]}
+          </SelectItem>
+          <SelectItem value={Role.ADMIN}>{roleLabels[Role.ADMIN]}</SelectItem>
         </SelectContent>
       </Select>
 
@@ -176,8 +184,8 @@ function UserRow({
         size="icon"
         onClick={handleResend}
         disabled={sending}
-        aria-label={`Lien de connexion pour ${displayName}`}
-        title="Envoyer un lien de première connexion / réinitialisation"
+        aria-label={fmt(t.admin.users.setupLinkAria, { name: displayName })}
+        title={t.admin.users.setupLinkTitle}
       >
         {sending ? <Loader2 className="animate-spin" /> : <KeyRound />}
       </Button>
@@ -199,6 +207,7 @@ function SetupLinkDialog({
   link: SetupLink | null;
   onClose: () => void;
 }) {
+  const t = useDict();
   const [copied, setCopied] = useState(false);
 
   async function copy() {
@@ -208,7 +217,7 @@ function SetupLinkDialog({
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      toast.error("Copie impossible. Sélectionnez le lien manuellement.");
+      toast.error(t.admin.users.copyError);
     }
   }
 
@@ -216,11 +225,13 @@ function SetupLinkDialog({
     <Dialog open={!!link} onOpenChange={(next) => !next && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Lien de première connexion</DialogTitle>
+          <DialogTitle>{t.admin.users.setupTitle}</DialogTitle>
           <DialogDescription>
             {link?.emailSent
-              ? `Un e-mail a été envoyé à ${link.email}. Vous pouvez aussi copier le lien.`
-              : `Copiez ce lien et transmettez-le à ${link?.email}. L'envoi d'e-mail n'est pas configuré.`}
+              ? fmt(t.admin.users.setupDescriptionSent, { email: link.email })
+              : fmt(t.admin.users.setupDescriptionManual, {
+                  email: link?.email ?? "",
+                })}
           </DialogDescription>
         </DialogHeader>
         <div className="flex items-center gap-2">
@@ -232,16 +243,16 @@ function SetupLinkDialog({
           />
           <Button type="button" variant="outline" onClick={copy} className="shrink-0">
             {copied ? <Check /> : <Copy />}
-            {copied ? "Copié" : "Copier"}
+            {copied ? t.admin.users.copied : t.admin.users.copy}
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
-          Ce lien est valable 7 jours et à usage unique.
+          {t.admin.users.setupHint}
         </p>
         <DialogFooter>
           <DialogClose asChild>
             <Button type="button" variant="outline">
-              Fermer
+              {t.admin.users.close}
             </Button>
           </DialogClose>
         </DialogFooter>
@@ -260,6 +271,7 @@ function DeleteUserDialog({
   displayName: string;
   isSelf: boolean;
 }) {
+  const t = useDict();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -272,7 +284,7 @@ function DeleteUserDialog({
       setSubmitting(false);
       return;
     }
-    toast.success(`Utilisateur « ${displayName} » supprimé.`);
+    toast.success(fmt(t.admin.users.deletedToast, { name: displayName }));
     setOpen(false);
     setSubmitting(false);
     router.refresh();
@@ -287,28 +299,25 @@ function DeleteUserDialog({
           size="icon"
           className="text-muted-foreground hover:text-destructive"
           disabled={isSelf}
-          aria-label={`Supprimer ${displayName}`}
-          title={
-            isSelf
-              ? "Vous ne pouvez pas supprimer votre propre compte."
-              : undefined
-          }
+          aria-label={fmt(t.admin.users.deleteAria, { name: displayName })}
+          title={isSelf ? t.admin.users.deleteSelfTitle : undefined}
         >
           <Trash2 />
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Supprimer « {displayName} » ?</DialogTitle>
+          <DialogTitle>
+            {fmt(t.admin.users.deleteTitle, { name: displayName })}
+          </DialogTitle>
           <DialogDescription>
-            Cette action est définitive : l&apos;utilisateur perdra l&apos;accès à
-            Artemis.
+            {t.admin.users.deleteDescription}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <DialogClose asChild>
             <Button type="button" variant="outline" disabled={submitting}>
-              Annuler
+              {t.common.cancel}
             </Button>
           </DialogClose>
           <Button
@@ -318,7 +327,7 @@ function DeleteUserDialog({
             disabled={submitting}
           >
             {submitting && <Loader2 className="animate-spin" />}
-            Supprimer
+            {t.common.delete}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -328,6 +337,7 @@ function DeleteUserDialog({
 
 /** Dialogue de création d'un utilisateur (mot de passe optionnel = lien de connexion). */
 function AddUserDialog({ onLink }: { onLink: (link: SetupLink) => void }) {
+  const t = useDict();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -341,11 +351,11 @@ function AddUserDialog({ onLink }: { onLink: (link: SetupLink) => void }) {
     const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
     if (!name || !email) {
-      toast.error("Renseignez un nom et un e-mail.");
+      toast.error(t.admin.users.validationMissing);
       return;
     }
     if (password && password.length < 8) {
-      toast.error("Le mot de passe doit faire 8 caractères minimum.");
+      toast.error(t.admin.users.validationPasswordShort);
       return;
     }
 
@@ -370,9 +380,9 @@ function AddUserDialog({ onLink }: { onLink: (link: SetupLink) => void }) {
         email: res.data.email,
         emailSent: !!res.data.emailSent,
       });
-      toast.success(`« ${name} » créé. Lien de première connexion généré.`);
+      toast.success(fmt(t.admin.users.createdWithLinkToast, { name }));
     } else {
-      toast.success(`Utilisateur « ${name} » créé.`);
+      toast.success(fmt(t.admin.users.createdToast, { name }));
     }
     router.refresh();
   }
@@ -382,23 +392,23 @@ function AddUserDialog({ onLink }: { onLink: (link: SetupLink) => void }) {
       <DialogTrigger asChild>
         <Button type="button">
           <UserPlus />
-          Ajouter un utilisateur
+          {t.admin.users.addUser}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Ajouter un utilisateur</DialogTitle>
+          <DialogTitle>{t.admin.users.addUser}</DialogTitle>
           <DialogDescription>
-            Créez un compte et attribuez-lui un rôle.
+            {t.admin.users.addUserDescription}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="new-user-name">Nom</Label>
+            <Label htmlFor="new-user-name">{t.admin.users.nameLabel}</Label>
             <Input id="new-user-name" name="name" maxLength={80} required />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="new-user-email">E-mail</Label>
+            <Label htmlFor="new-user-email">{t.admin.users.emailLabel}</Label>
             <Input
               id="new-user-email"
               name="email"
@@ -408,7 +418,9 @@ function AddUserDialog({ onLink }: { onLink: (link: SetupLink) => void }) {
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="new-user-password">Mot de passe</Label>
+            <Label htmlFor="new-user-password">
+              {t.admin.users.passwordLabel}
+            </Label>
             <Input
               id="new-user-password"
               name="password"
@@ -418,31 +430,34 @@ function AddUserDialog({ onLink }: { onLink: (link: SetupLink) => void }) {
               maxLength={200}
             />
             <p className="text-xs text-muted-foreground">
-              Laissez vide pour envoyer un lien de première connexion (l&apos;utilisateur
-              choisit son mot de passe).
+              {t.admin.users.passwordHint}
             </p>
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="new-user-role">Rôle</Label>
+            <Label htmlFor="new-user-role">{t.admin.users.roleLabel}</Label>
             <Select value={role} onValueChange={(v) => setRole(v as Role)}>
               <SelectTrigger id="new-user-role">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={Role.REPORTER}>Rapporteur</SelectItem>
-                <SelectItem value={Role.ADMIN}>Administrateur</SelectItem>
+                <SelectItem value={Role.REPORTER}>
+                  {t.admin.users.roleReporter}
+                </SelectItem>
+                <SelectItem value={Role.ADMIN}>
+                  {t.admin.users.roleAdmin}
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
           <DialogFooter>
             <DialogClose asChild>
               <Button type="button" variant="outline" disabled={submitting}>
-                Annuler
+                {t.common.cancel}
               </Button>
             </DialogClose>
             <Button type="submit" disabled={submitting}>
               {submitting ? <Loader2 className="animate-spin" /> : <Plus />}
-              Créer
+              {t.common.create}
             </Button>
           </DialogFooter>
         </form>

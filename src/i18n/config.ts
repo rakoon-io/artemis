@@ -14,7 +14,7 @@ export const LOCALE_COOKIE = "locale";
 
 /** Libelles des langues, tels qu'affiches dans le selecteur. */
 export const localeNames: Record<Locale, string> = {
-  fr: "Francais",
+  fr: "Français",
   en: "English",
 };
 
