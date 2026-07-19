@@ -16,10 +16,12 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useDict } from "@/i18n/provider";
 
 /** Formulaire de connexion (Credentials → session Auth.js). */
 export function LoginForm() {
   const router = useRouter();
+  const t = useDict();
   const [isLoading, setIsLoading] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -36,14 +38,14 @@ export function LoginForm() {
         redirect: false,
       });
       if (res?.error) {
-        toast.error("E-mail ou mot de passe incorrect.");
+        toast.error(t.login.errorInvalid);
         return;
       }
-      toast.success("Connexion réussie.");
+      toast.success(t.login.success);
       router.push("/projects");
       router.refresh();
     } catch {
-      toast.error("Une erreur est survenue. Réessayez.");
+      toast.error(t.common.genericError);
     } finally {
       setIsLoading(false);
     }
@@ -52,30 +54,30 @@ export function LoginForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl">Connexion</CardTitle>
-        <CardDescription>Accédez à votre espace Artemis.</CardDescription>
+        <CardTitle className="text-xl">{t.login.title}</CardTitle>
+        <CardDescription>{t.login.subtitle}</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="email">E-mail</Label>
+            <Label htmlFor="email">{t.login.email}</Label>
             <Input
               id="email"
               name="email"
               type="email"
               autoComplete="email"
-              placeholder="vous@exemple.com"
+              placeholder={t.login.emailPlaceholder}
               required
             />
           </div>
           <div className="grid gap-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="password">Mot de passe</Label>
+              <Label htmlFor="password">{t.login.password}</Label>
               <Link
                 href="/reset"
                 className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
               >
-                Mot de passe oublié ?
+                {t.login.forgotPassword}
               </Link>
             </div>
             <Input
@@ -89,15 +91,15 @@ export function LoginForm() {
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Connexion…" : "Se connecter"}
+            {isLoading ? t.login.submitting : t.login.submit}
           </Button>
           <p className="text-center text-sm text-muted-foreground">
-            Pas encore de compte ?{" "}
+            {t.login.noAccount}{" "}
             <Link
               href="/register"
               className="font-medium text-foreground underline underline-offset-4"
             >
-              Créer un compte
+              {t.login.createAccount}
             </Link>
           </p>
         </CardFooter>

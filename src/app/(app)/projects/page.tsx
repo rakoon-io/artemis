@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CalendarRange, CircleCheck, Ticket } from "lucide-react";
 import { auth } from "@/auth";
 import { isAdmin } from "@/lib/policies";
+import { getDictionary } from "@/i18n/server";
 import { getAccessibleProjectsWithStats } from "@/server/queries";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -20,15 +21,16 @@ export default async function ProjectsPage() {
   const session = await auth();
   const projects = await getAccessibleProjectsWithStats(session?.user);
   const admin = isAdmin(session?.user);
+  const t = await getDictionary();
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 md:px-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Projets</h1>
-          <p className="text-sm text-muted-foreground">
-            Sélectionnez un projet ou créez-en un nouveau.
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {t.projects.title}
+          </h1>
+          <p className="text-sm text-muted-foreground">{t.projects.subtitle}</p>
         </div>
         {admin ? <CreateProjectDialog /> : null}
       </div>
@@ -36,11 +38,9 @@ export default async function ProjectsPage() {
       {projects.length === 0 ? (
         <Card className="flex flex-col items-center justify-center gap-4 border-dashed py-16 text-center">
           <div className="flex flex-col gap-1">
-            <p className="text-lg font-medium">Aucun projet pour l&apos;instant</p>
+            <p className="text-lg font-medium">{t.projects.emptyTitle}</p>
             <p className="text-sm text-muted-foreground">
-              {admin
-                ? "Créez votre premier projet pour commencer à suivre des tickets."
-                : "Aucun projet n'est encore disponible. Contactez un administrateur."}
+              {admin ? t.projects.emptyAdmin : t.projects.emptyReporter}
             </p>
           </div>
           {admin ? <CreateProjectDialog /> : null}
@@ -74,7 +74,8 @@ export default async function ProjectsPage() {
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <CircleCheck className="size-3.5" />
-                          {project.doneCount} / {project.ticketCount} terminés
+                          {project.doneCount} / {project.ticketCount}{" "}
+                          {t.projects.done}
                         </span>
                         <span className="font-medium text-foreground">{pct}%</span>
                       </div>
@@ -88,13 +89,17 @@ export default async function ProjectsPage() {
                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Ticket className="size-3.5" />
-                        {project.ticketCount} ticket
-                        {project.ticketCount > 1 ? "s" : ""}
+                        {project.ticketCount}{" "}
+                        {project.ticketCount > 1
+                          ? t.projects.ticketOther
+                          : t.projects.ticketOne}
                       </span>
                       <span className="flex items-center gap-1">
                         <CalendarRange className="size-3.5" />
-                        {project.sprintCount} sprint
-                        {project.sprintCount > 1 ? "s" : ""}
+                        {project.sprintCount}{" "}
+                        {project.sprintCount > 1
+                          ? t.projects.sprintOther
+                          : t.projects.sprintOne}
                       </span>
                     </div>
                   </CardContent>
