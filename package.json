@@ -21,6 +21,13 @@
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
+  "overrides": {
+    "postcss": ">=8.5.18",
+    "sharp": ">=0.35.0",
+    "fast-uri": ">=3.1.4",
+    "brace-expansion": ">=4.0.1",
+    "minimatch": ">=10.0.3"
+  },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.700.0",
     "@aws-sdk/s3-request-presigner": "^3.700.0",
@@ -43,8 +50,8 @@
     "clsx": "^2.1.1",
     "fractional-indexing": "^3.2.0",
     "lucide-react": "latest",
-    "next": "16.2.10",
-    "next-auth": "beta",
+    "next": "16.2.12",
+    "next-auth": "5.0.0-beta.32",
     "next-themes": "latest",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -63,7 +70,7 @@
     "@types/react-dom": "^19",
     "cross-env": "^7.0.3",
     "eslint": "^9",
-    "eslint-config-next": "16.2.10",
+    "eslint-config-next": "16.2.12",
     "prisma": "^6.1.0",
     "tailwindcss": "^4",
     "tsx": "latest",
