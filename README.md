@@ -23,6 +23,15 @@ tout self-hostable (Docker + PostgreSQL).
   **et** clavier (dnd-kit).
 - **Vue liste** - filtres, tri multi-colonnes et recherche plein texte.
 - **Sprints / lots** - backlog, planification, iterations datees, reouverture.
+- **Modules fonctionnels** - un niveau au-dessus des composants : les grands domaines du produit
+  (suivi des tickets, documentation, administration...), qui regroupent plusieurs composants.
+  C'est de la **structure produit**, pas un lot de travail : un module ne se **termine** jamais,
+  contrairement a un sprint. Facultatif de bout en bout.
+- **Composants applicatifs** - chaque projet declare le catalogue des composants dont son
+  application est faite (une **page**, un **composant reutilisable**, un **service**), chacun
+  rattachable a un module ; un ticket peut en referencer un pour situer la demande, filtrer les
+  vues et donner du contexte a l'IA. Son module est alors celui de son composant : un ticket ne
+  porte son propre module que lorsqu'il n'a aucun composant.
 - **Wiki de projet** - documentation en Markdown etendu, recherche, citation de tickets avec `@`.
 - **Commentaires** - fil de discussion par ticket.
 - **Pieces jointes** - vignettes des images, telechargement des logs et fichiers.
@@ -33,7 +42,8 @@ tout self-hostable (Docker + PostgreSQL).
 - **Notifications par e-mail** - les concernes (rapporteur, assigne) sont
   prevenus par e-mail (Mailjet) sur les evenements cles : nouveau commentaire,
   assignation. Optionnel, configure par variables d'environnement.
-- **Personnalisation** - workflow (colonnes), labels, types, priorites, themes clair/sombre.
+- **Personnalisation** - workflow (colonnes), labels, types, priorites, modules, composants,
+  themes clair/sombre.
 - **Roles Admin / Rapporteur** - RBAC extensible, **impose cote serveur**.
 
 ## Stack
@@ -100,7 +110,7 @@ MAILJET_API_KEY=""        # cle publique Mailjet
 MAILJET_API_SECRET=""     # cle privee Mailjet
 EMAIL_FROM="noreply@rakoon.io"   # adresse expeditrice validee cote Mailjet
 EMAIL_FROM_NAME="Artemis"
-APP_URL="https://tracker.apps.rakoon.io"   # base des liens dans les e-mails
+APP_URL="https://artemis.apps.rakoon.io"   # base des liens dans les e-mails
 ```
 
 Les concernes (rapporteur et assigne du ticket) recoivent un e-mail lors d'un

@@ -88,6 +88,65 @@ export const taxonomy: TaxonomyDict = {
     newPlaceholder: "e.g. Bug",
   },
 
+  // Functional modules (group components together)
+  modules: {
+    reordered: "Module order updated.",
+    empty: "No modules yet.",
+    moveUp: "Move module {name} up",
+    moveDown: "Move module {name} down",
+    updated: "Module updated.",
+    created: "Module “{name}” created.",
+    deleted: "Module “{name}” deleted.",
+    editAria: "Edit module {name}",
+    editTitle: "Edit module",
+    editDescription: "Rename the module, change its color or its description.",
+    deleteAria: "Delete module {name}",
+    colorAria: "Module color",
+    newLabel: "New module",
+    newPlaceholder: "e.g. User management",
+    descriptionLabel: "Description",
+    descriptionPlaceholder: "What does this module cover? (optional)",
+    descriptionHint:
+      "Situates the module's functional scope, and is sent to the AI along with the components it groups.",
+    noModule: "No module",
+    unassignedHeading: "No module",
+  },
+
+  // Application components
+  components: {
+    reordered: "Component order updated.",
+    empty: "No components yet.",
+    moveUp: "Move component {name} up",
+    moveDown: "Move component {name} down",
+    updated: "Component updated.",
+    created: "Component “{name}” created.",
+    deleted: "Component “{name}” deleted.",
+    editAria: "Edit component {name}",
+    editTitle: "Edit component",
+    editDescription:
+      "Rename the component, change its kind, its color or its description.",
+    deleteAria: "Delete component {name}",
+    colorAria: "Component color",
+    newLabel: "New component",
+    newPlaceholder: "e.g. Kanban board",
+    // « Nature » en francais ; « Kind » en anglais - « nature » serait un faux ami.
+    kindLabel: "Kind",
+    kindAria: "Component kind",
+    moduleLabel: "Module",
+    moduleAria: "Component module",
+    descriptionLabel: "Description",
+    descriptionPlaceholder: "What is this component for? (optional)",
+    descriptionHint:
+      "Used to contextualize the tickets attached to this component, and sent to the AI when generating tickets from a text.",
+  },
+
+  // Component kinds (ComponentKind enum values)
+  componentKinds: {
+    PAGE: "Page",
+    SHARED: "Reusable component",
+    SERVICE: "Service",
+  },
+
   // Project members
   members: {
     summary:

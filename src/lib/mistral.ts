@@ -84,6 +84,8 @@ export interface TicketDraft {
   type: string | null;
   /** Nom de la priorité suggérée (à rapprocher des priorités du projet). */
   priority: string | null;
+  /** Nom du composant concerné (à rapprocher du catalogue du projet) - ou null. */
+  component: string | null;
 }
 
 export interface GenerateTicketDraftsOptions {
@@ -91,6 +93,12 @@ export interface GenerateTicketDraftsOptions {
   types?: string[];
   /** Noms des priorités disponibles pour le projet (aide le modèle au mapping). */
   priorities?: string[];
+  /**
+   * Noms des composants du projet (page / composant réutilisable / service). Leur
+   * nature et leur description figurent dans `context` ; cette liste fixe les
+   * valeurs EXACTES attendues en sortie pour permettre le rapprochement.
+   */
+  components?: string[];
   /** Limite haute de tickets à produire (bornée par `MAX_GENERATED_TICKETS`). */
   maxTickets?: number;
   /**
@@ -158,10 +166,11 @@ async function fetchOrThrow(
   return res;
 }
 
-/** Construit le prompt système, en injectant types/priorités et contexte éventuel. */
+/** Construit le prompt système, en injectant types/priorités/composants et contexte éventuel. */
 function buildSystemPrompt(opts: {
   types?: string[];
   priorities?: string[];
+  components?: string[];
   maxTickets: number;
   context?: string;
 }): string {
@@ -169,6 +178,12 @@ function buildSystemPrompt(opts: {
   const prioList = opts.priorities?.length
     ? opts.priorities.join(", ")
     : "(aucune imposée)";
+  // Séparateur « | » et non « , » : un nom de composant est saisi librement et
+  // contient volontiers une virgule (« Détail du ticket, mobile »), qui ferait
+  // alors passer un seul composant pour deux candidats distincts.
+  const componentList = opts.components?.length
+    ? opts.components.join(" | ")
+    : null;
   const lines: string[] = [
     "Tu es un assistant qui transforme un texte libre (notes de réunion, e-mail,",
     "compte-rendu, liste de tâches…) en tickets de suivi clairs et actionnables.",
@@ -190,13 +205,16 @@ function buildSystemPrompt(opts: {
   lines.push(
     "",
     "Réponds STRICTEMENT en JSON valide, sans texte ni balise autour, avec la forme :",
-    '{ "tickets": [ { "title": string, "description": string, "type": string|null, "priority": string|null } ] }',
+    '{ "tickets": [ { "title": string, "description": string, "type": string|null, "priority": string|null, "component": string|null } ] }',
     "",
     "Règles :",
     "- title : concis (max 200 caractères), en français, à l'impératif si possible.",
     "- description : détails utiles issus du texte (contexte, critères). Peut être vide (\"\").",
     `- type : l'un de ces types EXACTS si pertinent, sinon null : ${typeList}.`,
     `- priority : l'une de ces priorités EXACTES si pertinent, sinon null : ${prioList}.`,
+    componentList
+      ? `- component : le composant concerné, nom EXACT repris tel quel parmi ces valeurs séparées par « | » : ${componentList}. null si aucune ne correspond clairement (ne devine pas).`
+      : "- component : toujours null (ce projet ne déclare aucun composant).",
     "- N'invente aucune information absente du texte ni du contexte.",
   );
   return lines.join("\n");
@@ -234,7 +252,17 @@ function parseDrafts(content: string): TicketDraft[] {
       typeof obj.priority === "string" && obj.priority.trim()
         ? obj.priority.trim()
         : null;
-    drafts.push({ title: title.slice(0, 200), description, type, priority });
+    const component =
+      typeof obj.component === "string" && obj.component.trim()
+        ? obj.component.trim()
+        : null;
+    drafts.push({
+      title: title.slice(0, 200),
+      description,
+      type,
+      priority,
+      component,
+    });
   }
   return drafts;
 }
@@ -447,6 +475,7 @@ export async function generateTicketDrafts(
       content: buildSystemPrompt({
         types: options.types,
         priorities: options.priorities,
+        components: options.components,
         maxTickets,
         context: options.context,
       }),

@@ -25,6 +25,16 @@ enum EmailStatus {
   DISABLED
 }
 
+// Nature d'un composant applicatif (cf. model Component).
+//   PAGE    - un écran / une route de l'application ;
+//   SHARED  - un composant réutilisable (design system, widget partagé) ;
+//   SERVICE - un service technique (API, job, intégration externe).
+enum ComponentKind {
+  PAGE
+  SHARED
+  SERVICE
+}
+
 model User {
   id           String       @id @default(cuid())
   email        String       @unique
@@ -83,6 +93,8 @@ model Project {
   labels           Label[]
   ticketTypes      TicketType[]
   ticketPriorities TicketPriority[]
+  modules          Module[]
+  components       Component[]
   wikiPages        WikiPage[]
   members          ProjectMember[]
 }
@@ -143,6 +155,57 @@ model TicketPriority {
   @@index([projectId])
 }
 
+// Module fonctionnel d'un projet : un ensemble de fonctionnalités à grosse
+// maille (ex. « Gestion des utilisateurs »), au-dessus des composants. C'est de
+// la STRUCTURE PRODUIT, pas un conteneur de travail : un module ne se « termine »
+// pas, contrairement à un sprint ou un lot. Il regroupe plusieurs composants
+// (écrans, briques partagées, services) et sert à situer une demande à maille
+// large. Entièrement facultatif : un projet peut n'en déclarer aucun.
+model Module {
+  id          String      @id @default(cuid())
+  projectId   String
+  project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String
+  description String? // contexte libre (périmètre fonctionnel du module)
+  color       String // hex, ex : "#0EA5E9"
+  order       Int
+  components  Component[]
+  tickets     Ticket[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@unique([projectId, name])
+  @@index([projectId])
+}
+
+// Composant applicatif d'un projet : la brique fonctionnelle CONCERNÉE par une
+// demande (« de quoi parle ce ticket ? »). Configurable par projet, comme les
+// types et priorités, avec en plus une NATURE (`kind`) : page, composant
+// réutilisable ou service. La `description` porte le contexte métier/technique
+// du composant : elle est affichée dans l'UI et injectée dans le contexte
+// transmis à l'IA lors de la génération de tickets.
+model Component {
+  id          String        @id @default(cuid())
+  projectId   String
+  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  // Module de rattachement (facultatif). Les composants transverses - typiquement
+  // les `SHARED`, qui servent plusieurs modules - n'en ont volontairement aucun.
+  moduleId    String?
+  module      Module?       @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  name        String
+  kind        ComponentKind @default(PAGE)
+  description String? // contexte libre (rôle, périmètre, contraintes)
+  color       String // hex, ex : "#8B5CF6"
+  order       Int
+  tickets     Ticket[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([projectId, name])
+  @@index([projectId])
+  @@index([moduleId])
+}
+
 model Ticket {
   id          String          @id @default(cuid())
   projectId   String
@@ -155,6 +218,17 @@ model Ticket {
   type        TicketType      @relation(fields: [typeId], references: [id])
   priorityId  String
   priority    TicketPriority  @relation(fields: [priorityId], references: [id])
+  // Composant concerné (facultatif) : contextualise la demande. `SetNull` pour
+  // qu'un composant supprimé n'entraîne jamais la perte d'un ticket.
+  componentId String?
+  component   Component?      @relation(fields: [componentId], references: [id], onDelete: SetNull)
+  // Module PROPRE du ticket, renseignable uniquement lorsqu'aucun composant n'est
+  // choisi (demande à grosse maille). INVARIANT imposé par le service : dès qu'un
+  // composant est posé, ce champ repasse à `null` et le module effectif du ticket
+  // devient celui du composant. Une seule source de vérité, donc jamais de
+  // contradiction entre le module du ticket et celui de son composant.
+  moduleId    String?
+  module      Module?         @relation(fields: [moduleId], references: [id], onDelete: SetNull)
   columnId    String
   column      Column          @relation(fields: [columnId], references: [id])
   rank        String // ordre dans la colonne (lexorank)
@@ -175,6 +249,8 @@ model Ticket {
   @@index([sprintId])
   @@index([typeId])
   @@index([priorityId])
+  @@index([componentId])
+  @@index([moduleId])
 }
 
 model Sprint {

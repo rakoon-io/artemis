@@ -1,12 +1,32 @@
 import { prisma } from "@/lib/db";
 import { rankAfter } from "@/lib/rank";
+import { moduleIdForTicket } from "@/lib/effective-module";
 import { Prisma } from "@prisma/client";
 
 /**
  * Service Ticket - accès données pur (autorisation dans les actions).
  * Génération de clé et rang initial faits en transaction.
- * Chaque lecture renvoie `type`/`priority` en `{ id, name, color }` (badges UI).
+ * Chaque lecture renvoie `type`/`priority` en `{ id, name, color }` (badges UI)
+ * et `component` en `{ id, name, kind, color }` (ou `null` : champ facultatif).
  */
+
+/** Sélection d'un module telle qu'attendue par les vues (badge, filtre, détail). */
+const moduleSelect = { select: { id: true, name: true, color: true } } as const;
+
+/**
+ * Sélection d'un composant, avec SON module : le module effectif d'un ticket se
+ * lit d'abord là (cf. `@/lib/effective-module`), il doit donc être présent
+ * partout où l'on charge le composant.
+ */
+const componentSelect = {
+  select: {
+    id: true,
+    name: true,
+    kind: true,
+    color: true,
+    module: moduleSelect,
+  },
+} as const;
 
 export interface CreateTicketServiceInput {
   projectId: string;
@@ -14,6 +34,14 @@ export interface CreateTicketServiceInput {
   description?: string | null;
   typeId?: string;
   priorityId?: string;
+  /** Composant concerné (facultatif) : contextualise la demande. */
+  componentId?: string | null;
+  /**
+   * Module propre du ticket (facultatif), pour une demande à grosse maille sans
+   * écran précis. Ignoré si un composant est fourni : le module effectif est
+   * alors celui du composant (cf. `@/lib/effective-module`).
+   */
+  moduleId?: string | null;
   assigneeId?: string | null;
   sprintId?: string | null;
   labelIds?: string[];
@@ -67,7 +95,8 @@ export function createTicket(input: CreateTicketServiceInput, reporterId: string
       priorityId = firstPriority.id;
     }
 
-    // M3 - cohérence projet : sprint, assigné et labels doivent être valides pour ce projet.
+    // M3 - cohérence projet : sprint, composant, assigné et labels doivent être
+    // valides pour ce projet.
     let sprintId = input.sprintId ?? null;
     if (sprintId) {
       const sprint = await tx.sprint.findFirst({
@@ -76,6 +105,27 @@ export function createTicket(input: CreateTicketServiceInput, reporterId: string
       });
       if (!sprint) sprintId = null;
     }
+
+    let componentId = input.componentId ?? null;
+    if (componentId) {
+      const component = await tx.component.findFirst({
+        where: { id: componentId, projectId: input.projectId },
+        select: { id: true },
+      });
+      if (!component) componentId = null;
+    }
+
+    // Module propre : validé comme les autres relations, puis soumis à
+    // l'invariant (un ticket rattaché à un composant n'en porte pas).
+    let ownModuleId = input.moduleId ?? null;
+    if (ownModuleId) {
+      const target = await tx.module.findFirst({
+        where: { id: ownModuleId, projectId: input.projectId },
+        select: { id: true },
+      });
+      if (!target) ownModuleId = null;
+    }
+    const moduleId = moduleIdForTicket(componentId, ownModuleId);
 
     let assigneeId = input.assigneeId ?? null;
     if (assigneeId) {
@@ -106,6 +156,8 @@ export function createTicket(input: CreateTicketServiceInput, reporterId: string
         description: input.description ?? null,
         typeId,
         priorityId,
+        componentId,
+        moduleId,
         columnId: column.id,
         rank,
         reporterId,
@@ -122,6 +174,8 @@ export function createTicket(input: CreateTicketServiceInput, reporterId: string
         labels: { include: { label: true } },
         type: { select: { id: true, name: true, color: true } },
         priority: { select: { id: true, name: true, color: true } },
+        component: componentSelect,
+        module: moduleSelect,
       },
     });
   });
@@ -132,6 +186,13 @@ export interface TicketFilters {
   labelId?: string;
   typeId?: string;
   priorityId?: string;
+  componentId?: string;
+  /**
+   * Filtre par module EFFECTIF : retient les tickets rattachés au module par
+   * leur composant, comme ceux qui le portent directement (cf. l'invariant dans
+   * `@/lib/effective-module`).
+   */
+  moduleId?: string;
   sprintId?: string;
   columnId?: string;
   q?: string;
@@ -155,6 +216,7 @@ export async function listTickets(projectId: string, filters: TicketFilters = {}
     ...(filters.assigneeId ? { assigneeId: filters.assigneeId } : {}),
     ...(filters.typeId ? { typeId: filters.typeId } : {}),
     ...(filters.priorityId ? { priorityId: filters.priorityId } : {}),
+    ...(filters.componentId ? { componentId: filters.componentId } : {}),
     ...(filters.sprintId ? { sprintId: filters.sprintId } : {}),
     ...(filters.columnId ? { columnId: filters.columnId } : {}),
     ...(filters.labelId ? { labels: { some: { labelId: filters.labelId } } } : {}),
@@ -163,6 +225,25 @@ export async function listTickets(projectId: string, filters: TicketFilters = {}
           OR: [
             { title: { contains: filters.q, mode: Prisma.QueryMode.insensitive } },
             { description: { contains: filters.q, mode: Prisma.QueryMode.insensitive } },
+          ],
+        }
+      : {}),
+    // Le module effectif se lit sur deux chemins : via le composant, ou en
+    // direct. D'où un OR - encapsulé dans un `AND` car la clef `OR` est déjà
+    // prise par la recherche plein texte ci-dessus, et une seconde l'écraserait.
+    ...(filters.moduleId
+      ? {
+          AND: [
+            {
+              OR: [
+                { component: { moduleId: filters.moduleId } },
+                // `componentId: null` est indispensable : le composant fait
+                // autorité (cf. `effectiveModule`), donc un ticket qui en a un
+                // ne doit JAMAIS être retenu via son module propre - sinon le
+                // filtre et l'affichage divergeraient sur une donnée héritée.
+                { componentId: null, moduleId: filters.moduleId },
+              ],
+            },
           ],
         }
       : {}),
@@ -180,6 +261,8 @@ export async function listTickets(projectId: string, filters: TicketFilters = {}
         labels: { include: { label: true } },
         type: { select: { id: true, name: true, color: true } },
         priority: { select: { id: true, name: true, color: true } },
+        component: componentSelect,
+        module: moduleSelect,
       },
     }),
     prisma.ticket.count({ where }),
@@ -198,6 +281,8 @@ export function listBoardTickets(projectId: string) {
       labels: { include: { label: true } },
       type: { select: { id: true, name: true, color: true } },
       priority: { select: { id: true, name: true, color: true } },
+      component: componentSelect,
+      module: moduleSelect,
     },
   });
 }
@@ -230,6 +315,8 @@ export function getTicketById(id: string) {
       sprint: true,
       type: { select: { id: true, name: true, color: true } },
       priority: { select: { id: true, name: true, color: true } },
+      component: componentSelect,
+      module: moduleSelect,
       labels: { include: { label: true } },
       attachments: { orderBy: { createdAt: "asc" } },
       comments: { include: { author: true }, orderBy: { createdAt: "asc" } },
@@ -257,6 +344,10 @@ export interface UpdateTicketServiceInput {
   description?: string | null;
   typeId?: string;
   priorityId?: string;
+  /** `undefined` = ne pas toucher ; `null` = détacher le composant. */
+  componentId?: string | null;
+  /** `undefined` = ne pas toucher ; `null` = détacher. Ignoré si un composant reste posé. */
+  moduleId?: string | null;
   assigneeId?: string | null;
   sprintId?: string | null;
   labelIds?: string[];
@@ -267,7 +358,9 @@ export function updateTicket(input: UpdateTicketServiceInput) {
   return prisma.$transaction(async (tx) => {
     const ticket = await tx.ticket.findUnique({
       where: { id },
-      select: { projectId: true },
+      // `componentId` est nécessaire pour trancher l'invariant du module quand
+      // l'appelant ne touche pas au composant (mise à jour partielle).
+      select: { projectId: true, componentId: true },
     });
     if (!ticket) throw new Error("Ticket introuvable.");
     const { projectId } = ticket;
@@ -283,6 +376,31 @@ export function updateTicket(input: UpdateTicketServiceInput) {
       });
       if (!sprint) sprintId = undefined;
     }
+
+    let componentId = rest.componentId;
+    if (componentId) {
+      const component = await tx.component.findFirst({
+        where: { id: componentId, projectId },
+        select: { id: true },
+      });
+      if (!component) componentId = undefined;
+    }
+
+    let ownModuleId = rest.moduleId;
+    if (ownModuleId) {
+      const target = await tx.module.findFirst({
+        where: { id: ownModuleId, projectId },
+        select: { id: true },
+      });
+      if (!target) ownModuleId = undefined;
+    }
+
+    // Invariant : le module propre ne subsiste que si le ticket n'a AUCUN
+    // composant à l'issue de la mise à jour. `componentId` valant `undefined`
+    // (champ non touché), c'est le composant actuel qui tranche.
+    const nextComponentId =
+      componentId !== undefined ? componentId : ticket.componentId;
+    const moduleId = moduleIdForTicket(nextComponentId, ownModuleId);
 
     let assigneeId = rest.assigneeId;
     if (assigneeId) {
@@ -318,6 +436,8 @@ export function updateTicket(input: UpdateTicketServiceInput) {
         ...(rest.description !== undefined ? { description: rest.description } : {}),
         ...(rest.typeId !== undefined ? { typeId: rest.typeId } : {}),
         ...(rest.priorityId !== undefined ? { priorityId: rest.priorityId } : {}),
+        ...(componentId !== undefined ? { componentId } : {}),
+        ...(moduleId !== undefined ? { moduleId } : {}),
         ...(assigneeId !== undefined ? { assigneeId } : {}),
         ...(sprintId !== undefined ? { sprintId } : {}),
       },
@@ -327,6 +447,8 @@ export function updateTicket(input: UpdateTicketServiceInput) {
         labels: { include: { label: true } },
         type: { select: { id: true, name: true, color: true } },
         priority: { select: { id: true, name: true, color: true } },
+        component: componentSelect,
+        module: moduleSelect,
       },
     });
   });
@@ -358,6 +480,8 @@ export function moveTicket(ticketId: string, columnId: string, rank: string) {
       labels: { include: { label: true } },
       type: { select: { id: true, name: true, color: true } },
       priority: { select: { id: true, name: true, color: true } },
+      component: componentSelect,
+      module: moduleSelect,
     },
   });
 }

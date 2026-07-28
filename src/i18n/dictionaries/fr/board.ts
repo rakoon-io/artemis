@@ -19,6 +19,8 @@ export const board = {
   filterType: "Type",
   filterPriority: "Priorité",
   filterLabel: "Label",
+  filterModule: "Module",
+  filterComponent: "Composant",
   unassigned: "Non assigné",
   reset: "Réinitialiser",
   all: "Tous",

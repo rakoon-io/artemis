@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { InlineEdit } from "@/components/ui/inline-edit";
 import { useDict } from "@/i18n/provider";
 import { fmt } from "@/i18n";
 
@@ -70,6 +71,19 @@ export function TypeManager({
     }
     toast.success(t.taxonomy.types.reordered);
     router.refresh();
+  }
+
+  /** Renomme en place. Le schéma accepte une mise à jour partielle : la couleur
+   * n'est pas touchée. */
+  async function saveType(id: string, name: string): Promise<boolean> {
+    const res = await updateTicketTypeAction({ id, name });
+    if (!res.ok) {
+      toast.error(res.error);
+      return false;
+    }
+    toast.success(t.common.inline.saved);
+    router.refresh();
+    return true;
   }
 
   async function handleDelete(id: string, name: string) {
@@ -130,7 +144,16 @@ export function TypeManager({
                 style={{ backgroundColor: type.color }}
                 aria-hidden
               />
-              <span className="flex-1 font-medium">{type.name}</span>
+              <div className="min-w-0 flex-1">
+                <InlineEdit
+                  value={type.name}
+                  field={t.taxonomy.name}
+                  required
+                  maxLength={40}
+                  className="font-medium"
+                  onSave={(next) => saveType(type.id, next)}
+                />
+              </div>
               <span className="font-mono text-xs uppercase text-muted-foreground">
                 {type.color}
               </span>

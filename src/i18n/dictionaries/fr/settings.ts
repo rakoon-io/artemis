@@ -18,7 +18,7 @@ export const settings = {
   // En-tete de la page de reglages (settings/page.tsx)
   pageTitle: "{name} - Paramètres",
   pageSubtitle:
-    "Éditez le projet, personnalisez le workflow (colonnes, labels, types, priorités) et gérez ses membres.",
+    "Éditez le projet, personnalisez le workflow (colonnes, labels, types, priorités, modules, composants) et gérez ses membres.",
   adminOnlyTitle: "Accès réservé aux administrateurs",
   adminOnlyDescription:
     "Les paramètres du projet ne sont accessibles qu'aux administrateurs.",
@@ -30,6 +30,8 @@ export const settings = {
     labels: "Labels",
     types: "Types",
     priorities: "Priorités",
+    modules: "Modules",
+    components: "Composants",
     members: "Membres",
   },
 
@@ -48,6 +50,12 @@ export const settings = {
   prioritiesCardTitle: "Priorités",
   prioritiesCardDescription:
     "Définissez les priorités (nom + couleur), réordonnez-les ou supprimez celles qui ne servent plus.",
+  modulesCardTitle: "Modules fonctionnels",
+  modulesCardDescription:
+    "Découpez le produit en grands domaines fonctionnels (ex : gestion des utilisateurs) : chaque module regroupe plusieurs composants et situe les tickets dans le produit.",
+  componentsCardTitle: "Composants de l'application",
+  componentsCardDescription:
+    "Déclarez les composants du projet (pages, composants réutilisables, services) : ils contextualisent les tickets et enrichissent la génération par l'IA.",
   membersCardTitle: "Membres du projet",
   membersCardDescription:
     "Donnez ou retirez l'accès à ce projet, utilisateur par utilisateur. Les administrateurs accèdent à tous les projets.",

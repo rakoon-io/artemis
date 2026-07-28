@@ -11,6 +11,7 @@ import { isBatchEnabled, isMistralConfigured } from "@/lib/mistral";
 import { assertAiBudgetAvailable, estimateCostMicros, recordAiUsage } from "@/lib/ai-budget";
 import { rateLimit } from "@/lib/rate-limit";
 import { createTicket } from "@/server/services/ticket.service";
+import { listComponents } from "@/server/services/component.service";
 import { listTicketTypes } from "@/server/services/tickettype.service";
 import { listTicketPriorities } from "@/server/services/ticketpriority.service";
 import { suggestTicketsForProject } from "@/server/services/ai-ticket.service";
@@ -25,6 +26,8 @@ export interface SuggestedTicket {
   typeId: string | null;
   /** Id de la priorité du projet rapprochée de la suggestion (ou null). */
   priorityId: string | null;
+  /** Id du composant du projet rapproché de la suggestion (ou null). */
+  componentId: string | null;
 }
 
 /** Résumé d'un ticket effectivement créé, renvoyé à l'UI. */
@@ -79,12 +82,14 @@ export async function suggestTicketsFromTextAction(
     await assertAiBudgetAvailable();
 
     // Contextualisation + appel Mistral délégués au service dédié : il charge le
-    // projet + sa taxonomie, assemble le contexte (infos projet + consignes) et
-    // renvoie brouillons, usage (coût) et les types/priorités pour le mapping.
-    const { drafts, usage, types, priorities } = await suggestTicketsForProject(
-      data.text,
-      { projectId: data.projectId, instructions: data.context ?? null },
-    );
+    // projet, sa taxonomie et son catalogue de composants, assemble le contexte
+    // (infos projet + composants + consignes) et renvoie brouillons, usage (coût)
+    // et les référentiels types/priorités/composants pour le mapping.
+    const { drafts, usage, types, priorities, components } =
+      await suggestTicketsForProject(data.text, {
+        projectId: data.projectId,
+        instructions: data.context ?? null,
+      });
 
     if (usage) {
       const costMicros = estimateCostMicros(usage.promptTokens, usage.completionTokens, {
@@ -98,6 +103,7 @@ export async function suggestTicketsFromTextAction(
       description: draft.description,
       typeId: matchByName(types, draft.type),
       priorityId: matchByName(priorities, draft.priority),
+      componentId: matchByName(components, draft.component),
     }));
 
     return { ok: true, data: { tickets } };
@@ -118,14 +124,16 @@ export async function createTicketsFromDraftsAction(
     const data = createTicketsFromDraftsSchema.parse(input);
     await assertProjectAccess(user, data.projectId);
 
-    // Vérifie que les type/priorité fournis appartiennent bien au projet
+    // Vérifie que les type/priorité/composant fournis appartiennent bien au projet
     // (défense en profondeur : l'UI les peuple depuis les options du projet).
-    const [types, priorities] = await Promise.all([
+    const [types, priorities, components] = await Promise.all([
       listTicketTypes(data.projectId),
       listTicketPriorities(data.projectId),
+      listComponents(data.projectId),
     ]);
     const typeIds = new Set(types.map((t) => t.id));
     const priorityIds = new Set(priorities.map((p) => p.id));
+    const componentIds = new Set(components.map((c) => c.id));
 
     // Création séquentielle : chaque `createTicket` incrémente `ticketSeq` dans sa
     // propre transaction ; on évite ainsi les conflits sur la séquence du projet.
@@ -136,6 +144,10 @@ export async function createTicketsFromDraftsAction(
         draft.priorityId && priorityIds.has(draft.priorityId)
           ? draft.priorityId
           : undefined;
+      const componentId =
+        draft.componentId && componentIds.has(draft.componentId)
+          ? draft.componentId
+          : null;
       const ticket = await createTicket(
         {
           projectId: data.projectId,
@@ -143,6 +155,7 @@ export async function createTicketsFromDraftsAction(
           description: draft.description ?? null,
           typeId,
           priorityId,
+          componentId,
         },
         user.id,
       );

@@ -13,8 +13,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ComponentSelect } from "./component-select";
+import { ModuleSelect } from "./module-select";
 import {
   ALL,
+  type ComponentOption,
+  type ModuleOption,
   type LabelOption,
   type Member,
   type PriorityOption,
@@ -25,8 +29,8 @@ import { useDict } from "@/i18n/provider";
 
 /**
  * Barre de filtres de la vue liste : recherche `q` + selects (assigné / type /
- * priorité / label / sprint). Chaque changement met à jour les searchParams
- * (source de vérité côté serveur) et réinitialise la pagination.
+ * priorité / composant / label / sprint). Chaque changement met à jour les
+ * searchParams (source de vérité côté serveur) et réinitialise la pagination.
  */
 export function TicketFilters({
   members,
@@ -34,12 +38,18 @@ export function TicketFilters({
   labels,
   types,
   priorities,
+  components,
+  modules,
 }: {
   members: Member[];
   sprints: SprintOption[];
   labels: LabelOption[];
   types: TicketTypeOption[];
   priorities: PriorityOption[];
+  /** Catalogue du projet ; vide = le filtre « Composant » n'est pas rendu. */
+  components: ComponentOption[];
+  /** Modules du projet ; vide = le filtre « Module » n'est pas rendu. */
+  modules: ModuleOption[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -76,6 +86,8 @@ export function TicketFilters({
   const currentPriority = searchParams.get("priorityId") ?? ALL;
   const currentAssignee = searchParams.get("assigneeId") ?? ALL;
   const currentSprint = searchParams.get("sprintId") ?? ALL;
+  const currentComponent = searchParams.get("componentId") ?? ALL;
+  const currentModule = searchParams.get("moduleId") ?? ALL;
   const currentLabel = searchParams.get("labelId") ?? ALL;
   const hasFilters =
     searchParams.toString().length > 0 && [...searchParams.keys()].some((k) => k !== "page");
@@ -191,6 +203,30 @@ export function TicketFilters({
           </SelectContent>
         </Select>
       </div>
+
+      <ModuleSelect
+        id="filter-module"
+        modules={modules}
+        value={currentModule}
+        onChange={(v) => setParam("moduleId", v)}
+        label={t.tickets.moduleLabel}
+        ariaLabel={t.tickets.moduleFilterAria}
+        emptyValue={ALL}
+        emptyLabel={t.tickets.allModules}
+        triggerClassName="w-44"
+      />
+
+      <ComponentSelect
+        id="filter-component"
+        components={components}
+        value={currentComponent}
+        onChange={(v) => setParam("componentId", v)}
+        label={t.tickets.componentLabel}
+        ariaLabel={t.tickets.componentFilterAria}
+        emptyValue={ALL}
+        emptyLabel={t.tickets.allComponents}
+        triggerClassName="w-44"
+      />
 
       <div className="space-y-1.5">
         <Label htmlFor="filter-label">{t.tickets.labelLabel}</Label>

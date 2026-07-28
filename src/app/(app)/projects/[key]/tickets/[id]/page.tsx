@@ -17,7 +17,9 @@ import { formatDate, initials } from "@/lib/utils";
 import { getAccessibleProjectByKey } from "@/server/access";
 import {
   getAssignableUsers,
+  getComponents,
   getLabels,
+  getModules,
   getSprints,
   getTicketDetail,
   getTicketPriorities,
@@ -25,13 +27,20 @@ import {
 } from "@/server/queries";
 import {
   ColorBadge,
+  ComponentBadge,
   formatBytes,
   LabelChip,
+  ModuleBadge,
 } from "@/components/ticket/ticket-fields";
+import { effectiveModule } from "@/lib/effective-module";
 import { CommentForm } from "@/components/ticket/comment-form";
 import { CommentList } from "@/components/ticket/comment-list";
 import { DeleteTicketButton } from "@/components/ticket/delete-ticket-button";
 import { EditTicketDialog } from "@/components/ticket/edit-ticket-dialog";
+import {
+  TicketDescriptionInline,
+  TicketTitleInline,
+} from "@/components/ticket/ticket-inline-fields";
 import { fmt } from "@/i18n";
 import { getDictionary } from "@/i18n/server";
 
@@ -64,6 +73,9 @@ export default async function TicketDetailPage({
   });
   const canDelete = can(user, "delete_ticket");
 
+  // Module effectif : celui du composant s'il y en a un, sinon celui du ticket.
+  const ticketModule = effectiveModule(ticket);
+
   let editData:
     | {
         members: Awaited<ReturnType<typeof getAssignableUsers>>;
@@ -71,17 +83,30 @@ export default async function TicketDetailPage({
         labels: Awaited<ReturnType<typeof getLabels>>;
         types: Awaited<ReturnType<typeof getTicketTypes>>;
         priorities: Awaited<ReturnType<typeof getTicketPriorities>>;
+        components: Awaited<ReturnType<typeof getComponents>>;
+        modules: Awaited<ReturnType<typeof getModules>>;
       }
     | null = null;
   if (canEdit) {
-    const [members, sprints, labels, types, priorities] = await Promise.all([
-      getAssignableUsers(ticket.projectId),
-      getSprints(ticket.projectId),
-      getLabels(ticket.projectId),
-      getTicketTypes(ticket.projectId),
-      getTicketPriorities(ticket.projectId),
-    ]);
-    editData = { members, sprints, labels, types, priorities };
+    const [members, sprints, labels, types, priorities, components, modules] =
+      await Promise.all([
+        getAssignableUsers(ticket.projectId),
+        getSprints(ticket.projectId),
+        getLabels(ticket.projectId),
+        getTicketTypes(ticket.projectId),
+        getTicketPriorities(ticket.projectId),
+        getComponents(ticket.projectId),
+        getModules(ticket.projectId),
+      ]);
+    editData = {
+      members,
+      sprints,
+      labels,
+      types,
+      priorities,
+      components,
+      modules,
+    };
   }
 
   return (
@@ -96,8 +121,14 @@ export default async function TicketDetailPage({
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-2">
           <p className="font-mono text-sm text-muted-foreground">{ticket.key}</p>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {ticket.title}
+          {/* Titre éditable en place : le `<h1>` garde la sémantique, la
+              primitive porte l'apparence et l'interaction. */}
+          <h1>
+            <TicketTitleInline
+              ticketId={ticket.id}
+              value={ticket.title}
+              canEdit={canEdit}
+            />
           </h1>
           <div className="flex flex-wrap items-center gap-2">
             <ColorBadge name={ticket.type.name} color={ticket.type.color} />
@@ -105,6 +136,17 @@ export default async function TicketDetailPage({
               name={ticket.priority.name}
               color={ticket.priority.color}
             />
+            {ticketModule && (
+              <ModuleBadge name={ticketModule.name} color={ticketModule.color} />
+            )}
+            {ticket.component && (
+              <ComponentBadge
+                name={ticket.component.name}
+                kind={ticket.component.kind}
+                color={ticket.component.color}
+                kindLabel={t.taxonomy.componentKinds[ticket.component.kind]}
+              />
+            )}
             <Badge variant="secondary">{ticket.column.name}</Badge>
           </div>
         </div>
@@ -118,6 +160,8 @@ export default async function TicketDetailPage({
                   description: ticket.description,
                   typeId: ticket.type.id,
                   priorityId: ticket.priority.id,
+                  componentId: ticket.componentId,
+                  moduleId: ticket.moduleId,
                   assigneeId: ticket.assigneeId,
                   sprintId: ticket.sprintId,
                   labelIds: ticket.labels.map((l) => l.labelId),
@@ -127,6 +171,8 @@ export default async function TicketDetailPage({
                 labels={editData.labels}
                 types={editData.types}
                 priorities={editData.priorities}
+                components={editData.components}
+                modules={editData.modules}
               />
             )}
             {canDelete && (
@@ -149,15 +195,11 @@ export default async function TicketDetailPage({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {ticket.description ? (
-                <p className="whitespace-pre-wrap break-words text-sm">
-                  {ticket.description}
-                </p>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  {t.ticketDetail.noDescription}
-                </p>
-              )}
+              <TicketDescriptionInline
+                ticketId={ticket.id}
+                value={ticket.description}
+                canEdit={canEdit}
+              />
             </CardContent>
           </Card>
 
@@ -270,6 +312,42 @@ export default async function TicketDetailPage({
                 <p className="mt-0.5">
                   {ticket.sprint?.name ?? t.ticketDetail.backlog}
                 </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">
+                  {t.ticketDetail.module}
+                </p>
+                <div className="mt-1">
+                  {ticketModule ? (
+                    <ModuleBadge
+                      name={ticketModule.name}
+                      color={ticketModule.color}
+                    />
+                  ) : (
+                    <span className="text-muted-foreground">
+                      {t.ticketDetail.noModule}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">
+                  {t.ticketDetail.component}
+                </p>
+                <div className="mt-1">
+                  {ticket.component ? (
+                    <ComponentBadge
+                      name={ticket.component.name}
+                      kind={ticket.component.kind}
+                      color={ticket.component.color}
+                      kindLabel={t.taxonomy.componentKinds[ticket.component.kind]}
+                    />
+                  ) : (
+                    <span className="text-muted-foreground">
+                      {t.ticketDetail.noComponent}
+                    </span>
+                  )}
+                </div>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">

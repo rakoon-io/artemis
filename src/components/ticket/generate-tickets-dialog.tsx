@@ -31,7 +31,15 @@ import {
   suggestTicketsFromTextAction,
 } from "@/server/actions/ai-ticket.actions";
 import { ContextField } from "@/components/ai/context-field";
-import type { PriorityOption, TicketTypeOption } from "./ticket-fields";
+import { ComponentSelect } from "./component-select";
+import {
+  NO_COMPONENT,
+  type ComponentOption,
+  type PriorityOption,
+  type TicketTypeOption,
+} from "./ticket-fields";
+import { useDict } from "@/i18n/provider";
+import { fmt } from "@/i18n";
 
 /** Brouillon éditable dans l'écran de revue (uid local pour clé stable). */
 interface EditableDraft {
@@ -40,6 +48,8 @@ interface EditableDraft {
   description: string;
   typeId: string;
   priorityId: string;
+  /** Composant concerné : `NO_COMPONENT` tant qu'aucun n'est retenu. */
+  componentId: string;
 }
 
 /**
@@ -47,7 +57,13 @@ interface EditableDraft {
  *  1. « Analyser » : le texte part vers une Server Action qui appelle Mistral
  *     côté serveur et renvoie des tickets SUGGÉRÉS (rien n'est encore créé).
  *  2. « Revue » : l'utilisateur relit, modifie (titre, description, type,
- *     priorité), retire les indésirables, puis valide la création en lot.
+ *     priorité, composant), retire les indésirables, puis valide la création.
+ *
+ * La demande est CONTEXTUALISÉE de trois façons : le projet (nom, description),
+ * son catalogue de composants et les consignes libres du champ « Contexte ». Les
+ * deux premières sont assemblées côté serveur (cf. `ai-ticket.service`), si bien
+ * que le modèle peut proposer lui-même le composant concerné par chaque ticket.
+ *
  * Le composant n'est monté que si l'IA est configurée (cf. page Tickets) ; la
  * clé API Mistral reste strictement côté serveur.
  */
@@ -56,14 +72,18 @@ export function GenerateTicketsDialog({
   projectName,
   types,
   priorities,
+  components,
 }: {
   projectId: string;
   /** Nom du projet : sert à indiquer que son contexte est pris en compte. */
   projectName: string;
   types: TicketTypeOption[];
   priorities: PriorityOption[];
+  /** Catalogue du projet ; vide = le champ « Composant » n'est pas rendu. */
+  components: ComponentOption[];
 }) {
   const router = useRouter();
+  const t = useDict();
   const uidRef = useRef(0);
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<"input" | "review">("input");
@@ -92,7 +112,7 @@ export function GenerateTicketsDialog({
     event.preventDefault();
     const trimmed = text.trim();
     if (!trimmed) {
-      toast.error("Collez d'abord un texte à analyser.");
+      toast.error(t.aiTickets.pasteFirst);
       return;
     }
 
@@ -110,7 +130,7 @@ export function GenerateTicketsDialog({
     }
     const suggested = result.data?.tickets ?? [];
     if (suggested.length === 0) {
-      toast.error("Aucun ticket n'a pu être suggéré depuis ce texte.");
+      toast.error(t.aiTickets.noneSuggested);
       return;
     }
 
@@ -121,6 +141,9 @@ export function GenerateTicketsDialog({
         description: s.description ?? "",
         typeId: s.typeId ?? types[0]?.id ?? "",
         priorityId: s.priorityId ?? priorities[0]?.id ?? "",
+        // Le composant n'a pas de valeur par défaut : sans rapprochement franc,
+        // on préfère « aucun » plutôt qu'un rattachement arbitraire.
+        componentId: s.componentId ?? NO_COMPONENT,
       })),
     );
     setStep("review");
@@ -137,7 +160,7 @@ export function GenerateTicketsDialog({
   async function handleCreate() {
     const valid = drafts.filter((d) => d.title.trim());
     if (valid.length === 0) {
-      toast.error("Ajoutez un titre à au moins un ticket.");
+      toast.error(t.aiTickets.titleRequired);
       return;
     }
 
@@ -149,6 +172,7 @@ export function GenerateTicketsDialog({
         description: d.description.trim() ? d.description.trim() : null,
         typeId: d.typeId || null,
         priorityId: d.priorityId || null,
+        componentId: d.componentId === NO_COMPONENT ? null : d.componentId,
       })),
     });
 
@@ -161,8 +185,8 @@ export function GenerateTicketsDialog({
     const created = result.data?.tickets ?? [];
     toast.success(
       created.length === 1
-        ? `Ticket ${created[0].key} créé.`
-        : `${created.length} tickets créés.`,
+        ? fmt(t.aiTickets.createdOne, { key: created[0].key })
+        : fmt(t.aiTickets.createdMany, { count: created.length }),
     );
     router.refresh();
     setCreating(false);
@@ -177,38 +201,36 @@ export function GenerateTicketsDialog({
       <DialogTrigger asChild>
         <Button variant="outline">
           <Sparkles />
-          Créer depuis un texte
+          {t.aiTickets.trigger}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         {step === "input" ? (
           <>
             <DialogHeader>
-              <DialogTitle>Créer des tickets depuis un texte</DialogTitle>
+              <DialogTitle>{t.aiTickets.inputTitle}</DialogTitle>
               <DialogDescription>
-                Collez vos notes de réunion, un compte-rendu, un e-mail ou une liste
-                de tâches. L&apos;IA (Mistral) en propose un ou plusieurs tickets que
-                vous relirez avant création.
+                {t.aiTickets.inputDescription}
               </DialogDescription>
             </DialogHeader>
 
             <form onSubmit={handleAnalyze} className="space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="ai-ticket-text">
-                  Texte <span className="text-destructive">*</span>
+                  {t.aiTickets.textLabel}{" "}
+                  <span className="text-destructive">*</span>
                 </Label>
                 <Textarea
                   id="ai-ticket-text"
                   value={text}
                   onChange={(e) => setText(e.target.value)}
-                  placeholder="Collez ici le texte à transformer en tickets…"
+                  placeholder={t.aiTickets.textPlaceholder}
                   rows={12}
                   autoFocus
                   required
                 />
                 <p className="text-xs text-muted-foreground">
-                  Aucun ticket n&apos;est créé à cette étape : vous pourrez tout
-                  ajuster ensuite.
+                  {t.aiTickets.textHint}
                 </p>
               </div>
 
@@ -216,23 +238,25 @@ export function GenerateTicketsDialog({
                 id="ai-ticket-context"
                 value={context}
                 onChange={setContext}
-                label="Contexte / consignes (facultatif)"
+                label={t.aiTickets.contextLabel}
                 rows={3}
                 maxLength={4000}
-                placeholder="Ex. : audience technique, module concerné, style des titres, priorité par défaut…"
-                description={`Le contexte du projet « ${projectName} » (nom, description) est pris en compte automatiquement. Ajoutez ici des consignes propres à cette demande.`}
+                placeholder={t.aiTickets.contextPlaceholder}
+                description={fmt(t.aiTickets.contextDescription, {
+                  project: projectName,
+                })}
                 disabled={analyzing}
               />
 
               <DialogFooter>
                 <DialogClose asChild>
                   <Button type="button" variant="outline" disabled={analyzing}>
-                    Annuler
+                    {t.common.cancel}
                   </Button>
                 </DialogClose>
                 <Button type="submit" disabled={analyzing}>
                   {analyzing && <Loader2 className="animate-spin" />}
-                  Analyser le texte
+                  {analyzing ? t.aiTickets.analyzing : t.aiTickets.analyze}
                 </Button>
               </DialogFooter>
             </form>
@@ -240,11 +264,11 @@ export function GenerateTicketsDialog({
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle>Revue des tickets suggérés</DialogTitle>
+              <DialogTitle>{t.aiTickets.reviewTitle}</DialogTitle>
               <DialogDescription>
                 {drafts.length > 0
-                  ? "Relisez et modifiez chaque ticket, retirez ceux qui ne conviennent pas, puis validez."
-                  : "Vous avez retiré tous les tickets. Revenez en arrière pour analyser un autre texte."}
+                  ? t.aiTickets.reviewDescription
+                  : t.aiTickets.reviewEmpty}
               </DialogDescription>
             </DialogHeader>
 
@@ -254,7 +278,7 @@ export function GenerateTicketsDialog({
                   <CardContent className="space-y-3 p-4">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs font-medium text-muted-foreground">
-                        Ticket {index + 1}
+                        {fmt(t.aiTickets.ticketIndex, { index: index + 1 })}
                       </span>
                       <Button
                         type="button"
@@ -263,7 +287,7 @@ export function GenerateTicketsDialog({
                         className="size-7 text-muted-foreground hover:text-destructive"
                         onClick={() => removeDraft(draft.uid)}
                         disabled={creating}
-                        aria-label="Retirer ce ticket"
+                        aria-label={t.aiTickets.removeAria}
                       >
                         <Trash2 />
                       </Button>
@@ -271,7 +295,8 @@ export function GenerateTicketsDialog({
 
                     <div className="space-y-1.5">
                       <Label htmlFor={`draft-title-${draft.uid}`}>
-                        Titre <span className="text-destructive">*</span>
+                        {t.aiTickets.titleLabel}{" "}
+                        <span className="text-destructive">*</span>
                       </Label>
                       <Input
                         id={`draft-title-${draft.uid}`}
@@ -279,33 +304,42 @@ export function GenerateTicketsDialog({
                         onChange={(e) =>
                           updateDraft(draft.uid, { title: e.target.value })
                         }
-                        placeholder="Titre du ticket"
+                        placeholder={t.aiTickets.titlePlaceholder}
                         required
                       />
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label htmlFor={`draft-desc-${draft.uid}`}>Description</Label>
+                      <Label htmlFor={`draft-desc-${draft.uid}`}>
+                        {t.aiTickets.descriptionLabel}
+                      </Label>
                       <Textarea
                         id={`draft-desc-${draft.uid}`}
                         value={draft.description}
                         onChange={(e) =>
                           updateDraft(draft.uid, { description: e.target.value })
                         }
-                        placeholder="Détails (facultatif)"
+                        placeholder={t.aiTickets.descriptionPlaceholder}
                         rows={3}
                       />
                     </div>
 
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div className="space-y-1.5">
-                        <Label htmlFor={`draft-type-${draft.uid}`}>Type</Label>
+                        <Label htmlFor={`draft-type-${draft.uid}`}>
+                          {t.aiTickets.typeLabel}
+                        </Label>
                         <Select
                           value={draft.typeId}
                           onValueChange={(v) => updateDraft(draft.uid, { typeId: v })}
                         >
-                          <SelectTrigger id={`draft-type-${draft.uid}`} aria-label="Type">
-                            <SelectValue placeholder="Sélectionner…" />
+                          <SelectTrigger
+                            id={`draft-type-${draft.uid}`}
+                            aria-label={t.aiTickets.typeLabel}
+                          >
+                            <SelectValue
+                              placeholder={t.aiTickets.selectPlaceholder}
+                            />
                           </SelectTrigger>
                           <SelectContent>
                             {types.map((o) => (
@@ -325,7 +359,9 @@ export function GenerateTicketsDialog({
                       </div>
 
                       <div className="space-y-1.5">
-                        <Label htmlFor={`draft-priority-${draft.uid}`}>Priorité</Label>
+                        <Label htmlFor={`draft-priority-${draft.uid}`}>
+                          {t.aiTickets.priorityLabel}
+                        </Label>
                         <Select
                           value={draft.priorityId}
                           onValueChange={(v) =>
@@ -334,9 +370,11 @@ export function GenerateTicketsDialog({
                         >
                           <SelectTrigger
                             id={`draft-priority-${draft.uid}`}
-                            aria-label="Priorité"
+                            aria-label={t.aiTickets.priorityLabel}
                           >
-                            <SelectValue placeholder="Sélectionner…" />
+                            <SelectValue
+                              placeholder={t.aiTickets.selectPlaceholder}
+                            />
                           </SelectTrigger>
                           <SelectContent>
                             {priorities.map((o) => (
@@ -354,6 +392,19 @@ export function GenerateTicketsDialog({
                           </SelectContent>
                         </Select>
                       </div>
+
+                      <ComponentSelect
+                        id={`draft-component-${draft.uid}`}
+                        components={components}
+                        value={draft.componentId}
+                        onChange={(v) =>
+                          updateDraft(draft.uid, { componentId: v })
+                        }
+                        label={t.aiTickets.componentLabel}
+                        emptyValue={NO_COMPONENT}
+                        emptyLabel={t.aiTickets.noComponent}
+                        disabled={creating}
+                      />
                     </div>
                   </CardContent>
                 </Card>
@@ -368,7 +419,7 @@ export function GenerateTicketsDialog({
                 disabled={creating}
               >
                 <ArrowLeft />
-                Retour
+                {t.aiTickets.back}
               </Button>
               <Button
                 type="button"
@@ -377,8 +428,8 @@ export function GenerateTicketsDialog({
               >
                 {creating && <Loader2 className="animate-spin" />}
                 {keepCount > 1
-                  ? `Créer ${keepCount} tickets`
-                  : "Créer le ticket"}
+                  ? fmt(t.aiTickets.createMany, { count: keepCount })
+                  : t.aiTickets.createOne}
               </Button>
             </DialogFooter>
           </>

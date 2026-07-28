@@ -4,6 +4,7 @@ import { board } from "./en/board";
 import { tickets } from "./en/tickets";
 import { ticketForm } from "./en/ticketForm";
 import { ticketDetail } from "./en/ticketDetail";
+import { aiTickets } from "./en/aiTickets";
 import { sprints } from "./en/sprints";
 import { wiki } from "./en/wiki";
 import { settings } from "./en/settings";
@@ -22,6 +23,17 @@ export const en: Messages = {
     delete: "Delete",
     create: "Create",
     edit: "Edit",
+    // Edition en place : un texte devient un champ au clic (titre et
+    // description d'un ticket, nom et description des modules/composants).
+    // `editAria` interpole {field} via `fmt`.
+    inline: {
+      editAria: "Edit {field}",
+      hint: "Enter to save, Esc to cancel",
+      hintMultiline: "⌘/Ctrl + Enter to save, Esc to cancel",
+      empty: "Add…",
+      required: "This field can't be empty.",
+      saved: "Change saved.",
+    },
     loading: "Loading…",
     search: "Search",
     genericError: "Something went wrong. Please try again.",
@@ -66,6 +78,7 @@ export const en: Messages = {
   tickets,
   ticketForm,
   ticketDetail,
+  aiTickets,
   sprints,
   wiki,
   settings,

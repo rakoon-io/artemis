@@ -39,6 +39,14 @@ const schema = z.object({
   MISTRAL_USE_BATCH: z.string().optional(),
   MISTRAL_BATCH_TIMEOUT_MS: z.string().optional(),
   MISTRAL_API_URL: z.string().optional(),
+  // Plafond de dépense IA quotidien, en USD (ex. "0.30"). Absent = pas de plafond.
+  // Tarifs par million de tokens (défauts mistral-medium-3.5, à ajuster si besoin).
+  // Voir src/lib/ai-budget.ts.
+  AI_DAILY_BUDGET_USD: z.string().optional(),
+  MISTRAL_INPUT_PRICE_PER_MTOK_USD: z.string().optional(),
+  MISTRAL_OUTPUT_PRICE_PER_MTOK_USD: z.string().optional(),
+  // Mode démo : bannière + identifiants de démo affichés dans l'UI (login + shell app).
+  DEMO_MODE: z.string().optional(),
 });
 
 const parsed = schema.safeParse(process.env);

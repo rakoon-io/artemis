@@ -6,7 +6,9 @@ import { getAccessibleProjectByKey } from "@/server/access";
 import {
   getAssignableUsers,
   getBoardData,
+  getComponents,
   getLabels,
+  getModules,
   getSprints,
   getTicketPriorities,
   getTicketTypes,
@@ -30,15 +32,25 @@ export default async function BoardPage({
   const project = await getAccessibleProjectByKey(session?.user, key);
   if (!project) notFound();
 
-  const [{ columns }, members, types, priorities, labels, sprints] =
-    await Promise.all([
+  const [
+    { columns },
+    members,
+    types,
+    priorities,
+    labels,
+    sprints,
+    components,
+    modules,
+  ] = await Promise.all([
       getBoardData(project.id),
       getAssignableUsers(project.id),
       getTicketTypes(project.id),
       getTicketPriorities(project.id),
       getLabels(project.id),
       getSprints(project.id),
-    ]);
+    getComponents(project.id),
+    getModules(project.id),
+  ]);
 
   const currentUser: CurrentUser = session?.user
     ? { id: session.user.id, role: session.user.role ?? Role.REPORTER }
@@ -58,6 +70,8 @@ export default async function BoardPage({
       members={members}
       types={types}
       priorities={priorities}
+      components={components}
+      modules={modules}
       action={
         <div className="flex flex-wrap items-center gap-2">
           {aiEnabled && (
@@ -66,6 +80,7 @@ export default async function BoardPage({
               projectName={project.name}
               types={types}
               priorities={priorities}
+              components={components}
             />
           )}
           <CreateTicketDialog
@@ -75,6 +90,8 @@ export default async function BoardPage({
             labels={labels}
             types={types}
             priorities={priorities}
+            components={components}
+            modules={modules}
           />
         </div>
       }

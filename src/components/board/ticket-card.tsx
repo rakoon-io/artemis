@@ -17,7 +17,12 @@ import {
 import { cn, initials } from "@/lib/utils";
 import { useDict } from "@/i18n/provider";
 import { fmt } from "@/i18n";
-import { ColorBadge } from "@/components/ticket/ticket-fields";
+import {
+  ColorBadge,
+  ComponentBadge,
+  ModuleBadge,
+} from "@/components/ticket/ticket-fields";
+import { effectiveModule } from "@/lib/effective-module";
 import type { BoardTicket, CurrentUser } from "./kanban-board";
 
 /** Un utilisateur peut déplacer un ticket s'il est Admin, rapporteur ou assigné. */
@@ -44,6 +49,8 @@ export function TicketCardView({
   handle?: ReactNode;
   overlay?: boolean;
 }) {
+  const t = useDict();
+  const ticketModule = effectiveModule(ticket);
   const assigneeName = ticket.assignee?.name ?? ticket.assignee?.email ?? null;
   const extraLabels = ticket.labels.length - 4;
 
@@ -76,6 +83,22 @@ export function TicketCardView({
 
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <ColorBadge name={ticket.type.name} color={ticket.type.color} />
+            {/* Composant concerné : situe la demande dans le produit. */}
+            {ticket.component && (
+              <ComponentBadge
+                name={ticket.component.name}
+                kind={ticket.component.kind}
+                color={ticket.component.color}
+                kindLabel={t.taxonomy.componentKinds[ticket.component.kind]}
+              />
+            )}
+            {/* Module affiché UNIQUEMENT à défaut de composant : quand il y en a
+                un, il porte déjà son module, et empiler les deux alourdirait la
+                carte. Sans cela, un ticket contextualisé au seul niveau du
+                module paraîtrait dépourvu de tout rattachement sur le tableau. */}
+            {!ticket.component && ticketModule && (
+              <ModuleBadge name={ticketModule.name} color={ticketModule.color} />
+            )}
           </div>
 
           {(ticket.labels.length > 0 || assigneeName) && (

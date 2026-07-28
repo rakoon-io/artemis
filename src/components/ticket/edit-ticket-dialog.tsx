@@ -28,9 +28,15 @@ import {
 import { updateTicketAction } from "@/server/actions/ticket.actions";
 import { AttachmentField, usePendingAttachments } from "./attachment-field";
 import { LabelMultiSelect } from "./label-multi-select";
+import { ComponentSelect } from "./component-select";
+import { ModuleSelect } from "./module-select";
 import {
   NO_ASSIGNEE,
+  NO_COMPONENT,
+  NO_MODULE,
   NO_SPRINT,
+  type ComponentOption,
+  type ModuleOption,
   type LabelOption,
   type Member,
   type PriorityOption,
@@ -45,6 +51,10 @@ export interface EditableTicket {
   description: string | null;
   typeId: string;
   priorityId: string;
+  /** Composant concerné, ou `null` si la demande n'en cible aucun. */
+  componentId: string | null;
+  /** Module PROPRE du ticket : renseigné seulement s'il n'a pas de composant. */
+  moduleId: string | null;
   assigneeId: string | null;
   sprintId: string | null;
   labelIds: string[];
@@ -58,6 +68,8 @@ export function EditTicketDialog({
   labels,
   types,
   priorities,
+  components,
+  modules,
 }: {
   ticket: EditableTicket;
   members: Member[];
@@ -65,6 +77,10 @@ export function EditTicketDialog({
   labels: LabelOption[];
   types: TicketTypeOption[];
   priorities: PriorityOption[];
+  /** Catalogue du projet ; vide = le champ « Composant » n'est pas rendu. */
+  components: ComponentOption[];
+  /** Modules du projet ; vide = le champ « Module » n'est pas rendu. */
+  modules: ModuleOption[];
 }) {
   const router = useRouter();
   const t = useDict();
@@ -74,6 +90,12 @@ export function EditTicketDialog({
   const [description, setDescription] = useState(ticket.description ?? "");
   const [typeId, setTypeId] = useState<string>(ticket.typeId);
   const [priorityId, setPriorityId] = useState<string>(ticket.priorityId);
+  const [componentId, setComponentId] = useState<string>(
+    ticket.componentId ?? NO_COMPONENT,
+  );
+  const [moduleId, setModuleId] = useState<string>(
+    ticket.moduleId ?? NO_MODULE,
+  );
   const [assigneeId, setAssigneeId] = useState<string>(
     ticket.assigneeId ?? NO_ASSIGNEE,
   );
@@ -83,12 +105,23 @@ export function EditTicketDialog({
   const [labelIds, setLabelIds] = useState<string[]>(ticket.labelIds);
   const [submitting, setSubmitting] = useState(false);
 
+  // Module : dérivé du composant dès qu'il y en a un (invariant serveur), et
+  // saisissable seulement pour une demande à grosse maille, sans composant.
+  const componentModule =
+    components.find((c) => c.id === componentId)?.module ?? null;
+  const componentChosen = componentId !== NO_COMPONENT;
+  const displayedModuleId = componentChosen
+    ? (componentModule?.id ?? NO_MODULE)
+    : moduleId;
+
   function reset() {
     attachments.clear();
     setTitle(ticket.title);
     setDescription(ticket.description ?? "");
     setTypeId(ticket.typeId);
     setPriorityId(ticket.priorityId);
+    setComponentId(ticket.componentId ?? NO_COMPONENT);
+    setModuleId(ticket.moduleId ?? NO_MODULE);
     setAssigneeId(ticket.assigneeId ?? NO_ASSIGNEE);
     setSprintId(ticket.sprintId ?? NO_SPRINT);
     setLabelIds(ticket.labelIds);
@@ -114,6 +147,11 @@ export function EditTicketDialog({
       description: description.trim() ? description.trim() : null,
       typeId,
       priorityId,
+      componentId: componentId === NO_COMPONENT ? null : componentId,
+      // Le serveur impose de toute façon l'invariant ; on lui envoie déjà l'état
+      // cohérent pour que la charge utile reflète ce que l'écran montrait.
+      moduleId:
+        componentId === NO_COMPONENT && moduleId !== NO_MODULE ? moduleId : null,
       assigneeId: assigneeId === NO_ASSIGNEE ? null : assigneeId,
       sprintId: sprintId === NO_SPRINT ? null : sprintId,
       labelIds,
@@ -251,6 +289,30 @@ export function EditTicketDialog({
                 </SelectContent>
               </Select>
             </div>
+
+            <ComponentSelect
+              id="edit-component"
+              components={components}
+              value={componentId}
+              onChange={setComponentId}
+              label={t.ticketForm.componentLabel}
+              emptyValue={NO_COMPONENT}
+              emptyLabel={t.ticketForm.noComponent}
+            />
+
+            <ModuleSelect
+              id="edit-module"
+              modules={modules}
+              value={displayedModuleId}
+              onChange={setModuleId}
+              label={t.ticketForm.moduleLabel}
+              emptyValue={NO_MODULE}
+              emptyLabel={t.ticketForm.noModule}
+              disabled={componentChosen}
+              description={
+                componentChosen ? t.ticketForm.moduleFromComponent : undefined
+              }
+            />
           </div>
 
           <div className="space-y-1.5">

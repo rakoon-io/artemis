@@ -6,7 +6,9 @@ import { fmt } from "@/i18n";
 import { isAdmin } from "@/lib/policies";
 import {
   getBoardData,
+  getComponents,
   getLabels,
+  getModules,
   getProjectByKey,
   getProjectMembersView,
   getTicketPriorities,
@@ -21,7 +23,9 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ColumnManager } from "@/components/settings/column-manager";
+import { ComponentManager } from "@/components/settings/component-manager";
 import { LabelManager } from "@/components/settings/label-manager";
+import { ModuleManager } from "@/components/settings/module-manager";
 import { PriorityManager } from "@/components/settings/priority-manager";
 import { MemberManager } from "@/components/settings/member-manager";
 import { ProjectSettingsForm } from "@/components/settings/project-settings-form";
@@ -59,14 +63,23 @@ export default async function SettingsPage({
   const project = await getProjectByKey(key);
   if (!project) notFound();
 
-  const [{ columns }, labels, membersView, types, priorities] =
-    await Promise.all([
-      getBoardData(project.id),
-      getLabels(project.id),
-      getProjectMembersView(project.id),
-      getTicketTypes(project.id),
-      getTicketPriorities(project.id),
-    ]);
+  const [
+    { columns },
+    labels,
+    membersView,
+    types,
+    priorities,
+    components,
+    modules,
+  ] = await Promise.all([
+    getBoardData(project.id),
+    getLabels(project.id),
+    getProjectMembersView(project.id),
+    getTicketTypes(project.id),
+    getTicketPriorities(project.id),
+    getComponents(project.id),
+    getModules(project.id),
+  ]);
 
   const columnSummaries = columns.map((column) => ({
     id: column.id,
@@ -95,6 +108,10 @@ export default async function SettingsPage({
           <TabsTrigger value="types">{t.settings.tabs.types}</TabsTrigger>
           <TabsTrigger value="priorities">
             {t.settings.tabs.priorities}
+          </TabsTrigger>
+          <TabsTrigger value="modules">{t.settings.tabs.modules}</TabsTrigger>
+          <TabsTrigger value="components">
+            {t.settings.tabs.components}
           </TabsTrigger>
           <TabsTrigger value="members">{t.settings.tabs.members}</TabsTrigger>
         </TabsList>
@@ -173,6 +190,42 @@ export default async function SettingsPage({
             <CardContent>
               <PriorityManager
                 priorities={priorities}
+                projectId={project.id}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="modules" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>{t.settings.modulesCardTitle}</CardTitle>
+              <CardDescription>
+                {t.settings.modulesCardDescription}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ModuleManager
+                modules={modules}
+                components={components}
+                projectId={project.id}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="components" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>{t.settings.componentsCardTitle}</CardTitle>
+              <CardDescription>
+                {t.settings.componentsCardDescription}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ComponentManager
+                components={components}
+                modules={modules}
                 projectId={project.id}
               />
             </CardContent>

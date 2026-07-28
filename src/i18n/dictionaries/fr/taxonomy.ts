@@ -1,8 +1,9 @@
 /**
  * Namespace `taxonomy` : gestionnaires de configuration d'un projet (colonnes,
- * labels, priorites, types, membres). Ne contient que du texte visible ; les
- * valeurs metier saisies par l'utilisateur (noms de colonnes, labels, types,
- * priorites, e-mails, noms) restent en base et ne sont pas traduites.
+ * labels, priorites, types, composants, membres). Ne contient que du texte
+ * visible ; les valeurs metier saisies par l'utilisateur (noms de colonnes,
+ * labels, types, priorites, composants, e-mails, noms) restent en base et ne
+ * sont pas traduites.
  *
  * Les libelles partages entre plusieurs gestionnaires sont a la racine ; chaque
  * gestionnaire regroupe ensuite ses clefs propres dans un sous-groupe.
@@ -89,6 +90,65 @@ export const taxonomy = {
     colorAria: "Couleur du type",
     newLabel: "Nouveau type",
     newPlaceholder: "ex : Bug",
+  },
+
+  // Modules fonctionnels (regroupent les composants)
+  modules: {
+    reordered: "Ordre des modules mis à jour.",
+    empty: "Aucun module pour l'instant.",
+    moveUp: "Monter le module {name}",
+    moveDown: "Descendre le module {name}",
+    updated: "Module mis à jour.",
+    created: "Module « {name} » créé.",
+    deleted: "Module « {name} » supprimé.",
+    editAria: "Modifier le module {name}",
+    editTitle: "Modifier le module",
+    editDescription:
+      "Renommez le module, changez sa couleur ou sa description.",
+    deleteAria: "Supprimer le module {name}",
+    colorAria: "Couleur du module",
+    newLabel: "Nouveau module",
+    newPlaceholder: "ex : Gestion des utilisateurs",
+    descriptionLabel: "Description",
+    descriptionPlaceholder: "Que couvre ce module ? (optionnel)",
+    descriptionHint:
+      "Situe le périmètre fonctionnel du module et est transmise à l'IA avec les composants qu'il regroupe.",
+    noModule: "Aucun module",
+    unassignedHeading: "Sans module",
+  },
+
+  // Composants de l'application
+  components: {
+    reordered: "Ordre des composants mis à jour.",
+    empty: "Aucun composant pour l'instant.",
+    moveUp: "Monter le composant {name}",
+    moveDown: "Descendre le composant {name}",
+    updated: "Composant mis à jour.",
+    created: "Composant « {name} » créé.",
+    deleted: "Composant « {name} » supprimé.",
+    editAria: "Modifier le composant {name}",
+    editTitle: "Modifier le composant",
+    editDescription:
+      "Renommez le composant, changez sa nature, sa couleur ou sa description.",
+    deleteAria: "Supprimer le composant {name}",
+    colorAria: "Couleur du composant",
+    newLabel: "Nouveau composant",
+    newPlaceholder: "ex : Tableau Kanban",
+    kindLabel: "Nature",
+    kindAria: "Nature du composant",
+    moduleLabel: "Module",
+    moduleAria: "Module du composant",
+    descriptionLabel: "Description",
+    descriptionPlaceholder: "À quoi sert ce composant ? (optionnel)",
+    descriptionHint:
+      "Sert à contextualiser les tickets rattachés à ce composant et est transmise à l'IA lors de la génération de tickets depuis un texte.",
+  },
+
+  // Natures de composant (valeurs de l'enum ComponentKind)
+  componentKinds: {
+    PAGE: "Page",
+    SHARED: "Composant réutilisable",
+    SERVICE: "Service",
   },
 
   // Membres du projet

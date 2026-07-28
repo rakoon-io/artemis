@@ -15,7 +15,7 @@ export const settings: SettingsDict = {
   // En-tete de la page de reglages (settings/page.tsx)
   pageTitle: "{name} - Settings",
   pageSubtitle:
-    "Edit the project, customize the workflow (columns, labels, types, priorities) and manage its members.",
+    "Edit the project, customize the workflow (columns, labels, types, priorities, modules, components) and manage its members.",
   adminOnlyTitle: "Administrators only",
   adminOnlyDescription:
     "Project settings are only accessible to administrators.",
@@ -27,6 +27,8 @@ export const settings: SettingsDict = {
     labels: "Labels",
     types: "Types",
     priorities: "Priorities",
+    modules: "Modules",
+    components: "Components",
     members: "Members",
   },
 
@@ -45,6 +47,12 @@ export const settings: SettingsDict = {
   prioritiesCardTitle: "Priorities",
   prioritiesCardDescription:
     "Define priorities (name + color), reorder them or delete the ones you no longer use.",
+  modulesCardTitle: "Functional modules",
+  modulesCardDescription:
+    "Split the product into broad functional areas (e.g. user management): each module groups several components and situates tickets within the product.",
+  componentsCardTitle: "Application components",
+  componentsCardDescription:
+    "Declare the project's components (pages, reusable components, services): they contextualize tickets and enrich AI generation.",
   membersCardTitle: "Project members",
   membersCardDescription:
     "Grant or revoke access to this project, user by user. Administrators can access every project.",

@@ -62,22 +62,69 @@ travail configurable**.
 - Créer un **lot** (regroupement) ou un **sprint** (lot **daté** : `startDate`/`endDate`, objectif).
 - Backlog → planification (glisser des tickets dans un sprint) → sprint actif → clôturé.
 
-### 3.5 Personnalisation
+### 3.5 Modules & composants applicatifs
+
+Deux niveaux **facultatifs** décrivent *de quelle partie du produit* parle une demande : le
+**module** (grosse maille, un domaine fonctionnel) et le **composant** (maille fine, une brique).
+
+#### Modules fonctionnels
+- Un **module** est un **domaine fonctionnel** du produit (ex. « Gestion des utilisateurs »,
+  « Suivi des tickets ») : nom, description libre (périmètre) et couleur. Il **regroupe plusieurs
+  composants** (pages, briques réutilisables, services).
+- **Un module n'est pas un epic.** C'est de la **structure produit**, pas un conteneur de travail :
+  il ne se planifie pas, n'a ni dates ni avancement et **ne se « termine » jamais**, contrairement
+  à un sprint ou un lot (§3.4). « Suivi des tickets » existera toujours ; un sprint, non.
+- Un composant appartient **au plus à un module** (`Component.moduleId`, optionnel). Les composants
+  **transverses** - typiquement les `SHARED`, servis par plusieurs modules - n'en ont aucun.
+- Comme le catalogue de composants, les modules sont **inhérents au projet** : aucun module par
+  défaut n'est créé à la création d'un projet. Tant qu'il n'y en a aucun, l'interface se comporte
+  comme si la notion n'existait pas (ni champ, ni filtre).
+- Nom + description sont **injectés dans le contexte projet transmis à l'IA**, au même titre que
+  les composants, et exposés via le serveur MCP.
+
+#### Composants applicatifs
+- Chaque projet déclare le **catalogue des composants** dont son application est faite : nom,
+  **nature**, description libre (rôle / périmètre) et couleur.
+- Trois natures (`ComponentKind`) : **Page** (`PAGE`, un écran / une route), **Composant
+  réutilisable** (`SHARED` : design system, widget partagé), **Service** (`SERVICE`,
+  un service technique : API, job, intégration). Ces trois libellés sont ceux affichés par
+  l'interface (`taxonomy.componentKinds`) : la documentation les reprend à l'identique.
+- Un ticket référence **au plus un composant** (`Ticket.componentId`, optionnel) : il
+  **contextualise la demande** en indiquant *de quelle partie du produit* elle parle. Affiché sur
+  la carte Kanban, dans la vue liste et sur le détail du ticket ; **filtrable** dans les deux vues.
+- Le catalogue (nom + nature + description) est **injecté dans le contexte envoyé à l'IA** lors de
+  la génération d'un ticket à partir d'un texte libre, et exposé via le serveur MCP.
+- Le catalogue est **inhérent au projet** : aucun composant par défaut n'est créé à la création
+  d'un projet (contrairement aux types et priorités). Tant qu'il est vide, l'interface se comporte
+  comme si la notion n'existait pas (ni champ, ni filtre).
+
+#### Module effectif d'un ticket (invariant)
+- Le module **effectif** d'un ticket est **celui de son composant** dès qu'il en a un.
+- `Ticket.moduleId` (optionnel) ne porte donc le module que d'un ticket **sans composant** : une
+  demande à grosse maille, qu'aucune brique précise ne résume.
+- Corollaire imposé **côté serveur** : choisir un composant **remet `Ticket.moduleId` à `null`**.
+  Une seule source de vérité, donc le module d'un ticket ne peut **jamais** contredire celui de
+  son composant.
+- **Tout est facultatif** : un projet peut ne déclarer aucun module, un composant peut n'être
+  rattaché à aucun, et un ticket peut n'avoir ni composant ni module (demande transverse).
+
+### 3.6 Personnalisation
 - **Workflow** : ajouter/renommer/réordonner/supprimer des colonnes par projet.
 - **Labels** : nom + couleur.
+- **Modules & composants** : structure applicative, configurée **par projet** (cf. §3.5).
 - **Thème** : clair / sombre + couleur d'accent.
 
-### 3.6 Commentaires & pièces jointes
+### 3.7 Commentaires & pièces jointes
 - Fil de commentaires par ticket.
 - Pièces jointes multiples ; aperçu inline des images ; téléchargement des logs/fichiers.
 
-### 3.7 Authentification & rôles
+### 3.8 Authentification & rôles
 - Connexion par e-mail/mot de passe (OAuth optionnel en évolution).
 - Rôle porté par l'utilisateur (`ADMIN` / `REPORTER`).
 
 ## 4. Modèle de données (résumé)
 
-Entités : **User, Project, Column, Ticket, Sprint, Label, LabelOnTicket, Attachment, Comment**.
+Entités : **User, Project, Column, Module, Component, Ticket, Sprint, Label, LabelOnTicket, Attachment, Comment**.
 Schéma complet et relations : [`prisma/schema.prisma`](./prisma/schema.prisma).
 
 ## 5. Parcours utilisateur clés
@@ -120,6 +167,16 @@ Temps réel, notifications e-mail, app mobile native, intégrations (Jira/GitHub
 
 - **Ticket** : unité de travail (bug, feature, tâche, chore).
 - **Colonne** : statut configurable du workflow (une colonne du Kanban).
+- **Module** : domaine fonctionnel du produit (ex. « Suivi des tickets »), regroupant plusieurs
+  composants. C'est de la **structure produit**, pas un lot de travail : **ce n'est pas un epic**,
+  il ne se planifie pas et ne se termine jamais. Facultatif à tous les niveaux ; le module
+  **effectif** d'un ticket est celui de son composant, et un ticket ne porte le sien que s'il n'a
+  aucun composant (cf. §3.5).
+- **Composant** : partie de l'application décrite par le projet (catalogue propre à chaque projet),
+  rattachée **au plus à un module** - aucun pour les composants transverses.
+  Sa **nature** est une **page** (`PAGE`, un écran / une route), un **composant réutilisable**
+  (`SHARED` : design system, widget partagé) ou un **service** (`SERVICE`, technique : API,
+  job, intégration). Un ticket peut en référencer un pour situer la demande.
 - **Lot** : regroupement de tickets.
 - **Sprint** : lot **daté** avec objectif (itération agile).
 - **Backlog** : tickets non planifiés dans un sprint.

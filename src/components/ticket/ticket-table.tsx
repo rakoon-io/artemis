@@ -3,26 +3,53 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { cn, formatDate, initials } from "@/lib/utils";
 import { getDictionary } from "@/i18n/server";
+import { effectiveModule } from "@/lib/effective-module";
 import {
   ColorBadge,
+  ComponentBadge,
   LabelChip,
+  ModuleBadge,
   type SprintOption,
   type TicketRow,
 } from "./ticket-fields";
 
 /**
+ * Cellule « Module » : affiche le module EFFECTIF du ticket, c'est-à-dire celui
+ * de son composant s'il en a un, sinon le sien. Extraite pour ne résoudre ce
+ * module qu'une fois par ligne.
+ */
+function ModuleCell({ ticket }: { ticket: TicketRow }) {
+  const ticketModule = effectiveModule(ticket);
+  return (
+    <td className="px-3 py-2">
+      {ticketModule ? (
+        <ModuleBadge name={ticketModule.name} color={ticketModule.color} />
+      ) : (
+        <span className="text-muted-foreground">-</span>
+      )}
+    </td>
+  );
+}
+
+/**
  * Vue liste des tickets (tableau). Rendu serveur : purement présentationnel.
  * `sprints` sert à résoudre le nom du sprint (la query liste ne l'inclut pas).
+ * La colonne « Composant » n'apparaît que si le projet en déclare au moins un
+ * (`hasComponents`) : sinon elle n'afficherait qu'une colonne de tirets.
  */
 export async function TicketTable({
   items,
   projectKey,
   sprints,
+  hasComponents,
+  hasModules,
   hasFilters,
 }: {
   items: TicketRow[];
   projectKey: string;
   sprints: SprintOption[];
+  hasComponents: boolean;
+  hasModules: boolean;
   hasFilters: boolean;
 }) {
   const t = await getDictionary();
@@ -55,6 +82,16 @@ export async function TicketTable({
             <th scope="col" className="px-3 py-2 font-medium">{t.tickets.colTitle}</th>
             <th scope="col" className="px-3 py-2 font-medium">{t.tickets.colType}</th>
             <th scope="col" className="px-3 py-2 font-medium">{t.tickets.colPriority}</th>
+            {hasModules && (
+              <th scope="col" className="px-3 py-2 font-medium">
+                {t.tickets.colModule}
+              </th>
+            )}
+            {hasComponents && (
+              <th scope="col" className="px-3 py-2 font-medium">
+                {t.tickets.colComponent}
+              </th>
+            )}
             <th scope="col" className="px-3 py-2 font-medium">{t.tickets.colStatus}</th>
             <th scope="col" className="px-3 py-2 font-medium">{t.tickets.colAssignee}</th>
             <th scope="col" className="px-3 py-2 font-medium">{t.tickets.colSprint}</th>
@@ -88,6 +125,21 @@ export async function TicketTable({
                   color={ticket.priority.color}
                 />
               </td>
+              {hasModules && <ModuleCell ticket={ticket} />}
+              {hasComponents && (
+                <td className="px-3 py-2">
+                  {ticket.component ? (
+                    <ComponentBadge
+                      name={ticket.component.name}
+                      kind={ticket.component.kind}
+                      color={ticket.component.color}
+                      kindLabel={t.taxonomy.componentKinds[ticket.component.kind]}
+                    />
+                  ) : (
+                    <span className="text-muted-foreground">-</span>
+                  )}
+                </td>
+              )}
               <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">
                 {ticket.column.name}
               </td>

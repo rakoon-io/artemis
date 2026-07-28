@@ -16,9 +16,16 @@ export const ticketForm = {
   priorityLabel: "Priorité",
   assigneeLabel: "Assigné à",
   sprintLabel: "Sprint",
+  componentLabel: "Composant",
+  moduleLabel: "Module",
   selectPlaceholder: "Sélectionner…",
   noAssignee: "Personne",
   backlogOption: "Backlog (aucun sprint)",
+  noComponent: "Aucun composant",
+  noModule: "Aucun module",
+  // Affiche sous le champ module quand un composant est selectionne : le module
+  // effectif du ticket est alors celui de son composant.
+  moduleFromComponent: "Déterminé par le composant choisi.",
   labelsLabel: "Labels",
   titleRequired: "Le titre est requis.",
 

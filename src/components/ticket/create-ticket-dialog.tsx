@@ -28,9 +28,15 @@ import {
 import { createTicketAction } from "@/server/actions/ticket.actions";
 import { AttachmentField, usePendingAttachments } from "./attachment-field";
 import { LabelMultiSelect } from "./label-multi-select";
+import { ComponentSelect } from "./component-select";
+import { ModuleSelect } from "./module-select";
 import {
   NO_ASSIGNEE,
+  NO_COMPONENT,
+  NO_MODULE,
   NO_SPRINT,
+  type ComponentOption,
+  type ModuleOption,
   type LabelOption,
   type Member,
   type PriorityOption,
@@ -53,6 +59,8 @@ export function CreateTicketDialog({
   labels,
   types,
   priorities,
+  components,
+  modules,
 }: {
   projectId: string;
   members: Member[];
@@ -60,6 +68,10 @@ export function CreateTicketDialog({
   labels: LabelOption[];
   types: TicketTypeOption[];
   priorities: PriorityOption[];
+  /** Catalogue du projet ; vide = le champ « Composant » n'est pas rendu. */
+  components: ComponentOption[];
+  /** Modules du projet ; vide = le champ « Module » n'est pas rendu. */
+  modules: ModuleOption[];
 }) {
   const router = useRouter();
   const t = useDict();
@@ -69,10 +81,21 @@ export function CreateTicketDialog({
   const [description, setDescription] = useState("");
   const [typeId, setTypeId] = useState<string>(types[0]?.id ?? "");
   const [priorityId, setPriorityId] = useState<string>(priorities[0]?.id ?? "");
+  const [componentId, setComponentId] = useState<string>(NO_COMPONENT);
+  const [moduleId, setModuleId] = useState<string>(NO_MODULE);
   const [assigneeId, setAssigneeId] = useState<string>(NO_ASSIGNEE);
   const [sprintId, setSprintId] = useState<string>(NO_SPRINT);
   const [labelIds, setLabelIds] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+
+  // Module : dérivé du composant dès qu'il y en a un (invariant serveur), et
+  // saisissable seulement pour une demande à grosse maille, sans composant.
+  const componentModule =
+    components.find((c) => c.id === componentId)?.module ?? null;
+  const componentChosen = componentId !== NO_COMPONENT;
+  const displayedModuleId = componentChosen
+    ? (componentModule?.id ?? NO_MODULE)
+    : moduleId;
 
   function resetForm() {
     attachments.clear();
@@ -80,6 +103,8 @@ export function CreateTicketDialog({
     setDescription("");
     setTypeId(types[0]?.id ?? "");
     setPriorityId(priorities[0]?.id ?? "");
+    setComponentId(NO_COMPONENT);
+    setModuleId(NO_MODULE);
     setAssigneeId(NO_ASSIGNEE);
     setSprintId(NO_SPRINT);
     setLabelIds([]);
@@ -106,6 +131,11 @@ export function CreateTicketDialog({
       description: description.trim() ? description.trim() : undefined,
       typeId: typeId || undefined,
       priorityId: priorityId || undefined,
+      componentId: componentId === NO_COMPONENT ? null : componentId,
+      // Le serveur impose de toute façon l'invariant ; on lui envoie déjà l'état
+      // cohérent pour que la charge utile reflète ce que l'écran montrait.
+      moduleId:
+        componentId === NO_COMPONENT && moduleId !== NO_MODULE ? moduleId : null,
       assigneeId: assigneeId === NO_ASSIGNEE ? null : assigneeId,
       sprintId: sprintId === NO_SPRINT ? null : sprintId,
       labelIds,
@@ -253,6 +283,30 @@ export function CreateTicketDialog({
                 </SelectContent>
               </Select>
             </div>
+
+            <ComponentSelect
+              id="ticket-component"
+              components={components}
+              value={componentId}
+              onChange={setComponentId}
+              label={t.ticketForm.componentLabel}
+              emptyValue={NO_COMPONENT}
+              emptyLabel={t.ticketForm.noComponent}
+            />
+
+            <ModuleSelect
+              id="ticket-module"
+              modules={modules}
+              value={displayedModuleId}
+              onChange={setModuleId}
+              label={t.ticketForm.moduleLabel}
+              emptyValue={NO_MODULE}
+              emptyLabel={t.ticketForm.noModule}
+              disabled={componentChosen}
+              description={
+                componentChosen ? t.ticketForm.moduleFromComponent : undefined
+              }
+            />
           </div>
 
           <div className="space-y-1.5">

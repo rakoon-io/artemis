@@ -10,13 +10,13 @@ Vue produit -> [`README.md`](./README.md) - schéma de données -> [`prisma/sche
 
 ## 1. Cible & modèle
 
-- **Sous-domaine** : **`tracker.apps.rakoon.io`** *(proposé - à confirmer ; ex. `rakoon-tasker` = `spark.apps.rakoon.io`)*.
+- **Sous-domaine** : **`artemis.apps.rakoon.io`** *(ex. `rakoon-tasker` = `spark.apps.rakoon.io`)*.
 - **Reverse-proxy** : Traefik de Dokploy (`web` :80 → `websecure` :443, `certResolver: letsencrypt`).
 - **Réseau** : overlay Swarm **`dokploy-network`** (résolution des conteneurs par leur nom).
 
 ```
 Internet ──HTTPS──> Traefik (dokploy-traefik, :80/:443)
-                      │  route tracker.apps.rakoon.io  (Let's Encrypt)
+                      │  route artemis.apps.rakoon.io  (Let's Encrypt)
                       ▼
         artemis (Next.js « next start », :3000)
              ├──► artemis-db     (postgres:16)     vol: artemis-db-data
@@ -42,7 +42,7 @@ accès SSH root/sudo.
 |---|:--:|---|
 | `DATABASE_URL` | | Postgres interne (`artemis-db:5432`) |
 | `AUTH_SECRET` | | Secret Auth.js (`openssl rand -base64 32`) |
-| `AUTH_URL` | | `https://tracker.apps.rakoon.io` |
+| `AUTH_URL` | | `https://artemis.apps.rakoon.io` |
 | `AUTH_TRUST_HOST` | | `true` (derrière le proxy Traefik) |
 | `S3_ENDPOINT` | | Endpoint stockage pièces jointes (`http://artemis-minio:9000`) |
 | `S3_BUCKET` | | Bucket des pièces jointes (`artemis-attachments`) |
@@ -98,7 +98,7 @@ docker build -t artemis:latest /chemin/vers/le/contexte
 NODE_ENV=production
 DATABASE_URL=postgresql://tracker:<DBPW>@artemis-db:5432/tracker?schema=public
 AUTH_SECRET=<openssl rand -base64 32>
-AUTH_URL=https://tracker.apps.rakoon.io
+AUTH_URL=https://artemis.apps.rakoon.io
 AUTH_TRUST_HOST=true
 S3_ENDPOINT=http://artemis-minio:9000
 S3_BUCKET=artemis-attachments
@@ -122,23 +122,23 @@ docker run -d --name artemis --restart unless-stopped \
 ```
 
 ### 5.7 - Route Traefik (HTTPS auto)
-Fichier **`/etc/dokploy/traefik/dynamic/tracker.yml`** (rechargé à chaud) :
+Fichier **`/etc/dokploy/traefik/dynamic/artemis.yml`** (rechargé à chaud) :
 ```yaml
 http:
   routers:
-    tracker-secure:
-      rule: Host(`tracker.apps.rakoon.io`)
+    artemis-secure:
+      rule: Host(`artemis.apps.rakoon.io`)
       entryPoints: [websecure]
-      service: tracker
+      service: artemis
       tls:
         certResolver: letsencrypt
-    tracker-web:
-      rule: Host(`tracker.apps.rakoon.io`)
+    artemis-web:
+      rule: Host(`artemis.apps.rakoon.io`)
       entryPoints: [web]
       middlewares: [redirect-to-https]
-      service: tracker
+      service: artemis
   services:
-    tracker:
+    artemis:
       loadBalancer:
         servers:
           - url: http://artemis:3000
@@ -174,7 +174,7 @@ La route Traefik, la base et le stockage ne bougent pas (volumes persistants).
 - **Healthcheck** : l'application répond `200` (endpoint de santé à prévoir).
 - **Smoke test** : connexion → création d'un ticket avec **image collée** → déplacement d'une carte
   en Kanban → filtre en vue liste.
-- **TLS** : certificat Let's Encrypt actif sur `https://tracker.apps.rakoon.io`.
+- **TLS** : certificat Let's Encrypt actif sur `https://artemis.apps.rakoon.io`.
 
 ## 9. Rollback
 Redéployer l'image précédente (`artemis:<tag-précédent>`) ; si le schéma a changé, restaurer
@@ -185,3 +185,43 @@ CI/CD en place.
 - `.env*` et `rtr.env` **jamais commités** (gitignore).
 - Pièces jointes servies via **URLs presignées à durée limitée** (droits vérifiés avant émission).
 - Secrets côté serveur / gestionnaire de secrets Dokploy - **jamais dans le dépôt**.
+
+## 11. Mode démo
+
+Variables d'env dédiées (voir `.env.example`) :
+
+| Variable | Rôle |
+|---|---|
+| `DEMO_MODE=true` | Bannière + identifiants de démo sur `/login`, bandeau dans le shell app. |
+| `AI_DAILY_BUDGET_USD` | Plafond de dépense IA (Mistral) par jour UTC, ex. `0.30`. Absent = pas de plafond. Voir `src/lib/ai-budget.ts` (table `AiUsageDay`). |
+| `MISTRAL_INPUT_PRICE_PER_MTOK_USD` / `MISTRAL_OUTPUT_PRICE_PER_MTOK_USD` | Tarifs $/M tokens utilisés pour l'estimation de coût (défauts mistral-medium-3.5, juillet 2026 - à ajuster selon le contrat réel). |
+
+**Réinitialisation au seed de base** : `npm run db:reset-demo` (= `prisma/reset-demo.ts` puis
+`prisma/seed.ts`) supprime le projet `RKN` (cascade : tickets, sprints, labels, commentaires,
+pièces jointes, wiki) et le recrée avec le jeu de démo (14 tickets couvrant types/priorités/
+colonnes/sprints/assignations, commentaires, 2 pages wiki, une colonne avec WIP limit). Les
+comptes (`admin@rakoon.io`, `rapporteur@rakoon.io`, `bot@rakoon.io`) sont conservés (upsert).
+
+```bash
+docker run --rm --network dokploy-network --env-file rtr.env artemis:latest npm run db:reset-demo
+```
+
+Une **tâche cron** (crontab de l'utilisateur `almalinux` sur le serveur) relance cette commande
+chaque nuit à **03:00 UTC**, journalisée dans `/opt/deploys/artemis/reset-demo.log` :
+
+```
+0 3 * * * /usr/bin/sudo /usr/bin/docker run --rm --network dokploy-network \
+  --env-file /opt/deploys/artemis/rtr.env artemis:latest npm run db:reset-demo \
+  >> /opt/deploys/artemis/reset-demo.log 2>&1
+```
+
+`/opt/deploys/artemis/rtr.env` est la copie de référence de l'env de prod (utilisée par le cron ET
+pour les rebuilds manuels) ; `/opt/deploys/artemis/` contient aussi la dernière source déployée
+(sync via `rsync`, pas de dépôt Git sur le serveur).
+
+**État actuel (⚠️ secrets - ne pas committer)** :
+- **URL** : https://artemis.apps.rakoon.io
+- **Admin** : `admin@rakoon.io` / `***MOT-DE-PASSE-RETIRE***` ; **Rapporteur** : `rapporteur@rakoon.io` / `***MOT-DE-PASSE-RETIRE***`
+- **IA (Mistral)** : `AI_DAILY_BUDGET_USD=0.30` configuré, mais `MISTRAL_API_KEY` **non fournie** -
+  fonctionnalité de génération de tickets par IA désactivée proprement jusqu'à l'ajout d'une clé
+  dans `/opt/deploys/artemis/rtr.env` (le plafond s'appliquera automatiquement dès son ajout).

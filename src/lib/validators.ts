@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Role } from "@prisma/client";
+import { ComponentKind, Role } from "@prisma/client";
 
 /** Schémas Zod partagés client/serveur - validation à chaque frontière. */
 
@@ -62,6 +62,14 @@ export const createTicketSchema = z.object({
   description: z.string().max(20000).optional().nullable(),
   typeId: z.string().min(1).optional(),
   priorityId: z.string().min(1).optional(),
+  // Composant concerné (facultatif) : `null` = aucun composant. `.min(1)` est
+  // indispensable : une chaîne vide passerait le garde-fou de cohérence projet
+  // du service (qui teste la véracité) et partirait telle quelle en base, où
+  // elle violerait la clé étrangère `Ticket_componentId_fkey`.
+  componentId: z.string().min(1).optional().nullable(),
+  // Module propre du ticket : n'est retenu que s'il n'y a PAS de composant
+  // (le service impose l'invariant). `null` = aucun module.
+  moduleId: z.string().min(1).optional().nullable(),
   assigneeId: z.string().optional().nullable(),
   sprintId: z.string().optional().nullable(),
   labelIds: z.array(z.string()).optional().default([]),
@@ -73,6 +81,10 @@ export const updateTicketSchema = z.object({
   description: z.string().max(20000).optional().nullable(),
   typeId: z.string().min(1).optional(),
   priorityId: z.string().min(1).optional(),
+  // `undefined` = ne pas toucher ; `null` = détacher. Voir createTicketSchema
+  // pour la raison du `.min(1)`.
+  componentId: z.string().min(1).optional().nullable(),
+  moduleId: z.string().min(1).optional().nullable(),
   assigneeId: z.string().optional().nullable(),
   sprintId: z.string().optional().nullable(),
   labelIds: z.array(z.string()).optional(),
@@ -101,6 +113,7 @@ export const ticketDraftSchema = z.object({
   description: z.string().max(20000).optional().nullable(),
   typeId: z.string().min(1).optional().nullable(),
   priorityId: z.string().min(1).optional().nullable(),
+  componentId: z.string().min(1).optional().nullable(),
 });
 
 /** Création en lot des tickets validés depuis l'écran de revue. */
@@ -192,6 +205,82 @@ export const updateTicketPrioritySchema = z.object({
 });
 
 export const reorderTicketPrioritiesSchema = z.object({
+  projectId: z.string().min(1),
+  orderedIds: z.array(z.string()).min(1),
+});
+
+// --- Modules fonctionnels (regroupent les composants, par projet) ---
+export const createModuleSchema = z.object({
+  projectId: z.string().min(1),
+  name: z.string().trim().min(1, "Nom requis").max(60),
+  description: z
+    .string()
+    .trim()
+    .max(500, "Description trop longue (500 caractères maximum).")
+    .optional()
+    .nullable()
+    .transform((v) => v || null),
+  color: hex,
+});
+
+export const updateModuleSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().trim().min(1, "Nom requis").max(60).optional(),
+  // `undefined` = ne pas toucher à la description ; "" ou `null` = l'effacer.
+  description: z
+    .string()
+    .trim()
+    .max(500, "Description trop longue (500 caractères maximum).")
+    .optional()
+    .nullable()
+    .transform((v) => (v === undefined ? undefined : v || null)),
+  color: hex.optional(),
+});
+
+export const reorderModulesSchema = z.object({
+  projectId: z.string().min(1),
+  orderedIds: z.array(z.string()).min(1),
+});
+
+// --- Composants applicatifs (catalogue configurable par projet) ---
+/** Nature d'un composant : page, composant réutilisable ou service. */
+export const componentKindSchema = z.nativeEnum(ComponentKind);
+
+export const createComponentSchema = z.object({
+  projectId: z.string().min(1),
+  name: z.string().trim().min(1, "Nom requis").max(60),
+  kind: componentKindSchema,
+  // Module de rattachement (facultatif) : `null` = composant transverse.
+  moduleId: z.string().min(1).optional().nullable(),
+  // Contexte libre du composant (transmis à l'IA) : "" est normalisé en null.
+  description: z
+    .string()
+    .trim()
+    .max(500, "Description trop longue (500 caractères maximum).")
+    .optional()
+    .nullable()
+    .transform((v) => v || null),
+  color: hex,
+});
+
+export const updateComponentSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().trim().min(1, "Nom requis").max(60).optional(),
+  kind: componentKindSchema.optional(),
+  // `undefined` = ne pas toucher ; `null` = détacher du module.
+  moduleId: z.string().min(1).optional().nullable(),
+  // `undefined` = ne pas toucher à la description ; "" ou `null` = l'effacer.
+  description: z
+    .string()
+    .trim()
+    .max(500, "Description trop longue (500 caractères maximum).")
+    .optional()
+    .nullable()
+    .transform((v) => (v === undefined ? undefined : v || null)),
+  color: hex.optional(),
+});
+
+export const reorderComponentsSchema = z.object({
   projectId: z.string().min(1),
   orderedIds: z.array(z.string()).min(1),
 });

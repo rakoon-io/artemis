@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { getAccessibleProjectByKey } from "@/server/access";
 import {
   getAssignableUsers,
+  getComponents,
   getLabels,
+  getModules,
   getSprints,
   getTicketPriorities,
   getTicketsList,
@@ -48,28 +50,42 @@ export default async function TicketsListPage({
   const sprintId = one(sp.sprintId);
   const typeId = one(sp.typeId);
   const priorityId = one(sp.priorityId);
+  const componentId = one(sp.componentId);
+  const moduleId = one(sp.moduleId);
   const page = Math.max(1, Number(one(sp.page)) || 1);
 
-  const [list, sprints, labels, members, types, priorities] = await Promise.all([
-    getTicketsList(project.id, {
-      q,
-      assigneeId,
-      labelId,
-      sprintId,
-      typeId,
-      priorityId,
-      page,
-    }),
-    getSprints(project.id),
-    getLabels(project.id),
-    getAssignableUsers(project.id),
-    getTicketTypes(project.id),
-    getTicketPriorities(project.id),
-  ]);
+  const [list, sprints, labels, members, types, priorities, components, modules] =
+    await Promise.all([
+      getTicketsList(project.id, {
+        q,
+        assigneeId,
+        labelId,
+        sprintId,
+        typeId,
+        priorityId,
+        componentId,
+        moduleId,
+        page,
+      }),
+      getSprints(project.id),
+      getLabels(project.id),
+      getAssignableUsers(project.id),
+      getTicketTypes(project.id),
+      getTicketPriorities(project.id),
+      getComponents(project.id),
+      getModules(project.id),
+    ]);
 
   const totalPages = Math.max(1, Math.ceil(list.total / list.pageSize));
   const hasFilters = Boolean(
-    q || assigneeId || labelId || sprintId || typeId || priorityId,
+    q ||
+      assigneeId ||
+      labelId ||
+      sprintId ||
+      typeId ||
+      priorityId ||
+      componentId ||
+      moduleId,
   );
 
   // Conserve les filtres actifs dans les liens de pagination.
@@ -80,6 +96,8 @@ export default async function TicketsListPage({
     sprintId,
     typeId,
     priorityId,
+    componentId,
+    moduleId,
   };
   function pageHref(target: number): string {
     const params = new URLSearchParams();
@@ -109,6 +127,7 @@ export default async function TicketsListPage({
               projectName={project.name}
               types={types}
               priorities={priorities}
+              components={components}
             />
           )}
           <CreateTicketDialog
@@ -118,6 +137,8 @@ export default async function TicketsListPage({
             labels={labels}
             types={types}
             priorities={priorities}
+            components={components}
+            modules={modules}
           />
         </div>
       </div>
@@ -128,12 +149,16 @@ export default async function TicketsListPage({
         labels={labels}
         types={types}
         priorities={priorities}
+        components={components}
+        modules={modules}
       />
 
       <TicketTable
         items={list.items}
         projectKey={project.key}
         sprints={sprints}
+        hasComponents={components.length > 0}
+        hasModules={modules.length > 0}
         hasFilters={hasFilters}
       />
 

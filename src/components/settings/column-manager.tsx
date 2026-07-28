@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { InlineEdit } from "@/components/ui/inline-edit";
 import { useDict } from "@/i18n/provider";
 import { fmt } from "@/i18n";
 
@@ -61,6 +62,19 @@ export function ColumnManager({
   const router = useRouter();
   const t = useDict();
   const [reordering, setReordering] = useState(false);
+
+  /** Renomme une colonne en place. La limite WIP n'est pas touchée (le service
+   * n'écrit que les champs explicitement fournis). */
+  async function saveColumn(id: string, name: string): Promise<boolean> {
+    const res = await updateColumnAction({ id, name });
+    if (!res.ok) {
+      toast.error(res.error);
+      return false;
+    }
+    toast.success(t.common.inline.saved);
+    router.refresh();
+    return true;
+  }
 
   async function move(index: number, direction: -1 | 1) {
     const target = index + direction;
@@ -120,7 +134,16 @@ export function ColumnManager({
             </div>
 
             <div className="flex flex-1 flex-wrap items-center gap-2">
-              <span className="font-medium">{column.name}</span>
+              <div className="min-w-0 flex-1">
+                <InlineEdit
+                  value={column.name}
+                  field={t.taxonomy.name}
+                  required
+                  maxLength={40}
+                  className="font-medium"
+                  onSave={(next) => saveColumn(column.id, next)}
+                />
+              </div>
               {column.wipLimit != null && (
                 <Badge
                   variant={

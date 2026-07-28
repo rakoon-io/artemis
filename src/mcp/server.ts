@@ -6,6 +6,8 @@ import {
   mcpCommentTicket,
   mcpCreateTicket,
   mcpGetTicket,
+  mcpListComponents,
+  mcpListModules,
   mcpListProjects,
   mcpListStatuses,
   mcpListTickets,
@@ -67,12 +69,38 @@ async function main() {
   );
 
   server.registerTool(
+    "list_modules",
+    {
+      title: "Lister les modules",
+      description:
+        "Liste les modules fonctionnels d'un projet (nom, description) et les " +
+        "composants regroupes par chacun. Un module est un pan du produit a grosse " +
+        "maille, au-dessus des composants : c'est la vue d'ensemble.",
+      inputSchema: { project: z.string().describe("Cle du projet, ex. RKN") },
+    },
+    async ({ project }) => runTool(() => mcpListModules(actor, project)),
+  );
+
+  server.registerTool(
+    "list_components",
+    {
+      title: "Lister les composants",
+      description:
+        "Liste les composants applicatifs d'un projet (nom, nature PAGE / SHARED / " +
+        "SERVICE, description). Sert a situer un ticket dans l'application.",
+      inputSchema: { project: z.string().describe("Cle du projet, ex. RKN") },
+    },
+    async ({ project }) => runTool(() => mcpListComponents(actor, project)),
+  );
+
+  server.registerTool(
     "list_tickets",
     {
       title: "Lister les tickets",
       description:
         "Liste les tickets d'un projet. Filtres optionnels : status (nom de colonne), " +
-        'assignee ("me", "unassigned" ou un e-mail), limit.',
+        'assignee ("me", "unassigned" ou un e-mail), component (nom du composant), ' +
+        "module (nom du module, y compris les tickets rattaches via leur composant), limit.",
       inputSchema: {
         project: z.string().describe("Cle du projet, ex. RKN"),
         status: z.string().optional().describe("Filtrer par statut / colonne"),
@@ -80,12 +108,21 @@ async function main() {
           .string()
           .optional()
           .describe('"me", "unassigned" ou un e-mail'),
+        component: z.string().optional().describe("Filtrer par composant"),
+        module: z.string().optional().describe("Filtrer par module"),
         limit: z.number().int().positive().max(100).optional(),
       },
     },
-    async ({ project, status, assignee, limit }) =>
+    async ({ project, status, assignee, component, module, limit }) =>
       runTool(() =>
-        mcpListTickets(actor, { projectKey: project, status, assignee, limit }),
+        mcpListTickets(actor, {
+          projectKey: project,
+          status,
+          assignee,
+          component,
+          module,
+          limit,
+        }),
       ),
   );
 
@@ -107,8 +144,10 @@ async function main() {
       title: "Creer un ticket",
       description:
         "Cree un ticket dans un projet (place dans la 1re colonne du workflow). " +
-        "L'assistant en est le rapporteur. Type, priorite et assigne sont " +
-        "optionnels ; sans valeur, les defauts du projet s'appliquent.",
+        "L'assistant en est le rapporteur. Type, priorite, composant, module et " +
+        "assigne sont optionnels ; sans valeur, les defauts du projet s'appliquent. " +
+        "Preferer le composant quand la demande vise une brique precise ; le module " +
+        "sert aux demandes a grosse maille et n'est retenu qu'a defaut de composant.",
       inputSchema: {
         project: z.string().describe("Cle du projet, ex. RKN"),
         title: z.string().min(1).max(200).describe("Titre du ticket"),
@@ -125,13 +164,33 @@ async function main() {
           .string()
           .optional()
           .describe("Nom de la priorite (defaut : priorite par defaut du projet)"),
+        component: z
+          .string()
+          .optional()
+          .describe("Nom du composant concerne (defaut : aucun)"),
+        module: z
+          .string()
+          .optional()
+          .describe(
+            "Nom du module concerne (defaut : aucun). Ne s'applique que si aucun " +
+              "composant n'est fourni : sinon le module du composant prime.",
+          ),
         assignee: z
           .string()
           .optional()
           .describe('"me" ou un e-mail (defaut : non assigne)'),
       },
     },
-    async ({ project, title, description, type, priority, assignee }) =>
+    async ({
+      project,
+      title,
+      description,
+      type,
+      priority,
+      component,
+      module,
+      assignee,
+    }) =>
       runTool(() =>
         mcpCreateTicket(actor, {
           projectKey: project,
@@ -139,6 +198,8 @@ async function main() {
           description,
           type,
           priority,
+          component,
+          module,
           assignee,
         }),
       ),

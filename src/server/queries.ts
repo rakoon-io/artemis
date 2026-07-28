@@ -1,8 +1,10 @@
 import { isAdmin, type PolicyUser } from "@/lib/policies";
 import * as columnService from "./services/column.service";
+import * as componentService from "./services/component.service";
 import * as emailLogService from "./services/email-log.service";
 import * as labelService from "./services/label.service";
 import * as membershipService from "./services/membership.service";
+import * as moduleService from "./services/module.service";
 import * as projectService from "./services/project.service";
 import * as sprintService from "./services/sprint.service";
 import * as ticketService from "./services/ticket.service";
@@ -126,6 +128,29 @@ export function getTicketTypes(projectId: string) {
 /** Priorités de tickets du projet, ordonnées (badges + configuration). */
 export function getTicketPriorities(projectId: string) {
   return ticketPriorityService.listTicketPriorities(projectId);
+}
+
+/**
+ * Catalogue de composants du projet, ordonné : les briques applicatives (page,
+ * composant réutilisable, service) auxquelles rattacher un ticket pour en
+ * contextualiser la demande. Vide tant qu'aucun composant n'est déclaré.
+ */
+export function getComponents(projectId: string) {
+  return componentService.listComponents(projectId);
+}
+
+/**
+ * Modules fonctionnels du projet, ordonnés : les domaines à grosse maille
+ * (« Gestion des utilisateurs ») qui regroupent les composants. Vide tant
+ * qu'aucun module n'est déclaré - l'interface masque alors la notion.
+ */
+export function getModules(projectId: string) {
+  return moduleService.listModules(projectId);
+}
+
+/** Modules avec leurs composants, pour les vues à deux niveaux et le contexte IA. */
+export function getModulesWithComponents(projectId: string) {
+  return moduleService.listModulesWithComponents(projectId);
 }
 
 export function getMembers() {

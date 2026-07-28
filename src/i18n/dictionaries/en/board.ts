@@ -20,6 +20,8 @@ export const board: BoardDict = {
   filterType: "Type",
   filterPriority: "Priority",
   filterLabel: "Label",
+  filterModule: "Module",
+  filterComponent: "Component",
   unassigned: "Unassigned",
   reset: "Reset",
   all: "All",

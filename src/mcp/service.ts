@@ -1,9 +1,15 @@
+import { effectiveModule } from "@/lib/effective-module";
 import { isAdmin } from "@/lib/policies";
 import { rankAfter } from "@/lib/rank";
 import { canAccess } from "@/server/access";
 import { listColumns } from "@/server/services/column.service";
 import { createComment } from "@/server/services/comment.service";
+import { listComponents } from "@/server/services/component.service";
 import { listAccessibleProjectIds } from "@/server/services/membership.service";
+import {
+  listModules,
+  listModulesWithComponents,
+} from "@/server/services/module.service";
 import { getProjectByKey, listProjects } from "@/server/services/project.service";
 import { listTicketPriorities } from "@/server/services/ticketpriority.service";
 import { listTicketTypes } from "@/server/services/tickettype.service";
@@ -119,14 +125,41 @@ export async function mcpListStatuses(actor: Actor, projectKey: string) {
   return cols.map((c) => c.name);
 }
 
+/**
+ * Modules fonctionnels d'un projet (nom, description) avec les composants que
+ * chacun regroupe : l'IA voit ainsi la structure a deux niveaux du produit.
+ */
+export async function mcpListModules(actor: Actor, projectKey: string) {
+  const project = await requireProject(actor, projectKey);
+  const modules = await listModulesWithComponents(project.id);
+  return modules.map((m) => ({
+    name: m.name,
+    description: m.description ?? null,
+    components: m.components.map((c) => c.name),
+  }));
+}
+
+/** Composants applicatifs d'un projet (nom, nature, description). */
+export async function mcpListComponents(actor: Actor, projectKey: string) {
+  const project = await requireProject(actor, projectKey);
+  const components = await listComponents(project.id);
+  return components.map((c) => ({
+    name: c.name,
+    kind: c.kind,
+    description: c.description ?? null,
+  }));
+}
+
 export interface ListTicketsArgs {
   projectKey: string;
   status?: string;
   assignee?: string; // "me" | "unassigned" | e-mail
+  component?: string; // nom du composant
+  module?: string; // nom du module
   limit?: number;
 }
 
-/** Tickets d'un projet (filtres statut / assigne optionnels). */
+/** Tickets d'un projet (filtres statut / assigne / composant / module optionnels). */
 export async function mcpListTickets(actor: Actor, args: ListTicketsArgs) {
   const project = await requireProject(actor, args.projectKey);
   const cols = await listColumns(project.id);
@@ -149,9 +182,35 @@ export async function mcpListTickets(actor: Actor, args: ListTicketsArgs) {
     assigneeId = (await findUserIdByEmail(args.assignee)) ?? "__none__";
   }
 
+  let componentId: string | undefined;
+  if (args.component) {
+    const components = await listComponents(project.id);
+    const match = matchByName(components, args.component);
+    if (!match) {
+      throw new Error(
+        `Composant inconnu : "${args.component}". Composants disponibles : ${components.map((c) => c.name).join(", ")}.`,
+      );
+    }
+    componentId = match.id;
+  }
+
+  let moduleId: string | undefined;
+  if (args.module) {
+    const modules = await listModules(project.id);
+    const match = matchByName(modules, args.module);
+    if (!match) {
+      throw new Error(
+        `Module inconnu : "${args.module}". Modules disponibles : ${modules.map((m) => m.name).join(", ")}.`,
+      );
+    }
+    moduleId = match.id;
+  }
+
   const rows = await listProjectTickets(project.id, {
     columnId,
     assigneeId,
+    componentId,
+    moduleId,
     limit: clampLimit(args.limit),
   });
   return rows.map((t) => ({
@@ -160,6 +219,8 @@ export async function mcpListTickets(actor: Actor, args: ListTicketsArgs) {
     status: t.column.name,
     type: t.type.name,
     priority: t.priority.name,
+    module: effectiveModule(t)?.name ?? null,
+    component: t.component?.name ?? null,
     assignee: personName(t.assignee),
   }));
 }
@@ -175,6 +236,9 @@ export async function mcpGetTicket(actor: Actor, key: string) {
     status: t.column.name,
     type: t.type.name,
     priority: t.priority.name,
+    // Module EFFECTIF : celui du composant s'il y en a un, sinon celui du ticket.
+    module: effectiveModule(t)?.name ?? null,
+    component: t.component?.name ?? null,
     reporter: personName(t.reporter),
     assignee: personName(t.assignee),
     assignedToMe: t.assignee?.id === actor.id,
@@ -195,13 +259,20 @@ export interface CreateTicketArgs {
   description?: string;
   type?: string; // nom du type ; a defaut : type par defaut du projet
   priority?: string; // nom de la priorite ; a defaut : priorite par defaut
+  component?: string; // nom du composant ; a defaut : aucun
+  module?: string; // nom du module ; sans effet si un composant est fourni
   assignee?: string; // "me" | e-mail ; a defaut : non assigne
 }
 
 /**
  * Cree un ticket dans la 1re colonne du projet (l'acteur en est le rapporteur).
- * Type / priorite sont resolus par nom au sein du projet ; sans valeur, le
- * service applique les valeurs par defaut du projet. Requiert l'acces au projet.
+ * Type / priorite / composant / module sont resolus par nom au sein du projet ;
+ * sans valeur, le service applique les valeurs par defaut du projet (et ni
+ * composant ni module). Requiert l'acces au projet.
+ *
+ * Le module n'est qu'un repli a grosse maille : si un composant est fourni, le
+ * service remet le module propre du ticket a `null` (le module du composant fait
+ * foi). On ne leve donc pas d'erreur quand les deux sont donnes.
  */
 export async function mcpCreateTicket(actor: Actor, args: CreateTicketArgs) {
   const project = await requireProject(actor, args.projectKey);
@@ -232,6 +303,30 @@ export async function mcpCreateTicket(actor: Actor, args: CreateTicketArgs) {
     priorityId = match.id;
   }
 
+  let componentId: string | undefined;
+  if (args.component) {
+    const components = await listComponents(project.id);
+    const match = matchByName(components, args.component);
+    if (!match) {
+      throw new Error(
+        `Composant inconnu : "${args.component}". Composants disponibles : ${components.map((c) => c.name).join(", ")}.`,
+      );
+    }
+    componentId = match.id;
+  }
+
+  let moduleId: string | undefined;
+  if (args.module) {
+    const modules = await listModules(project.id);
+    const match = matchByName(modules, args.module);
+    if (!match) {
+      throw new Error(
+        `Module inconnu : "${args.module}". Modules disponibles : ${modules.map((m) => m.name).join(", ")}.`,
+      );
+    }
+    moduleId = match.id;
+  }
+
   let assigneeId: string | null = null;
   if (args.assignee === "me") {
     assigneeId = actor.id;
@@ -249,6 +344,8 @@ export async function mcpCreateTicket(actor: Actor, args: CreateTicketArgs) {
       description: args.description?.trim() || null,
       typeId,
       priorityId,
+      componentId,
+      moduleId,
       assigneeId,
     },
     actor.id,
@@ -262,6 +359,9 @@ export async function mcpCreateTicket(actor: Actor, args: CreateTicketArgs) {
     status: ticket.column.name,
     type: ticket.type.name,
     priority: ticket.priority.name,
+    // Module effectif applique par le service : confirme lequel des deux a pris.
+    module: effectiveModule(ticket)?.name ?? null,
+    component: ticket.component?.name ?? null,
     assignee: personName(ticket.assignee),
     message: `Ticket ${ticket.key} cree.`,
   };

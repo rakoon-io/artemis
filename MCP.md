@@ -62,13 +62,56 @@ Pour les clients qui ne gèrent pas l'expansion de variables (ex.
 |-------|-------|
 | `list_projects` | Projets accessibles a l'assistant. |
 | `list_statuses` | Statuts (colonnes) d'un projet. |
-| `list_tickets` | Tickets d'un projet (filtres `status`, `assignee`, `limit`). |
-| `get_ticket` | Detail d'un ticket (description, commentaires, etc.). |
-| `create_ticket` | Cree un ticket (type / priorite / assigne optionnels). |
+| `list_modules` | Modules fonctionnels d'un projet (nom, description, composants regroupes). |
+| `list_components` | Composants applicatifs d'un projet (nom, nature, description). |
+| `list_tickets` | Tickets d'un projet (filtres `status`, `assignee`, `component`, `module`, `limit`). |
+| `get_ticket` | Detail d'un ticket (description, module, composant, commentaires, etc.). |
+| `create_ticket` | Cree un ticket (type / priorite / composant / module / assigne optionnels). |
 | `take_ticket` | Prend un ticket en charge : se l'assigne et le passe en cours. |
 | `comment_ticket` | Ajoute un commentaire. |
 | `move_ticket` | Change le statut d'un ticket pris en charge. |
 | `update_ticket` | Met a jour le titre / la description d'un ticket pris en charge. |
+
+### Modules
+
+Au-dessus des composants, chaque projet declare ses **modules fonctionnels**
+(Parametres du projet -> Modules) : un pan du produit a grosse maille (« Gestion
+des utilisateurs ») avec un nom et une description facultative. Un module
+regroupe plusieurs composants. Tout est facultatif : un projet peut n'en declarer
+aucun.
+
+- `list_modules` renvoie les modules d'un projet avec, pour chacun, les noms des
+  composants qu'il regroupe : c'est la vue d'ensemble a lire en premier pour
+  situer une demande.
+- `create_ticket` accepte `module` (nom du module, insensible a la casse ; sans
+  valeur, aucun module). Un nom inconnu provoque une erreur qui liste les modules
+  disponibles.
+- **Precedence** : un ticket ne porte jamais un module ET un composant. Des qu'un
+  `component` est fourni, le module retenu est celui de ce composant et
+  l'argument `module` est simplement ignore (aucune erreur). Le `module` sert
+  donc aux demandes trop larges pour designer un composant precis.
+- `list_tickets` accepte `module` : le filtre ramene les tickets rattaches au
+  module **directement** comme ceux qui le sont **via leur composant**.
+- `get_ticket`, `list_tickets` et `create_ticket` renvoient le champ `module`
+  (nom du module effectif - celui du composant s'il y en a un, sinon celui du
+  ticket - ou `null`).
+
+### Composants
+
+Chaque projet declare ses **composants applicatifs** (Parametres du projet ->
+Composants) : une brique de l'application avec un nom, une **nature** (`PAGE`,
+`SHARED` ou `SERVICE`) et une description facultative. Rattacher un ticket a un
+composant situe la demande dans l'application et donne du contexte a l'assistant.
+
+- `list_components` renvoie les composants d'un projet ; c'est le point de depart
+  pour connaitre les noms acceptes.
+- `create_ticket` accepte `component` (nom du composant, insensible a la casse ;
+  sans valeur, le ticket n'est rattache a aucun composant). Un nom inconnu
+  provoque une erreur qui liste les composants disponibles.
+- `list_tickets` accepte `component` pour ne garder que les tickets d'un
+  composant donne.
+- `get_ticket`, `list_tickets` et `create_ticket` renvoient le champ `component`
+  (nom du composant, ou `null`).
 
 ## Regles d'autorisation
 
@@ -83,3 +126,7 @@ Pour les clients qui ne gèrent pas l'expansion de variables (ex.
 
 Un flux typique : `list_tickets` (assignee `unassigned`) -> `take_ticket` ->
 `comment_ticket` (avancement) -> `move_ticket` vers « Terminé ».
+
+Pour signaler un besoin : `list_modules` (vue d'ensemble) -> `list_components`
+-> `create_ticket` avec le `component` concerne, ou a defaut le `module` seul si
+la demande est trop large pour viser un composant.

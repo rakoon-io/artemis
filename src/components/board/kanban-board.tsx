@@ -35,7 +35,13 @@ import { fmt } from "@/i18n";
 import { moveTicketAction } from "@/server/actions/board.actions";
 import { createTicketAction } from "@/server/actions/ticket.actions";
 import type { getBoardData } from "@/server/queries";
-import type { PriorityOption, TicketTypeOption } from "@/components/ticket/ticket-fields";
+import type {
+  ComponentOption,
+  ModuleOption,
+  PriorityOption,
+  TicketTypeOption,
+} from "@/components/ticket/ticket-fields";
+import { effectiveModule } from "@/lib/effective-module";
 import { BoardColumn } from "./board-column";
 import { TicketCardView } from "./ticket-card";
 
@@ -51,6 +57,8 @@ type Filters = {
   assigneeId?: string;
   typeId?: string;
   priorityId?: string;
+  componentId?: string;
+  moduleId?: string;
   labelId?: string;
 };
 
@@ -67,6 +75,13 @@ function makeMatcher(filters: Filters) {
     }
     if (filters.typeId && ticket.type.id !== filters.typeId) return false;
     if (filters.priorityId && ticket.priority.id !== filters.priorityId) {
+      return false;
+    }
+    if (filters.componentId && ticket.componentId !== filters.componentId) {
+      return false;
+    }
+    // Module EFFECTIF : via le composant, ou porté en propre par le ticket.
+    if (filters.moduleId && effectiveModule(ticket)?.id !== filters.moduleId) {
       return false;
     }
     if (filters.labelId && !ticket.labels.some((l) => l.labelId === filters.labelId)) {
@@ -95,6 +110,8 @@ export function KanbanBoard({
   members,
   types,
   priorities,
+  components,
+  modules,
   className,
   action,
 }: {
@@ -105,6 +122,10 @@ export function KanbanBoard({
   members: Member[];
   types: TicketTypeOption[];
   priorities: PriorityOption[];
+  /** Catalogue du projet ; vide = le filtre « Composant » n'est pas rendu. */
+  components: ComponentOption[];
+  /** Modules du projet ; vide = le filtre « Module » n'est pas rendu. */
+  modules: ModuleOption[];
   className?: string;
   /** Élément affiché à droite de la barre de filtres (ex. « Nouveau ticket »). */
   action?: ReactNode;
@@ -166,6 +187,8 @@ export function KanbanBoard({
     !!filters.assigneeId ||
     !!filters.typeId ||
     !!filters.priorityId ||
+    !!filters.componentId ||
+    !!filters.moduleId ||
     !!filters.labelId;
 
   const announcements: Announcements = useMemo(() => {
@@ -330,6 +353,34 @@ export function KanbanBoard({
             }))}
             onChange={(value) => setFilters((f) => ({ ...f, priorityId: value }))}
           />
+          {/* Filtre « Module » : masqué tant que le projet n'en déclare aucun. */}
+          {modules.length > 0 && (
+            <FilterMenu
+              label={t.board.filterModule}
+              value={filters.moduleId}
+              options={modules.map((module) => ({
+                value: module.id,
+                label: module.name,
+                color: module.color,
+              }))}
+              onChange={(value) => setFilters((f) => ({ ...f, moduleId: value }))}
+            />
+          )}
+          {/* Filtre « Composant » : masqué tant que le projet n'en déclare aucun. */}
+          {components.length > 0 && (
+            <FilterMenu
+              label={t.board.filterComponent}
+              value={filters.componentId}
+              options={components.map((component) => ({
+                value: component.id,
+                label: component.name,
+                color: component.color,
+              }))}
+              onChange={(value) =>
+                setFilters((f) => ({ ...f, componentId: value }))
+              }
+            />
+          )}
           <FilterMenu
             label={t.board.filterLabel}
             value={filters.labelId}

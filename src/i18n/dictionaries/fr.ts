@@ -3,6 +3,7 @@ import { board } from "./fr/board";
 import { tickets } from "./fr/tickets";
 import { ticketForm } from "./fr/ticketForm";
 import { ticketDetail } from "./fr/ticketDetail";
+import { aiTickets } from "./fr/aiTickets";
 import { sprints } from "./fr/sprints";
 import { wiki } from "./fr/wiki";
 import { settings } from "./fr/settings";
@@ -25,6 +26,17 @@ export const fr = {
     delete: "Supprimer",
     create: "Créer",
     edit: "Modifier",
+    // Edition en place : un texte devient un champ au clic (titre et
+    // description d'un ticket, nom et description des modules/composants).
+    // `editAria` interpole {field} via `fmt`.
+    inline: {
+      editAria: "Modifier {field}",
+      hint: "Entrée pour valider, Échap pour annuler",
+      hintMultiline: "⌘/Ctrl + Entrée pour valider, Échap pour annuler",
+      empty: "Ajouter…",
+      required: "Ce champ ne peut pas être vide.",
+      saved: "Modification enregistrée.",
+    },
     loading: "Chargement…",
     search: "Rechercher",
     genericError: "Une erreur est survenue. Réessayez.",
@@ -70,6 +82,7 @@ export const fr = {
   tickets,
   ticketForm,
   ticketDetail,
+  aiTickets,
   sprints,
   wiki,
   settings,
