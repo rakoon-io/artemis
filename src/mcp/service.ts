@@ -5,8 +5,14 @@ import { listColumns } from "@/server/services/column.service";
 import { createComment } from "@/server/services/comment.service";
 import { listAccessibleProjectIds } from "@/server/services/membership.service";
 import { getProjectByKey, listProjects } from "@/server/services/project.service";
-import { moveTicket, updateTicket } from "@/server/services/ticket.service";
-import { notifyNewComment } from "@/server/notifications";
+import { listTicketPriorities } from "@/server/services/ticketpriority.service";
+import { listTicketTypes } from "@/server/services/tickettype.service";
+import {
+  createTicket,
+  moveTicket,
+  updateTicket,
+} from "@/server/services/ticket.service";
+import { notifyNewComment, notifyTicketAssigned } from "@/server/notifications";
 import type { Actor } from "./actor";
 import {
   findUserIdByEmail,
@@ -33,13 +39,21 @@ function clampLimit(limit?: number): number {
   return Math.min(MAX_LIMIT, Math.floor(limit));
 }
 
+/** Element nomme par nom (exact insensible a la casse, sinon sous-chaine). */
+function matchByName<T extends { name: string }>(
+  items: T[],
+  name: string,
+): T | undefined {
+  const s = name.trim().toLowerCase();
+  return (
+    items.find((i) => i.name.toLowerCase() === s) ??
+    items.find((i) => i.name.toLowerCase().includes(s))
+  );
+}
+
 /** Colonne par nom (exact insensible a la casse, sinon sous-chaine). */
 function matchColumn(cols: Column[], status: string): Column | undefined {
-  const s = status.trim().toLowerCase();
-  return (
-    cols.find((c) => c.name.toLowerCase() === s) ??
-    cols.find((c) => c.name.toLowerCase().includes(s))
-  );
+  return matchByName(cols, status);
 }
 
 /** Colonne « en cours » (meilleur effort) pour la prise en charge. */
@@ -172,6 +186,84 @@ export async function mcpGetTicket(actor: Actor, key: string) {
       body: c.body,
       at: c.createdAt.toISOString(),
     })),
+  };
+}
+
+export interface CreateTicketArgs {
+  projectKey: string;
+  title: string;
+  description?: string;
+  type?: string; // nom du type ; a defaut : type par defaut du projet
+  priority?: string; // nom de la priorite ; a defaut : priorite par defaut
+  assignee?: string; // "me" | e-mail ; a defaut : non assigne
+}
+
+/**
+ * Cree un ticket dans la 1re colonne du projet (l'acteur en est le rapporteur).
+ * Type / priorite sont resolus par nom au sein du projet ; sans valeur, le
+ * service applique les valeurs par defaut du projet. Requiert l'acces au projet.
+ */
+export async function mcpCreateTicket(actor: Actor, args: CreateTicketArgs) {
+  const project = await requireProject(actor, args.projectKey);
+  const title = args.title.trim();
+  if (!title) throw new Error("Le titre du ticket est obligatoire.");
+
+  let typeId: string | undefined;
+  if (args.type) {
+    const types = await listTicketTypes(project.id);
+    const match = matchByName(types, args.type);
+    if (!match) {
+      throw new Error(
+        `Type inconnu : "${args.type}". Types disponibles : ${types.map((t) => t.name).join(", ")}.`,
+      );
+    }
+    typeId = match.id;
+  }
+
+  let priorityId: string | undefined;
+  if (args.priority) {
+    const priorities = await listTicketPriorities(project.id);
+    const match = matchByName(priorities, args.priority);
+    if (!match) {
+      throw new Error(
+        `Priorite inconnue : "${args.priority}". Priorites disponibles : ${priorities.map((p) => p.name).join(", ")}.`,
+      );
+    }
+    priorityId = match.id;
+  }
+
+  let assigneeId: string | null = null;
+  if (args.assignee === "me") {
+    assigneeId = actor.id;
+  } else if (args.assignee) {
+    assigneeId = await findUserIdByEmail(args.assignee);
+    if (!assigneeId) {
+      throw new Error(`Aucun utilisateur avec l'e-mail "${args.assignee}".`);
+    }
+  }
+
+  const ticket = await createTicket(
+    {
+      projectId: project.id,
+      title,
+      description: args.description?.trim() || null,
+      typeId,
+      priorityId,
+      assigneeId,
+    },
+    actor.id,
+  );
+  // Notifie l'assigne (fire-and-forget) si ce n'est pas l'acteur lui-meme.
+  void notifyTicketAssigned(ticket.id, assigneeId, actor.id);
+  return {
+    ok: true,
+    key: ticket.key,
+    title: ticket.title,
+    status: ticket.column.name,
+    type: ticket.type.name,
+    priority: ticket.priority.name,
+    assignee: personName(ticket.assignee),
+    message: `Ticket ${ticket.key} cree.`,
   };
 }
 

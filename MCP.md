@@ -32,7 +32,10 @@ npm run mcp
 
 ## Configurer un client MCP
 
-Exemple de configuration (format `claude_desktop_config.json` et compatibles) :
+Un exemple prêt à l'emploi est fourni à la racine du dépôt dans
+[`.mcp.json`](./.mcp.json) (format reconnu par Claude Code et compatibles). Il
+utilise l'expansion `${VAR}` pour **ne coder aucun secret** : les valeurs sont
+lues depuis l'environnement.
 
 ```json
 {
@@ -40,15 +43,18 @@ Exemple de configuration (format `claude_desktop_config.json` et compatibles) :
     "artemis": {
       "command": "npm",
       "args": ["run", "--silent", "mcp"],
-      "cwd": "/chemin/absolu/vers/artemis",
       "env": {
-        "DATABASE_URL": "postgresql://user:pass@localhost:5432/artemis",
-        "ARTEMIS_MCP_ACTOR_EMAIL": "bot@rakoon.io"
+        "DATABASE_URL": "${DATABASE_URL}",
+        "ARTEMIS_MCP_ACTOR_EMAIL": "${ARTEMIS_MCP_ACTOR_EMAIL:-bot@rakoon.io}"
       }
     }
   }
 }
 ```
+
+Pour les clients qui ne gèrent pas l'expansion de variables (ex.
+`claude_desktop_config.json`), renseignez les valeurs directement et ajoutez
+`"cwd": "/chemin/absolu/vers/artemis"` — **sans committer** de secret.
 
 ## Outils exposes
 
@@ -58,6 +64,7 @@ Exemple de configuration (format `claude_desktop_config.json` et compatibles) :
 | `list_statuses` | Statuts (colonnes) d'un projet. |
 | `list_tickets` | Tickets d'un projet (filtres `status`, `assignee`, `limit`). |
 | `get_ticket` | Detail d'un ticket (description, commentaires, etc.). |
+| `create_ticket` | Cree un ticket (type / priorite / assigne optionnels). |
 | `take_ticket` | Prend un ticket en charge : se l'assigne et le passe en cours. |
 | `comment_ticket` | Ajoute un commentaire. |
 | `move_ticket` | Change le statut d'un ticket pris en charge. |
@@ -70,6 +77,8 @@ Exemple de configuration (format `claude_desktop_config.json` et compatibles) :
   l'IA ne prend pas le travail de quelqu'un d'autre.
 - `move_ticket` et `update_ticket` ne s'appliquent qu'aux tickets **assignes a
   l'acteur** : l'IA ne modifie que ce qu'elle a pris en charge.
+- `create_ticket` cree le ticket dans un projet **accessible** a l'acteur (qui en
+  devient le rapporteur), a l'image de tout membre du projet.
 - `comment_ticket` et la lecture sont possibles sur tout ticket accessible.
 
 Un flux typique : `list_tickets` (assignee `unassigned`) -> `take_ticket` ->

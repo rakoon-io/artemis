@@ -1,0 +1,13 @@
+{
+  "$comment": "Exemple de configuration pour connecter un agent de codage au serveur MCP Artemis (transport stdio). Ce format est reconnu par Claude Code et compatibles. Aucun secret n'est ecrit ici : les valeurs sont lues depuis l'environnement via l'expansion ${VAR}. Renseignez DATABASE_URL (et si besoin ARTEMIS_MCP_ACTOR_EMAIL) dans votre .env / shell avant de lancer l'agent.",
+  "mcpServers": {
+    "artemis": {
+      "command": "npm",
+      "args": ["run", "--silent", "mcp"],
+      "env": {
+        "DATABASE_URL": "${DATABASE_URL}",
+        "ARTEMIS_MCP_ACTOR_EMAIL": "${ARTEMIS_MCP_ACTOR_EMAIL:-bot@rakoon.io}"
+      }
+    }
+  }
+}

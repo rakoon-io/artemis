@@ -4,6 +4,7 @@ import { z } from "zod";
 import { resolveActor } from "./actor";
 import {
   mcpCommentTicket,
+  mcpCreateTicket,
   mcpGetTicket,
   mcpListProjects,
   mcpListStatuses,
@@ -98,6 +99,49 @@ async function main() {
       inputSchema: { key: z.string().describe("Cle du ticket, ex. RKN-3") },
     },
     async ({ key }) => runTool(() => mcpGetTicket(actor, key)),
+  );
+
+  server.registerTool(
+    "create_ticket",
+    {
+      title: "Creer un ticket",
+      description:
+        "Cree un ticket dans un projet (place dans la 1re colonne du workflow). " +
+        "L'assistant en est le rapporteur. Type, priorite et assigne sont " +
+        "optionnels ; sans valeur, les defauts du projet s'appliquent.",
+      inputSchema: {
+        project: z.string().describe("Cle du projet, ex. RKN"),
+        title: z.string().min(1).max(200).describe("Titre du ticket"),
+        description: z
+          .string()
+          .max(20000)
+          .optional()
+          .describe("Description du ticket (Markdown)"),
+        type: z
+          .string()
+          .optional()
+          .describe("Nom du type (defaut : type par defaut du projet)"),
+        priority: z
+          .string()
+          .optional()
+          .describe("Nom de la priorite (defaut : priorite par defaut du projet)"),
+        assignee: z
+          .string()
+          .optional()
+          .describe('"me" ou un e-mail (defaut : non assigne)'),
+      },
+    },
+    async ({ project, title, description, type, priority, assignee }) =>
+      runTool(() =>
+        mcpCreateTicket(actor, {
+          projectKey: project,
+          title,
+          description,
+          type,
+          priority,
+          assignee,
+        }),
+      ),
   );
 
   server.registerTool(
