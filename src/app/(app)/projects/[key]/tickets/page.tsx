@@ -106,6 +106,7 @@ export default async function TicketsListPage({
           {aiEnabled && (
             <GenerateTicketsDialog
               projectId={project.id}
+              projectName={project.name}
               types={types}
               priorities={priorities}
             />

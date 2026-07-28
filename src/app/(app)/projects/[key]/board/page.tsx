@@ -13,6 +13,8 @@ import {
 } from "@/server/queries";
 import { KanbanBoard, type CurrentUser } from "@/components/board/kanban-board";
 import { CreateTicketDialog } from "@/components/ticket/create-ticket-dialog";
+import { GenerateTicketsDialog } from "@/components/ticket/generate-tickets-dialog";
+import { isMistralConfigured } from "@/lib/mistral";
 
 /**
  * Vue Kanban d'un projet (RSC). Charge le projet, ses colonnes/tickets ordonnés
@@ -42,6 +44,10 @@ export default async function BoardPage({
     ? { id: session.user.id, role: session.user.role ?? Role.REPORTER }
     : { id: "", role: Role.REPORTER };
 
+  // Bouton « Créer depuis un texte » (notes de réunion → tickets) visible sur le
+  // Kanban uniquement si l'intégration IA est configurée côté serveur.
+  const aiEnabled = isMistralConfigured();
+
   return (
     <KanbanBoard
       className="h-[calc(100dvh-12rem)]"
@@ -53,14 +59,24 @@ export default async function BoardPage({
       types={types}
       priorities={priorities}
       action={
-        <CreateTicketDialog
-          projectId={project.id}
-          members={members}
-          sprints={sprints}
-          labels={labels}
-          types={types}
-          priorities={priorities}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          {aiEnabled && (
+            <GenerateTicketsDialog
+              projectId={project.id}
+              projectName={project.name}
+              types={types}
+              priorities={priorities}
+            />
+          )}
+          <CreateTicketDialog
+            projectId={project.id}
+            members={members}
+            sprints={sprints}
+            labels={labels}
+            types={types}
+            priorities={priorities}
+          />
+        </div>
       }
     />
   );

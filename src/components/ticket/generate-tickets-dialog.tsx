@@ -30,6 +30,7 @@ import {
   createTicketsFromDraftsAction,
   suggestTicketsFromTextAction,
 } from "@/server/actions/ai-ticket.actions";
+import { ContextField } from "@/components/ai/context-field";
 import type { PriorityOption, TicketTypeOption } from "./ticket-fields";
 
 /** Brouillon éditable dans l'écran de revue (uid local pour clé stable). */
@@ -52,10 +53,13 @@ interface EditableDraft {
  */
 export function GenerateTicketsDialog({
   projectId,
+  projectName,
   types,
   priorities,
 }: {
   projectId: string;
+  /** Nom du projet : sert à indiquer que son contexte est pris en compte. */
+  projectName: string;
   types: TicketTypeOption[];
   priorities: PriorityOption[];
 }) {
@@ -64,6 +68,7 @@ export function GenerateTicketsDialog({
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<"input" | "review">("input");
   const [text, setText] = useState("");
+  const [context, setContext] = useState("");
   const [drafts, setDrafts] = useState<EditableDraft[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -73,6 +78,7 @@ export function GenerateTicketsDialog({
   function reset() {
     setStep("input");
     setText("");
+    setContext("");
     setDrafts([]);
   }
 
@@ -91,7 +97,11 @@ export function GenerateTicketsDialog({
     }
 
     setAnalyzing(true);
-    const result = await suggestTicketsFromTextAction({ projectId, text: trimmed });
+    const result = await suggestTicketsFromTextAction({
+      projectId,
+      text: trimmed,
+      context: context.trim() ? context.trim() : null,
+    });
     setAnalyzing(false);
 
     if (!result.ok) {
@@ -176,9 +186,9 @@ export function GenerateTicketsDialog({
             <DialogHeader>
               <DialogTitle>Créer des tickets depuis un texte</DialogTitle>
               <DialogDescription>
-                Collez un compte-rendu, un e-mail ou une liste de tâches. L&apos;IA
-                (Mistral) en propose un ou plusieurs tickets que vous relirez avant
-                création.
+                Collez vos notes de réunion, un compte-rendu, un e-mail ou une liste
+                de tâches. L&apos;IA (Mistral) en propose un ou plusieurs tickets que
+                vous relirez avant création.
               </DialogDescription>
             </DialogHeader>
 
@@ -201,6 +211,18 @@ export function GenerateTicketsDialog({
                   ajuster ensuite.
                 </p>
               </div>
+
+              <ContextField
+                id="ai-ticket-context"
+                value={context}
+                onChange={setContext}
+                label="Contexte / consignes (facultatif)"
+                rows={3}
+                maxLength={4000}
+                placeholder="Ex. : audience technique, module concerné, style des titres, priorité par défaut…"
+                description={`Le contexte du projet « ${projectName} » (nom, description) est pris en compte automatiquement. Ajoutez ici des consignes propres à cette demande.`}
+                disabled={analyzing}
+              />
 
               <DialogFooter>
                 <DialogClose asChild>

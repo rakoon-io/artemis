@@ -35,6 +35,31 @@ interface BatchJob {
   error_file?: string;
 }
 
+/** Tokens consommés par un appel chat, tels que renvoyés par l'API Mistral. */
+export interface ChatUsage {
+  promptTokens: number;
+  completionTokens: number;
+}
+
+interface ChatCallResult {
+  content: string;
+  /** Absent si l'API n'a pas renvoyé de bloc `usage` (ne devrait pas arriver). */
+  usage: ChatUsage | null;
+}
+
+/** Normalise le bloc `usage` optionnel d'une réponse Mistral. */
+function extractUsage(raw: unknown): ChatUsage | null {
+  const usage = raw as
+    | { prompt_tokens?: number; completion_tokens?: number }
+    | null
+    | undefined;
+  if (!usage || typeof usage !== "object") return null;
+  const promptTokens = Number(usage.prompt_tokens);
+  const completionTokens = Number(usage.completion_tokens);
+  if (!Number.isFinite(promptTokens) || !Number.isFinite(completionTokens)) return null;
+  return { promptTokens, completionTokens };
+}
+
 const DEFAULT_CHAT_URL = "https://api.mistral.ai/v1/chat/completions";
 const DEFAULT_API_BASE = "https://api.mistral.ai";
 // Mistral Medium 3.5 (alias d'API). Pin daté équivalent : "mistral-medium-3-5-26-04".
@@ -68,6 +93,11 @@ export interface GenerateTicketDraftsOptions {
   priorities?: string[];
   /** Limite haute de tickets à produire (bornée par `MAX_GENERATED_TICKETS`). */
   maxTickets?: number;
+  /**
+   * Contexte libre à injecter dans le prompt système pour orienter la génération
+   * (métadonnées projet, consignes utilisateur…). Assemblé par la couche service.
+   */
+  context?: string;
 }
 
 /** Vrai si l'intégration Mistral est configurée (clé API présente). */
@@ -128,22 +158,36 @@ async function fetchOrThrow(
   return res;
 }
 
-/** Construit le prompt système, en injectant types/priorités disponibles. */
+/** Construit le prompt système, en injectant types/priorités et contexte éventuel. */
 function buildSystemPrompt(opts: {
   types?: string[];
   priorities?: string[];
   maxTickets: number;
+  context?: string;
 }): string {
   const typeList = opts.types?.length ? opts.types.join(", ") : "(aucun imposé)";
   const prioList = opts.priorities?.length
     ? opts.priorities.join(", ")
     : "(aucune imposée)";
-  return [
+  const lines: string[] = [
     "Tu es un assistant qui transforme un texte libre (notes de réunion, e-mail,",
     "compte-rendu, liste de tâches…) en tickets de suivi clairs et actionnables.",
     "Analyse le texte et identifie chaque tâche/problème distinct : produis un",
     `ticket par élément identifié, au maximum ${opts.maxTickets}. Si le texte ne`,
     "décrit qu'une seule tâche, renvoie un unique ticket.",
+  ];
+
+  const context = opts.context?.trim();
+  if (context) {
+    lines.push(
+      "",
+      "Contexte de la demande (à prendre en compte pour rédiger les tickets, sans",
+      "inventer d'information qui n'y figure pas) :",
+      context,
+    );
+  }
+
+  lines.push(
     "",
     "Réponds STRICTEMENT en JSON valide, sans texte ni balise autour, avec la forme :",
     '{ "tickets": [ { "title": string, "description": string, "type": string|null, "priority": string|null } ] }',
@@ -153,8 +197,9 @@ function buildSystemPrompt(opts: {
     "- description : détails utiles issus du texte (contexte, critères). Peut être vide (\"\").",
     `- type : l'un de ces types EXACTS si pertinent, sinon null : ${typeList}.`,
     `- priority : l'une de ces priorités EXACTES si pertinent, sinon null : ${prioList}.`,
-    "- N'invente aucune information absente du texte.",
-  ].join("\n");
+    "- N'invente aucune information absente du texte ni du contexte.",
+  );
+  return lines.join("\n");
 }
 
 /** Parse et normalise la réponse JSON du modèle en brouillons de tickets. */
@@ -209,7 +254,7 @@ async function callChatSync(
   apiKey: string,
   model: string,
   messages: ChatMessage[],
-): Promise<string> {
+): Promise<ChatCallResult> {
   const url = process.env.MISTRAL_API_URL || DEFAULT_CHAT_URL;
   const res = await fetchOrThrow(
     url,
@@ -226,14 +271,15 @@ async function callChatSync(
   );
   const payload = (await res.json().catch(() => null)) as {
     choices?: Array<{ message?: { content?: string } }>;
+    usage?: unknown;
   } | null;
   const content = payload?.choices?.[0]?.message?.content;
   if (!content) throw new Error("Réponse vide de l'API Mistral.");
-  return content;
+  return { content, usage: extractUsage(payload?.usage) };
 }
 
-/** Extrait le contenu texte de la 1re ligne du JSONL de sortie d'un job batch. */
-function extractBatchContent(jsonl: string): string {
+/** Extrait le contenu texte (+ usage) de la 1re ligne du JSONL de sortie d'un job batch. */
+function extractBatchContent(jsonl: string): ChatCallResult {
   const lines = jsonl
     .split("\n")
     .map((l) => l.trim())
@@ -248,14 +294,19 @@ function extractBatchContent(jsonl: string): string {
   }
   const entry = parsed as {
     error?: unknown;
-    response?: { body?: { choices?: Array<{ message?: { content?: string } }> } };
+    response?: {
+      body?: {
+        choices?: Array<{ message?: { content?: string } }>;
+        usage?: unknown;
+      };
+    };
   };
   if (entry.error) {
     throw new Error("Une requête du lot Mistral a échoué (voir logs Mistral).");
   }
   const content = entry.response?.body?.choices?.[0]?.message?.content;
   if (!content) throw new Error("Réponse vide dans le lot Mistral.");
-  return content;
+  return { content, usage: extractUsage(entry.response?.body?.usage) };
 }
 
 /**
@@ -266,7 +317,7 @@ async function callChatBatch(
   apiKey: string,
   model: string,
   messages: ChatMessage[],
-): Promise<string> {
+): Promise<ChatCallResult> {
   const base = apiBase();
   const authHeader = { Authorization: `Bearer ${apiKey}` };
 
@@ -361,6 +412,13 @@ async function callChatBatch(
   return extractBatchContent(outText);
 }
 
+/** Résultat de `generateTicketDrafts` : brouillons + usage (pour le suivi de coût). */
+export interface GenerateTicketDraftsResult {
+  drafts: TicketDraft[];
+  /** `null` si l'API n'a pas renvoyé de bloc `usage` (suivi de coût alors ignoré). */
+  usage: ChatUsage | null;
+}
+
 /**
  * Appelle Mistral pour extraire des brouillons de tickets d'un texte libre.
  * Utilise le mode batch (défaut) ou synchrone selon `MISTRAL_USE_BATCH`. Lève une
@@ -370,7 +428,7 @@ async function callChatBatch(
 export async function generateTicketDrafts(
   text: string,
   options: GenerateTicketDraftsOptions = {},
-): Promise<TicketDraft[]> {
+): Promise<GenerateTicketDraftsResult> {
   const apiKey = process.env.MISTRAL_API_KEY;
   if (!apiKey) throw new Error("L'intégration Mistral n'est pas configurée.");
 
@@ -390,12 +448,13 @@ export async function generateTicketDrafts(
         types: options.types,
         priorities: options.priorities,
         maxTickets,
+        context: options.context,
       }),
     },
     { role: "user", content: trimmed },
   ];
 
-  const content = isBatchEnabled()
+  const { content, usage } = isBatchEnabled()
     ? await callChatBatch(apiKey, model, messages)
     : await callChatSync(apiKey, model, messages);
 
@@ -403,5 +462,5 @@ export async function generateTicketDrafts(
   if (drafts.length === 0) {
     throw new Error("Aucun ticket n'a pu être extrait du texte fourni.");
   }
-  return drafts.slice(0, maxTickets);
+  return { drafts: drafts.slice(0, maxTickets), usage };
 }

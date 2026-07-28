@@ -258,3 +258,14 @@ model WikiPage {
   @@index([projectId])
   @@index([parentId])
 }
+
+// Cumul de dépense IA (Mistral) par jour UTC - plafond configurable (ex. mode
+// démo : AI_DAILY_BUDGET_USD). Coût exprimé en millionièmes de dollar (micro-USD)
+// pour éviter l'arithmétique flottante. Une ligne par jour, incrémentée à chaque
+// appel réussi (voir src/lib/ai-budget.ts).
+model AiUsageDay {
+  date       String   @id // "YYYY-MM-DD" (UTC)
+  costMicros Int      @default(0)
+  callCount  Int      @default(0)
+  updatedAt  DateTime @updatedAt
+}

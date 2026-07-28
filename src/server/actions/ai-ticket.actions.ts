@@ -7,15 +7,13 @@ import {
   createTicketsFromDraftsSchema,
   generateTicketsFromTextSchema,
 } from "@/lib/validators";
-import {
-  generateTicketDrafts,
-  isMistralConfigured,
-  MAX_GENERATED_TICKETS,
-} from "@/lib/mistral";
+import { isBatchEnabled, isMistralConfigured } from "@/lib/mistral";
+import { assertAiBudgetAvailable, estimateCostMicros, recordAiUsage } from "@/lib/ai-budget";
 import { rateLimit } from "@/lib/rate-limit";
 import { createTicket } from "@/server/services/ticket.service";
 import { listTicketTypes } from "@/server/services/tickettype.service";
 import { listTicketPriorities } from "@/server/services/ticketpriority.service";
+import { suggestTicketsForProject } from "@/server/services/ai-ticket.service";
 import { revalidateBoardAndList, withUser } from "./helpers";
 import type { ActionResult } from "./types";
 
@@ -76,17 +74,24 @@ export async function suggestTicketsFromTextAction(
       };
     }
 
-    // Types/priorités du projet : servent à mapper le nom suggéré par l'IA -> id.
-    const [types, priorities] = await Promise.all([
-      listTicketTypes(data.projectId),
-      listTicketPriorities(data.projectId),
-    ]);
+    // Garde-fou budget : plafond de dépense IA quotidien (ex. mode démo). Lève
+    // une erreur (message FR) si le budget du jour est déjà consommé.
+    await assertAiBudgetAvailable();
 
-    const drafts = await generateTicketDrafts(data.text, {
-      types: types.map((t) => t.name),
-      priorities: priorities.map((p) => p.name),
-      maxTickets: MAX_GENERATED_TICKETS,
-    });
+    // Contextualisation + appel Mistral délégués au service dédié : il charge le
+    // projet + sa taxonomie, assemble le contexte (infos projet + consignes) et
+    // renvoie brouillons, usage (coût) et les types/priorités pour le mapping.
+    const { drafts, usage, types, priorities } = await suggestTicketsForProject(
+      data.text,
+      { projectId: data.projectId, instructions: data.context ?? null },
+    );
+
+    if (usage) {
+      const costMicros = estimateCostMicros(usage.promptTokens, usage.completionTokens, {
+        batch: isBatchEnabled(),
+      });
+      await recordAiUsage(costMicros);
+    }
 
     const tickets: SuggestedTicket[] = drafts.map((draft) => ({
       title: draft.title,

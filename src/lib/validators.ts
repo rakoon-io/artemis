@@ -86,6 +86,13 @@ export const generateTicketsFromTextSchema = z.object({
     .trim()
     .min(1, "Collez un texte à analyser.")
     .max(20000, "Texte trop long (20000 caractères maximum)."),
+  // Contexte / consignes libres pour orienter la génération (facultatif).
+  context: z
+    .string()
+    .trim()
+    .max(4000, "Contexte trop long (4000 caractères maximum).")
+    .optional()
+    .nullable(),
 });
 
 /** Un brouillon de ticket, tel que validé dans l'écran de revue (avant création). */
