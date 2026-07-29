@@ -7,6 +7,7 @@ import {
   canCreateTicket,
   canEditTicket,
   canMoveTicket,
+  canProposeTaxonomy,
 } from "./policies";
 
 const admin = { id: "u-admin", role: Role.ADMIN };
@@ -57,5 +58,26 @@ describe("policies (RBAC)", () => {
     expect(canAccessProject(reporter, false)).toBe(false);
     // Non connecté : jamais.
     expect(canAccessProject(null, true)).toBe(false);
+  });
+
+  it("proposer une brique de structure est ouvert à tout utilisateur connecté", () => {
+    // C'est le point de la fonctionnalité : un rapporteur PROPOSE, il ne
+    // configure pas. La validation, elle, reste une action d'administration.
+    expect(canProposeTaxonomy(reporter)).toBe(true);
+    expect(canProposeTaxonomy(admin)).toBe(true);
+    expect(canProposeTaxonomy(null)).toBe(false);
+    expect(canProposeTaxonomy(undefined)).toBe(false);
+  });
+
+  it("valider une proposition et configurer la structure restent réservés à l'Admin", () => {
+    for (const action of [
+      "review_proposals",
+      "manage_modules",
+      "manage_components",
+    ] as const) {
+      expect(can(admin, action)).toBe(true);
+      expect(can(reporter, action)).toBe(false);
+      expect(can(null, action)).toBe(false);
+    }
   });
 });

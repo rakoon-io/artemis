@@ -148,6 +148,15 @@ export function getModules(projectId: string) {
   return moduleService.listModules(projectId);
 }
 
+/** Propositions en attente (modules puis composants), pour la file de validation. */
+export function getProposedModules(projectId: string) {
+  return moduleService.listProposedModules(projectId);
+}
+
+export function getProposedComponents(projectId: string) {
+  return componentService.listProposedComponents(projectId);
+}
+
 /** Modules avec leurs composants, pour les vues à deux niveaux et le contexte IA. */
 export function getModulesWithComponents(projectId: string) {
   return moduleService.listModulesWithComponents(projectId);

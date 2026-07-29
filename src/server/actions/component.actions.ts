@@ -1,15 +1,19 @@
 "use server";
 
 import type { z } from "zod";
-import { assert, isAdmin } from "@/lib/policies";
+import { assert, can, canProposeTaxonomy, isAdmin } from "@/lib/policies";
+import { assertProjectAccess } from "@/server/access";
 import {
   createComponentSchema,
   reorderComponentsSchema,
   updateComponentSchema,
 } from "@/lib/validators";
 import {
+  approveComponent,
   createComponent,
   deleteComponent,
+  proposeComponent,
+  rejectComponent,
   reorderComponents,
   updateComponent,
 } from "@/server/services/component.service";
@@ -79,6 +83,50 @@ export async function deleteComponentAction(id: string): Promise<ActionResult> {
         error: error instanceof Error ? error.message : "Suppression impossible.",
       };
     }
+    revalidateBoardAndList();
+    return { ok: true };
+  });
+}
+
+/**
+ * PROPOSE un composant (rapporteur). Ouverte à tout membre du projet, d'où la
+ * vérification d'accès ; la proposition n'est utilisable qu'une fois validée.
+ */
+export async function proposeComponentAction(
+  input: z.input<typeof createComponentSchema>,
+): Promise<ActionResult<{ id: string }>> {
+  return withUser<{ id: string }>(async (user) => {
+    assert(
+      canProposeTaxonomy(user),
+      "Vous devez être connecté pour proposer un composant.",
+    );
+    const data = createComponentSchema.parse(input);
+    await assertProjectAccess(user, data.projectId);
+    const created = await proposeComponent({
+      ...data,
+      moduleId: data.moduleId ?? null,
+      proposedById: user.id,
+    });
+    revalidateBoardAndList();
+    return { ok: true, data: { id: created.id } };
+  });
+}
+
+/** Valide une proposition de composant. Réservé à l'Admin. */
+export async function approveComponentAction(id: string): Promise<ActionResult> {
+  return withUser(async (user) => {
+    assert(can(user, "review_proposals"), FORBIDDEN);
+    await approveComponent(id);
+    revalidateBoardAndList();
+    return { ok: true };
+  });
+}
+
+/** Refuse (et supprime) une proposition de composant. Réservé à l'Admin. */
+export async function rejectComponentAction(id: string): Promise<ActionResult> {
+  return withUser(async (user) => {
+    assert(can(user, "review_proposals"), FORBIDDEN);
+    await rejectComponent(id);
     revalidateBoardAndList();
     return { ok: true };
   });

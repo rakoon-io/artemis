@@ -21,6 +21,9 @@ export function ProjectNav({ projectKey, isAdmin }: ProjectNavProps) {
     { href: `${base}/tickets`, label: t.settings.nav.tickets },
     { href: `${base}/sprints`, label: t.settings.nav.sprints },
     { href: `${base}/wiki`, label: t.settings.nav.wiki },
+    // Structure : ouverte à TOUT membre du projet (consultation + propositions),
+    // contrairement à Paramètres qui reste réservé aux administrateurs.
+    { href: `${base}/structure`, label: t.settings.nav.structure },
     ...(isAdmin
       ? [{ href: `${base}/settings`, label: t.settings.nav.settings }]
       : []),

@@ -25,6 +25,18 @@ enum EmailStatus {
   DISABLED
 }
 
+// Cycle de validation d'une brique de structure (module, composant) proposée par
+// un rapporteur. Un ADMIN crée directement en APPROVED ; un rapporteur soumet en
+// PROPOSED. Tant qu'une proposition n'est pas validée, elle n'apparaît NI dans les
+// sélecteurs de ticket, NI dans le contexte transmis à l'IA, NI via MCP : la
+// validation est ce qui la fait exister pour le reste de l'application.
+// Refuser une proposition la supprime : n'étant référencée par aucun ticket, il
+// n'y a pas d'orphelin à gérer, et l'on évite un cimetière d'entrées rejetées.
+enum ProposalStatus {
+  PROPOSED
+  APPROVED
+}
+
 // Nature d'un composant applicatif (cf. model Component).
 //   PAGE    - un écran / une route de l'application ;
 //   SHARED  - un composant réutilisable (design system, widget partagé) ;
@@ -36,20 +48,22 @@ enum ComponentKind {
 }
 
 model User {
-  id           String       @id @default(cuid())
-  email        String       @unique
-  name         String?
-  passwordHash String?
-  role         Role         @default(REPORTER)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  reported     Ticket[]        @relation("reporter")
-  assigned     Ticket[]        @relation("assignee")
-  comments     Comment[]
-  attachments  Attachment[]
-  wikiPages    WikiPage[]
-  memberships  ProjectMember[]
-  setupToken   PasswordSetupToken?
+  id                 String              @id @default(cuid())
+  email              String              @unique
+  name               String?
+  passwordHash       String?
+  role               Role                @default(REPORTER)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  reported           Ticket[]            @relation("reporter")
+  assigned           Ticket[]            @relation("assignee")
+  comments           Comment[]
+  attachments        Attachment[]
+  wikiPages          WikiPage[]
+  memberships        ProjectMember[]
+  setupToken         PasswordSetupToken?
+  proposedModules    Module[]            @relation("moduleProposals")
+  proposedComponents Component[]         @relation("componentProposals")
 }
 
 // Jeton de premiere connexion / reinitialisation : lien a usage unique et date
@@ -162,20 +176,27 @@ model TicketPriority {
 // (écrans, briques partagées, services) et sert à situer une demande à maille
 // large. Entièrement facultatif : un projet peut n'en déclarer aucun.
 model Module {
-  id          String      @id @default(cuid())
-  projectId   String
-  project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  name        String
-  description String? // contexte libre (périmètre fonctionnel du module)
-  color       String // hex, ex : "#0EA5E9"
-  order       Int
-  components  Component[]
-  tickets     Ticket[]
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id           String         @id @default(cuid())
+  projectId    String
+  project      Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name         String
+  description  String? // contexte libre (périmètre fonctionnel du module)
+  color        String // hex, ex : "#0EA5E9"
+  order        Int
+  // Validation : APPROVED par défaut (création par un admin, et données existantes).
+  status       ProposalStatus @default(APPROVED)
+  // Auteur de la proposition, pour que l'admin sache qui la demande. `SetNull` :
+  // la suppression d'un compte ne doit pas emporter la brique de structure.
+  proposedById String?
+  proposedBy   User?          @relation("moduleProposals", fields: [proposedById], references: [id], onDelete: SetNull)
+  components   Component[]
+  tickets      Ticket[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 
   @@unique([projectId, name])
   @@index([projectId])
+  @@index([projectId, status])
 }
 
 // Composant applicatif d'un projet : la brique fonctionnelle CONCERNÉE par une
@@ -185,25 +206,30 @@ model Module {
 // du composant : elle est affichée dans l'UI et injectée dans le contexte
 // transmis à l'IA lors de la génération de tickets.
 model Component {
-  id          String        @id @default(cuid())
-  projectId   String
-  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id           String         @id @default(cuid())
+  projectId    String
+  project      Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
   // Module de rattachement (facultatif). Les composants transverses - typiquement
   // les `SHARED`, qui servent plusieurs modules - n'en ont volontairement aucun.
-  moduleId    String?
-  module      Module?       @relation(fields: [moduleId], references: [id], onDelete: SetNull)
-  name        String
-  kind        ComponentKind @default(PAGE)
-  description String? // contexte libre (rôle, périmètre, contraintes)
-  color       String // hex, ex : "#8B5CF6"
-  order       Int
-  tickets     Ticket[]
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  moduleId     String?
+  module       Module?        @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  name         String
+  kind         ComponentKind  @default(PAGE)
+  description  String? // contexte libre (rôle, périmètre, contraintes)
+  color        String // hex, ex : "#8B5CF6"
+  order        Int
+  // Validation : voir `ProposalStatus`. Même logique que pour un module.
+  status       ProposalStatus @default(APPROVED)
+  proposedById String?
+  proposedBy   User?          @relation("componentProposals", fields: [proposedById], references: [id], onDelete: SetNull)
+  tickets      Ticket[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 
   @@unique([projectId, name])
   @@index([projectId])
   @@index([moduleId])
+  @@index([projectId, status])
 }
 
 model Ticket {

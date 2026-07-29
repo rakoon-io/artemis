@@ -8,6 +8,7 @@ import { aiTickets } from "./en/aiTickets";
 import { sprints } from "./en/sprints";
 import { wiki } from "./en/wiki";
 import { settings } from "./en/settings";
+import { structure } from "./en/structure";
 import { taxonomy } from "./en/taxonomy";
 import { admin } from "./en/admin";
 
@@ -84,6 +85,7 @@ export const en: Messages = {
   sprints,
   wiki,
   settings,
+  structure,
   taxonomy,
   admin,
 };

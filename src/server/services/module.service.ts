@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { Prisma } from "@prisma/client";
+import { Prisma, ProposalStatus } from "@prisma/client";
 
 /**
  * Service Module fonctionnel - accès données pur (autorisation dans les actions).
@@ -23,14 +23,74 @@ function rethrowBusinessError(error: unknown): never {
 }
 
 /**
- * Modules d'un projet, ordonnés. Le nom départage les `order` égaux (deux
+ * Modules VALIDÉS d'un projet, ordonnés. Le nom départage les `order` égaux (deux
  * créations concurrentes peuvent calculer le même rang), pour que l'ordre reste
  * stable d'une requête à l'autre - listes comme prompt IA.
+ *
+ * Le filtre sur `APPROVED` est le DÉFAUT, volontairement : tous les appelants
+ * existants (sélecteurs de ticket, contexte IA, serveur MCP) excluent ainsi les
+ * propositions sans avoir à y penser. Seules les vues de validation demandent
+ * explicitement à les voir.
  */
 export function listModules(projectId: string) {
   return prisma.module.findMany({
-    where: { projectId },
+    where: { projectId, status: ProposalStatus.APPROVED },
     orderBy: [{ order: "asc" }, { name: "asc" }],
+  });
+}
+
+/** Propositions de modules en attente de validation, plus anciennes d'abord. */
+export function listProposedModules(projectId: string) {
+  return prisma.module.findMany({
+    where: { projectId, status: ProposalStatus.PROPOSED },
+    orderBy: { createdAt: "asc" },
+    include: { proposedBy: { select: { name: true, email: true } } },
+  });
+}
+
+/**
+ * Enregistre une PROPOSITION de module (rapporteur). Elle est placée en fin de
+ * liste et reste invisible des sélecteurs tant qu'un admin ne l'a pas validée.
+ */
+export async function proposeModule(
+  input: CreateModuleServiceInput & { proposedById: string },
+) {
+  const aggregate = await prisma.module.aggregate({
+    where: { projectId: input.projectId },
+    _max: { order: true },
+  });
+  try {
+    return await prisma.module.create({
+      data: {
+        projectId: input.projectId,
+        name: input.name,
+        description: input.description ?? null,
+        color: input.color,
+        order: (aggregate._max.order ?? -1) + 1,
+        status: ProposalStatus.PROPOSED,
+        proposedById: input.proposedById,
+      },
+    });
+  } catch (error) {
+    rethrowBusinessError(error);
+  }
+}
+
+/** Valide une proposition : le module devient utilisable partout. */
+export function approveModule(id: string) {
+  return prisma.module.update({
+    where: { id },
+    data: { status: ProposalStatus.APPROVED, proposedById: null },
+  });
+}
+
+/**
+ * Refuse une proposition : on la supprime. N'étant jamais sélectionnable avant
+ * validation, elle n'est référencée par aucun ticket - aucun orphelin possible.
+ */
+export function rejectModule(id: string) {
+  return prisma.module.deleteMany({
+    where: { id, status: ProposalStatus.PROPOSED },
   });
 }
 
@@ -40,10 +100,11 @@ export function listModules(projectId: string) {
  */
 export function listModulesWithComponents(projectId: string) {
   return prisma.module.findMany({
-    where: { projectId },
+    where: { projectId, status: ProposalStatus.APPROVED },
     orderBy: [{ order: "asc" }, { name: "asc" }],
     include: {
       components: {
+        where: { status: ProposalStatus.APPROVED },
         orderBy: [{ order: "asc" }, { name: "asc" }],
         select: { id: true, name: true, kind: true, description: true, color: true },
       },

@@ -32,6 +32,9 @@ travail configurable**.
 | Gérer les colonnes / workflow | | |
 | Créer / gérer les sprints & lots | | |
 | Gérer les labels | | |
+| Consulter modules & composants | | |
+| **Proposer** un module / un composant | | |
+| **Valider / refuser** une proposition | | |
 | Gérer les utilisateurs & rôles | | |
 | Supprimer un ticket / projet | | |
 | Paramètres & personnalisation du projet | | |
@@ -97,6 +100,21 @@ Deux niveaux **facultatifs** décrivent *de quelle partie du produit* parle une 
 - Le catalogue est **inhérent au projet** : aucun composant par défaut n'est créé à la création
   d'un projet (contrairement aux types et priorités). Tant qu'il est vide, l'interface se comporte
   comme si la notion n'existait pas (ni champ, ni filtre).
+
+#### Propositions (rapporteurs)
+
+- Les **rapporteurs** consultent modules et composants en **lecture seule**, sur la page
+  **Structure** du projet — distincte des **Paramètres**, qui restent réservés aux administrateurs :
+  on *consulte* et l'on *propose* dans Structure, on *configure* dans Paramètres.
+- Tout membre du projet peut **proposer** un module ou un composant. La proposition est
+  enregistrée avec le statut `PROPOSED` (`ProposalStatus`) et l'auteur (`proposedById`).
+- Tant qu'elle n'est pas validée, une proposition **n'existe pour personne d'autre** : absente des
+  sélecteurs de ticket, du contexte transmis à l'IA et du serveur MCP. C'est la **validation** par
+  un administrateur qui la rend utilisable.
+- L'administrateur **valide** (`APPROVED`) ou **refuse**. Refuser **supprime** la proposition :
+  n'ayant jamais été sélectionnable, elle n'est référencée par aucun ticket — aucun orphelin.
+- La couleur n'est pas demandée au proposant (choix de présentation relevant de l'administrateur) :
+  une teinte neutre est appliquée, ajustable après validation.
 
 #### Module effectif d'un ticket (invariant)
 - Le module **effectif** d'un ticket est **celui de son composant** dès qu'il en a un.

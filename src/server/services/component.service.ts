@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { Prisma, type ComponentKind } from "@prisma/client";
+import { Prisma, ProposalStatus, type ComponentKind } from "@prisma/client";
 
 /**
  * Service Composant applicatif - accès données pur (autorisation dans les actions).
@@ -42,9 +42,67 @@ const moduleSelect = { select: { id: true, name: true, color: true } } as const;
  */
 export function listComponents(projectId: string) {
   return prisma.component.findMany({
-    where: { projectId },
+    where: { projectId, status: ProposalStatus.APPROVED },
     orderBy: [{ order: "asc" }, { name: "asc" }],
     include: { module: moduleSelect },
+  });
+}
+
+/** Propositions de composants en attente de validation, plus anciennes d'abord. */
+export function listProposedComponents(projectId: string) {
+  return prisma.component.findMany({
+    where: { projectId, status: ProposalStatus.PROPOSED },
+    orderBy: { createdAt: "asc" },
+    include: {
+      module: moduleSelect,
+      proposedBy: { select: { name: true, email: true } },
+    },
+  });
+}
+
+/**
+ * Enregistre une PROPOSITION de composant (rapporteur). Invisible des sélecteurs
+ * et du contexte IA tant qu'un admin ne l'a pas validée.
+ */
+export async function proposeComponent(
+  input: CreateComponentServiceInput & { proposedById: string },
+) {
+  const aggregate = await prisma.component.aggregate({
+    where: { projectId: input.projectId },
+    _max: { order: true },
+  });
+  const moduleId = await coherentModuleId(input.projectId, input.moduleId ?? null);
+  try {
+    return await prisma.component.create({
+      data: {
+        projectId: input.projectId,
+        name: input.name,
+        kind: input.kind,
+        moduleId: moduleId ?? null,
+        description: input.description ?? null,
+        color: input.color,
+        order: (aggregate._max.order ?? -1) + 1,
+        status: ProposalStatus.PROPOSED,
+        proposedById: input.proposedById,
+      },
+    });
+  } catch (error) {
+    rethrowBusinessError(error);
+  }
+}
+
+/** Valide une proposition : le composant devient utilisable partout. */
+export function approveComponent(id: string) {
+  return prisma.component.update({
+    where: { id },
+    data: { status: ProposalStatus.APPROVED, proposedById: null },
+  });
+}
+
+/** Refuse une proposition : suppression (jamais référencée par un ticket). */
+export function rejectComponent(id: string) {
+  return prisma.component.deleteMany({
+    where: { id, status: ProposalStatus.PROPOSED },
   });
 }
 

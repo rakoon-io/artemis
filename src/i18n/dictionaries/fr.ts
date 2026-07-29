@@ -7,6 +7,7 @@ import { aiTickets } from "./fr/aiTickets";
 import { sprints } from "./fr/sprints";
 import { wiki } from "./fr/wiki";
 import { settings } from "./fr/settings";
+import { structure } from "./fr/structure";
 import { taxonomy } from "./fr/taxonomy";
 import { admin } from "./fr/admin";
 
@@ -88,6 +89,7 @@ export const fr = {
   sprints,
   wiki,
   settings,
+  structure,
   taxonomy,
   admin,
 };

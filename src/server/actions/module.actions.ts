@@ -1,15 +1,19 @@
 "use server";
 
 import type { z } from "zod";
-import { assert, isAdmin } from "@/lib/policies";
+import { assert, can, canProposeTaxonomy, isAdmin } from "@/lib/policies";
+import { assertProjectAccess } from "@/server/access";
 import {
   createModuleSchema,
   reorderModulesSchema,
   updateModuleSchema,
 } from "@/lib/validators";
 import {
+  approveModule,
   createModule,
   deleteModule,
+  proposeModule,
+  rejectModule,
   reorderModules,
   updateModule,
 } from "@/server/services/module.service";
@@ -76,6 +80,48 @@ export async function deleteModuleAction(id: string): Promise<ActionResult> {
         error: error instanceof Error ? error.message : "Suppression impossible.",
       };
     }
+    revalidateBoardAndList();
+    return { ok: true };
+  });
+}
+
+/**
+ * PROPOSE un module (rapporteur). Contrairement aux actions ci-dessus, elle est
+ * ouverte à tout membre du projet - d'où la vérification d'accès au projet, que
+ * les actions réservées à l'admin n'ont pas besoin de faire (un administrateur
+ * accède à tous les projets).
+ *
+ * La proposition reste invisible des sélecteurs, de l'IA et du MCP tant qu'un
+ * administrateur ne l'a pas validée.
+ */
+export async function proposeModuleAction(
+  input: z.input<typeof createModuleSchema>,
+): Promise<ActionResult<{ id: string }>> {
+  return withUser<{ id: string }>(async (user) => {
+    assert(canProposeTaxonomy(user), "Vous devez être connecté pour proposer un module.");
+    const data = createModuleSchema.parse(input);
+    await assertProjectAccess(user, data.projectId);
+    const created = await proposeModule({ ...data, proposedById: user.id });
+    revalidateBoardAndList();
+    return { ok: true, data: { id: created.id } };
+  });
+}
+
+/** Valide une proposition de module. Réservé à l'Admin. */
+export async function approveModuleAction(id: string): Promise<ActionResult> {
+  return withUser(async (user) => {
+    assert(can(user, "review_proposals"), FORBIDDEN);
+    await approveModule(id);
+    revalidateBoardAndList();
+    return { ok: true };
+  });
+}
+
+/** Refuse (et supprime) une proposition de module. Réservé à l'Admin. */
+export async function rejectModuleAction(id: string): Promise<ActionResult> {
+  return withUser(async (user) => {
+    assert(can(user, "review_proposals"), FORBIDDEN);
+    await rejectModule(id);
     revalidateBoardAndList();
     return { ok: true };
   });

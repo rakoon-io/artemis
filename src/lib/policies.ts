@@ -25,6 +25,9 @@ export type AdminAction =
   | "manage_columns"
   | "manage_sprints"
   | "manage_labels"
+  | "manage_modules"
+  | "manage_components"
+  | "review_proposals"
   | "manage_users"
   | "manage_members"
   | "delete_ticket";
@@ -45,6 +48,19 @@ export function canAccessProject(
   if (!user) return false;
   if (isAdmin(user)) return true;
   return isMember;
+}
+
+/**
+ * PROPOSER une brique de structure (module, composant) : ouvert à tout membre du
+ * projet, rapporteurs compris. La proposition ne devient utilisable qu'une fois
+ * VALIDÉE par un administrateur (`review_proposals`) - c'est la validation qui la
+ * fait exister pour les tickets, l'IA et le serveur MCP.
+ *
+ * L'appartenance au projet n'est pas vérifiable ici (cette fonction reste pure) :
+ * les actions appellent `assertProjectAccess` en complément.
+ */
+export function canProposeTaxonomy(user: PolicyUser | null | undefined): boolean {
+  return !!user;
 }
 
 /** Tout utilisateur connecté peut créer un ticket / commenter. */

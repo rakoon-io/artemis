@@ -8,6 +8,7 @@ export const settings: SettingsDict = {
     tickets: "Tickets",
     sprints: "Sprints",
     wiki: "Wiki",
+    structure: "Structure",
     settings: "Settings",
     ariaLabel: "Project navigation",
   },

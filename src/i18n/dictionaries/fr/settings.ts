@@ -11,6 +11,7 @@ export const settings = {
     tickets: "Tickets",
     sprints: "Sprints",
     wiki: "Wiki",
+    structure: "Structure",
     settings: "Paramètres",
     ariaLabel: "Navigation du projet",
   },
