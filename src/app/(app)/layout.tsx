@@ -51,8 +51,13 @@ export default async function AppLayout({
       <main className="w-full flex-1">{children}</main>
       <footer className="flex items-center justify-center gap-2 border-t py-4 text-center text-xs text-muted-foreground">
         <span>Développé par Thomas Broussard</span>
-        <span aria-hidden>·</span>
-        <GithubLink />
+        {isDemo && (
+          <>
+            {/* Idem : séparateur et lien vont de pair. */}
+            <span aria-hidden>·</span>
+            <GithubLink />
+          </>
+        )}
       </footer>
     </div>
   );
