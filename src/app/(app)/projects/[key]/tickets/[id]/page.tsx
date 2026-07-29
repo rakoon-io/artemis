@@ -23,6 +23,7 @@ import {
   getSprints,
   getTicketDetail,
   getTicketPriorities,
+  getTicketRefs,
   getTicketTypes,
 } from "@/server/queries";
 import {
@@ -38,9 +39,16 @@ import { CommentList } from "@/components/ticket/comment-list";
 import { DeleteTicketButton } from "@/components/ticket/delete-ticket-button";
 import { EditTicketDialog } from "@/components/ticket/edit-ticket-dialog";
 import {
-  TicketDescriptionInline,
+  TicketAssigneeInline,
+  TicketComponentInline,
+  TicketLabelsInline,
+  TicketModuleInline,
+  TicketPriorityInline,
+  TicketSprintInline,
   TicketTitleInline,
+  TicketTypeInline,
 } from "@/components/ticket/ticket-inline-fields";
+import { TicketDescription } from "@/components/ticket/ticket-description";
 import { fmt } from "@/i18n";
 import { getDictionary } from "@/i18n/server";
 
@@ -75,6 +83,11 @@ export default async function TicketDetailPage({
 
   // Module effectif : celui du composant s'il y en a un, sinon celui du ticket.
   const ticketModule = effectiveModule(ticket);
+
+  // Références de tickets du projet : elles servent en LECTURE (résolution des
+  // citations « RKN-123 » en liens) autant qu'en édition (autocomplétion « @ »),
+  // donc chargées quels que soient les droits.
+  const ticketRefs = await getTicketRefs(ticket.projectId);
 
   let editData:
     | {
@@ -131,11 +144,29 @@ export default async function TicketDetailPage({
             />
           </h1>
           <div className="flex flex-wrap items-center gap-2">
-            <ColorBadge name={ticket.type.name} color={ticket.type.color} />
-            <ColorBadge
-              name={ticket.priority.name}
-              color={ticket.priority.color}
-            />
+            <span className="inline-flex">
+              <TicketTypeInline
+                ticketId={ticket.id}
+                value={ticket.type.id}
+                types={editData?.types ?? []}
+                canEdit={canEdit}
+              >
+                <ColorBadge name={ticket.type.name} color={ticket.type.color} />
+              </TicketTypeInline>
+            </span>
+            <span className="inline-flex">
+              <TicketPriorityInline
+                ticketId={ticket.id}
+                value={ticket.priority.id}
+                priorities={editData?.priorities ?? []}
+                canEdit={canEdit}
+              >
+                <ColorBadge
+                  name={ticket.priority.name}
+                  color={ticket.priority.color}
+                />
+              </TicketPriorityInline>
+            </span>
             {ticketModule && (
               <ModuleBadge name={ticketModule.name} color={ticketModule.color} />
             )}
@@ -195,9 +226,11 @@ export default async function TicketDetailPage({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <TicketDescriptionInline
+              <TicketDescription
                 ticketId={ticket.id}
                 value={ticket.description}
+                projectKey={project.key}
+                tickets={ticketRefs}
                 canEdit={canEdit}
               />
             </CardContent>
@@ -297,27 +330,39 @@ export default async function TicketDetailPage({
                 label={t.ticketDetail.reporter}
                 name={ticket.reporter.name ?? ticket.reporter.email}
               />
-              <MetaPerson
-                label={t.ticketDetail.assignee}
-                name={
-                  ticket.assignee
-                    ? (ticket.assignee.name ?? ticket.assignee.email)
-                    : null
-                }
-              />
+              <div>
+                <p className="text-xs text-muted-foreground">
+                  {t.ticketDetail.assignee}
+                </p>
+                <TicketAssigneeInline
+                  ticketId={ticket.id}
+                  value={ticket.assigneeId}
+                  members={editData?.members ?? []}
+                  canEdit={canEdit}
+                />
+              </div>
               <div>
                 <p className="text-xs text-muted-foreground">
                   {t.ticketDetail.sprint}
                 </p>
-                <p className="mt-0.5">
-                  {ticket.sprint?.name ?? t.ticketDetail.backlog}
-                </p>
+                <TicketSprintInline
+                  ticketId={ticket.id}
+                  value={ticket.sprintId}
+                  sprints={editData?.sprints ?? []}
+                  canEdit={canEdit}
+                />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">
                   {t.ticketDetail.module}
                 </p>
-                <div className="mt-1">
+                <TicketModuleInline
+                  ticketId={ticket.id}
+                  value={ticket.moduleId}
+                  modules={editData?.modules ?? []}
+                  hasComponent={ticket.componentId != null}
+                  canEdit={canEdit}
+                >
                   {ticketModule ? (
                     <ModuleBadge
                       name={ticketModule.name}
@@ -328,13 +373,18 @@ export default async function TicketDetailPage({
                       {t.ticketDetail.noModule}
                     </span>
                   )}
-                </div>
+                </TicketModuleInline>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">
                   {t.ticketDetail.component}
                 </p>
-                <div className="mt-1">
+                <TicketComponentInline
+                  ticketId={ticket.id}
+                  value={ticket.componentId}
+                  components={editData?.components ?? []}
+                  canEdit={canEdit}
+                >
                   {ticket.component ? (
                     <ComponentBadge
                       name={ticket.component.name}
@@ -347,27 +397,34 @@ export default async function TicketDetailPage({
                       {t.ticketDetail.noComponent}
                     </span>
                   )}
-                </div>
+                </TicketComponentInline>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">
                   {t.ticketDetail.labels}
                 </p>
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {ticket.labels.length > 0 ? (
-                    ticket.labels.map((l) => (
-                      <LabelChip
-                        key={l.labelId}
-                        name={l.label.name}
-                        color={l.label.color}
-                      />
-                    ))
-                  ) : (
-                    <span className="text-muted-foreground">
-                      {t.ticketDetail.noLabels}
-                    </span>
-                  )}
-                </div>
+                <TicketLabelsInline
+                  ticketId={ticket.id}
+                  value={ticket.labels.map((l) => l.labelId)}
+                  labels={editData?.labels ?? []}
+                  canEdit={canEdit}
+                >
+                  <span className="flex flex-wrap gap-1">
+                    {ticket.labels.length > 0 ? (
+                      ticket.labels.map((l) => (
+                        <LabelChip
+                          key={l.labelId}
+                          name={l.label.name}
+                          color={l.label.color}
+                        />
+                      ))
+                    ) : (
+                      <span className="text-muted-foreground">
+                        {t.ticketDetail.noLabels}
+                      </span>
+                    )}
+                  </span>
+                </TicketLabelsInline>
               </div>
               <Separator />
               <div className="grid grid-cols-2 gap-3">

@@ -26,6 +26,8 @@ export const fr = {
     delete: "Supprimer",
     create: "Créer",
     edit: "Modifier",
+    expand: "Agrandir",
+    collapse: "Réduire",
     // Edition en place : un texte devient un champ au clic (titre et
     // description d'un ticket, nom et description des modules/composants).
     // `editAria` interpole {field} via `fmt`.

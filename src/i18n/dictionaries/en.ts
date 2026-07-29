@@ -23,6 +23,8 @@ export const en: Messages = {
     delete: "Delete",
     create: "Create",
     edit: "Edit",
+    expand: "Expand",
+    collapse: "Collapse",
     // Edition en place : un texte devient un champ au clic (titre et
     // description d'un ticket, nom et description des modules/composants).
     // `editAria` interpole {field} via `fmt`.

@@ -12,6 +12,8 @@ export const ticketDetail = {
   // Sections
   description: "Description",
   noDescription: "Aucune description.",
+  descriptionPlaceholder:
+    "Décrivez la demande en Markdown : listes, titres, code, tableaux… Tapez « @ » pour citer un ticket.",
   attachments: "Pièces jointes ({count})",
   noAttachments: "Aucune pièce jointe.",
   comments: "Commentaires ({count})",
