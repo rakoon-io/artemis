@@ -34,8 +34,17 @@ export function ProjectNav({ projectKey, isAdmin }: ProjectNavProps) {
     // `overflow-x-auto`, c'est la PAGE ENTIÈRE qui se décalait vers la droite et
     // qu'il fallait faire glisser pour lire la moindre ligne. La barre défile
     // désormais pour elle seule - et non l'inverse.
+    // `pb-px` : en CSS, dès qu'un axe de débordement vaut autre chose que
+    // `visible`, l'autre bascule de `visible` à `auto`. Le `-mb-px` des onglets
+    // - qui fait chevaucher leur soulignement sur la bordure de la barre - les
+    // faisait dépasser d'un pixel, et ce pixel suffisait à faire naître un
+    // ascenseur VERTICAL sur toute la hauteur de la fenêtre.
+    //
+    // Un pixel de remplissage bas ABSORBE ce dépassement, plutôt que de le
+    // masquer par `overflow-y-hidden` : rien n'est rogné, le soulignement de
+    // l'onglet actif garde ses deux pixels pleins.
     <nav
-      className="flex items-center gap-1 overflow-x-auto border-b"
+      className="flex items-center gap-1 overflow-x-auto border-b pb-px"
       aria-label={t.settings.nav.ariaLabel}
     >
       {tabs.map((tab) => {

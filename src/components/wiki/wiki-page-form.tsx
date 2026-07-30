@@ -24,11 +24,18 @@ import {
 import { useDict } from "@/i18n/provider";
 
 /**
- * Formulaire pleine page de création / édition d'une page de wiki.
+ * Formulaire de création / édition d'une page de wiki.
  *
  * La saisie du contenu est déléguée à `MarkdownEditor` (barre d'outils, aperçu,
  * citation de tickets par « @ ») : le même éditeur sert à la description d'un
  * ticket, si bien que les deux surfaces ne peuvent plus diverger.
+ *
+ * Il vivait sur SES PROPRES ROUTES, pleine page. On perdait alors le plan, la
+ * section où l'on se trouvait, la page qu'on était en train de lire : écrire
+ * demandait de quitter l'endroit d'où l'on écrivait, et revenir supposait de
+ * s'y retrouver. Le formulaire s'affiche désormais DANS la colonne de lecture,
+ * à la place de l'article et dans le même cadre - le reste de l'écran ne bouge
+ * pas. `backHref` dit où retourner : la page qu'on lisait, et non la racine.
  */
 
 /** Valeur du Select pour « aucune page parente » (Radix interdit la valeur vide). */
@@ -48,6 +55,7 @@ export function WikiPageForm({
   parents,
   defaultParentId,
   page,
+  backHref,
 }: {
   projectId: string;
   projectKey: string;
@@ -55,11 +63,14 @@ export function WikiPageForm({
   parents: ParentOption[];
   defaultParentId?: string | null;
   page?: { id: string; title: string; content: string; parentId: string | null };
+  /** Où mène « Annuler ». Par défaut la racine du wiki. */
+  backHref?: string;
 }) {
   const t = useDict();
   const router = useRouter();
   const isEdit = Boolean(page);
   const wikiHref = `/projects/${projectKey}/wiki`;
+  const cancelHref = backHref ?? wikiHref;
 
   const [title, setTitle] = useState(page?.title ?? "");
   const [content, setContent] = useState(page?.content ?? "");
@@ -154,7 +165,7 @@ export function WikiPageForm({
 
       <div className="flex items-center justify-end gap-2">
         <Button asChild type="button" variant="outline">
-          <Link href={wikiHref}>{t.common.cancel}</Link>
+          <Link href={cancelHref}>{t.common.cancel}</Link>
         </Button>
         <Button type="submit" disabled={submitting}>
           {submitting && <Loader2 className="animate-spin" />}

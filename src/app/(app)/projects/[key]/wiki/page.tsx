@@ -16,6 +16,7 @@ import {
   ancestorsOf,
   groupBySection,
   orderedTree,
+  parentOptions,
   sectionOfPage,
 } from "@/lib/wiki-tree";
 import { MAX_REVISIONS_LISTED } from "@/server/services/wiki.service";
@@ -29,6 +30,7 @@ import {
   getComponents,
   getModules,
   getTicketKeys,
+  getTicketRefs,
   getWikiPageSubjects,
   getWikiPages,
   getWikiSections,
@@ -45,6 +47,7 @@ import { MeetingControls } from "@/components/wiki/meeting-controls";
 import { NewMeetingButton } from "@/components/wiki/new-meeting-button";
 import { StructureWikiButton } from "@/components/wiki/structure-wiki-button";
 import { PageSubjects } from "@/components/wiki/page-subjects";
+import { WikiPageForm } from "@/components/wiki/wiki-page-form";
 import { MeetingView } from "@/components/wiki/meeting-view";
 import { PageOutline } from "@/components/wiki/page-outline";
 import { MeetingSection } from "@/components/wiki/meeting-editor";
@@ -92,7 +95,10 @@ export default async function WikiPage({
     p?: string;
     spec?: string;
     rev?: string;
+    /** « points » (compte rendu), « page » (titre/contenu), « new » (création). */
     edit?: string;
+    /** Parent proposé à la création. */
+    parent?: string;
   }>;
 }) {
   const { key } = await params;
@@ -209,6 +215,51 @@ export default async function WikiPage({
   const currentSection = current
     ? sectionOfPage(allPages, wikiSections, current.id)
     : null;
+
+  // ÉCRIRE SANS QUITTER L'ENDROIT. Le formulaire remplace l'article dans la
+  // colonne de lecture ; le plan, la section et le sommaire ne bougent pas.
+  const formMode =
+    sp.edit === "new" ? "new" : sp.edit === "page" && current ? "page" : null;
+
+  /**
+   * Parent proposé à la création, du plus explicite au plus contextuel :
+   *   1. celui que demande l'URL (bouton « Sous-page ») ;
+   *   2. sinon la SECTION où l'on se trouve - créer une page en lisant
+   *      l'implémentation, c'est vouloir une page d'implémentation ;
+   *   3. sinon la racine.
+   * C'est ce qui évite d'avoir à redire, dans un menu déroulant, ce que
+   * l'endroit d'où l'on clique disait déjà.
+   */
+  const askedParent =
+    sp.parent && allPages.some((page) => page.id === sp.parent) ? sp.parent : null;
+  const sectionRootHere = currentSection
+    ? (wikiSections.find((s) => s.kind === currentSection)?.rootPageId ?? null)
+    : null;
+  const newParentId = askedParent ?? sectionRootHere;
+
+  const [ticketRefs, parents] = formMode
+    ? await Promise.all([
+        getTicketRefs(project.id),
+        Promise.resolve(
+          parentOptions(allPages, formMode === "page" ? current!.id : undefined).map(
+            (node) => ({
+              id: node.page.id,
+              title: node.page.title,
+              depth: node.depth,
+            }),
+          ),
+        ),
+      ])
+    : [[], []];
+
+  /** Adresse d'une page en mode formulaire, sans perdre la recherche en cours. */
+  const formHref = (mode: "page" | "new", parentId?: string | null) => {
+    const params = new URLSearchParams();
+    if (current && mode === "page") params.set("page", current.slug ?? current.id);
+    params.set("edit", mode);
+    if (mode === "new" && parentId) params.set("parent", parentId);
+    return `/projects/${project.key}/wiki?${params.toString()}`;
+  };
   const documents = currentSection === "IMPLEMENTATION" && !frozen;
   const [modules, components, subjects] = documents
     ? await Promise.all([
@@ -306,7 +357,7 @@ export default async function WikiPage({
         parentId={meetingRootId}
       />
       <Button asChild>
-        <Link href={`/projects/${project.key}/wiki/new`}>
+        <Link href={formHref("new", sectionRootHere)}>
           <Plus />
           {t.wiki.newPage}
         </Link>
@@ -573,13 +624,58 @@ export default async function WikiPage({
                 <PageOutline headings={outlineHeadings} title={outlineTitle} />
               </div>
             )}
-            {current ? (
+            {formMode ? (
+              /* ÉCRITURE DANS LE MÊME CADRE que la lecture : mêmes bords, même
+                 relief, même place. On ne change pas d'écran pour écrire, on
+                 retourne la page. */
+              <article className="space-y-4 rounded-xl border bg-card p-4 shadow-sm sm:p-8">
+                <div className="space-y-1 border-b pb-4">
+                  <h2 className="text-xl font-semibold tracking-tight">
+                    {formMode === "new" ? t.wiki.newPage : t.wiki.form.editTitle}
+                  </h2>
+                  {/* OÙ la page va naître, dit en toutes lettres : le menu
+                      déroulant plus bas le répète, mais on ne le lit qu'après
+                      s'être demandé où l'on était. */}
+                  {formMode === "new" && (
+                    <p className="text-sm text-muted-foreground">
+                      {newParentId
+                        ? fmt(t.wiki.form.willBeCreatedUnder, {
+                            parent: pageById.get(newParentId)?.title ?? "",
+                          })
+                        : t.wiki.form.willBeCreatedAtRoot}
+                    </p>
+                  )}
+                </div>
+                <WikiPageForm
+                  projectId={project.id}
+                  projectKey={project.key}
+                  tickets={ticketRefs}
+                  parents={parents}
+                  defaultParentId={newParentId}
+                  backHref={
+                    current
+                      ? pageHref(current.id)
+                      : `/projects/${project.key}/wiki`
+                  }
+                  page={
+                    formMode === "page" && current
+                      ? {
+                          id: current.id,
+                          title: current.title,
+                          content: current.content,
+                          parentId: current.parentId,
+                        }
+                      : undefined
+                  }
+                />
+              </article>
+            ) : current ? (
               // La page du wiki est une PAGE : elle a des bords, une marge
               // intérieure, et se pose sur le fond au lieu de s'y fondre. Le
               // texte flottait jusqu'ici entre deux colonnes encadrées, seul
               // élément sans contour de l'écran - ce qui le faisait passer pour
               // un fond, et non pour le document qu'on vient lire.
-              <article className="space-y-4 rounded-lg border bg-card p-4 sm:p-6">
+              <article className="wiki-reading space-y-4 rounded-xl border bg-card p-4 shadow-sm sm:p-8">
                 <div className="flex flex-wrap items-start justify-between gap-3 border-b pb-4">
                   <div className="space-y-1">
                     {trail.length > 0 && (
@@ -665,7 +761,7 @@ export default async function WikiPage({
                   <div className="flex flex-wrap items-center gap-2">
                     <Button asChild variant="outline" size="sm">
                       <Link
-                        href={`/projects/${project.key}/wiki/new?parent=${current.id}`}
+                        href={formHref("new", current.id)}
                       >
                         <Plus />
                         {t.wiki.index.subpage}
@@ -673,7 +769,7 @@ export default async function WikiPage({
                     </Button>
                     <Button asChild variant="outline" size="sm">
                       <Link
-                        href={`/projects/${project.key}/wiki/${current.id}/edit`}
+                        href={formHref("page")}
                       >
                         <Pencil />
                         {t.common.edit}
@@ -799,7 +895,7 @@ export default async function WikiPage({
                     content={current.content}
                     canEdit
                     aiEnabled={isMistralConfigured()}
-                    defaultEditing={sp.edit === "1"}
+                    defaultEditing={sp.edit === "points"}
                   >
                     <MeetingView
                       content={current.content}

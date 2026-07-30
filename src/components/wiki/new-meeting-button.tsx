@@ -102,7 +102,7 @@ export function NewMeetingButton({
     }
     toast.success(t.wiki.meeting.created);
     setOpen(false);
-    // `edit=1` : on arrive dans l'éditeur de points, pas devant une page vide
+    // `edit=points` : on arrive dans l'éditeur de points, pas devant une page vide
     // qu'il faudrait encore songer à modifier.
     //
     // Pas de `router.refresh()` derrière : il relit la route COURANTE et annule
@@ -110,7 +110,7 @@ export function NewMeetingButton({
     // créée mais jamais ouverte. La page étant rendue côté serveur, la
     // navigation suffit à la charger fraîche.
     const handle = res.data?.slug ?? res.data?.id;
-    router.push(`/projects/${projectKey}/wiki?page=${handle}&edit=1`);
+    router.push(`/projects/${projectKey}/wiki?page=${handle}&edit=points`);
   }
 
   return (

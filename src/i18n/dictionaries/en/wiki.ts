@@ -47,6 +47,8 @@ export const wiki: WikiDict = {
     markdownHelpAfter: " to mention a task (it becomes a link).",
     nothingToPreview: "Nothing to preview yet.",
     createSubmit: "Create page",
+    willBeCreatedUnder: "Will be created under “{parent}”",
+    willBeCreatedAtRoot: "Will be created at the wiki root.",
 
     // Bascule entre saisie assistee et Markdown brut
     modeRich: "Formatted",

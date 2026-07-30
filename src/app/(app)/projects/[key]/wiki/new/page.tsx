@@ -1,17 +1,15 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { redirect } from "next/navigation";
 
-import { auth } from "@/auth";
-import { parentOptions } from "@/lib/wiki-tree";
-import { getAccessibleProjectByKey } from "@/server/access";
-import { getTicketRefs, getWikiPages } from "@/server/queries";
-import { Button } from "@/components/ui/button";
-import { WikiPageForm } from "@/components/wiki/wiki-page-form";
-import { getDictionary } from "@/i18n/server";
-
-/** Création d'une page de wiki, pleine page (RSC + formulaire client). */
-export default async function NewWikiPage({
+/**
+ * Ancienne route de création, pleine page. Elle REDIRIGE désormais vers le wiki,
+ * qui ouvre le formulaire dans sa colonne de lecture (cf. `?edit=new`).
+ *
+ * Conservée plutôt que supprimée : des liens et des favoris la désignent, et un
+ * 404 sur « nouvelle page » serait une régression pour qui l'avait mise de côté.
+ * Elle n'a plus d'implémentation propre - une seule existe, celle du wiki, ce
+ * qui interdit aux deux de diverger.
+ */
+export default async function NewWikiPageRedirect({
   params,
   searchParams,
 }: {
@@ -20,44 +18,7 @@ export default async function NewWikiPage({
 }) {
   const { key } = await params;
   const { parent } = await searchParams;
-  const session = await auth();
-  const project = await getAccessibleProjectByKey(session?.user, key);
-  if (!project) notFound();
-  const t = await getDictionary();
-
-  const [tickets, pages] = await Promise.all([
-    getTicketRefs(project.id),
-    getWikiPages(project.id),
-  ]);
-  const parents = parentOptions(pages).map((n) => ({
-    id: n.page.id,
-    title: n.page.title,
-    depth: n.depth,
-  }));
-  // Le parent proposé (bouton « Sous-page ») n'est retenu que s'il existe.
-  const defaultParentId =
-    parent && pages.some((p) => p.id === parent) ? parent : null;
-
-  return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <div>
-        <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href={`/projects/${key}/wiki`}>
-            <ArrowLeft />
-            {t.wiki.title}
-          </Link>
-        </Button>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight">
-          {t.wiki.newPage}
-        </h1>
-      </div>
-      <WikiPageForm
-        projectId={project.id}
-        projectKey={project.key}
-        tickets={tickets}
-        parents={parents}
-        defaultParentId={defaultParentId}
-      />
-    </div>
-  );
+  const query = new URLSearchParams({ edit: "new" });
+  if (parent) query.set("parent", parent);
+  redirect(`/projects/${key}/wiki?${query.toString()}`);
 }

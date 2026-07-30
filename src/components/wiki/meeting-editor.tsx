@@ -855,7 +855,7 @@ export function MeetingSection({
   canEdit: boolean;
   aiEnabled?: boolean;
   /**
-   * Ouvrir directement sur l'éditeur. Posé par `?edit=1`, au retour de
+   * Ouvrir directement sur l'éditeur. Posé par `?edit=points`, au retour de
    * « Nouvelle réunion » : une page qui vient de naître n'a rien à faire lire,
    * elle attend qu'on l'écrive.
    */

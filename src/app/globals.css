@@ -279,17 +279,34 @@
 .wiki-prose > :first-child {
   @apply mt-0;
 }
+/* TITRES. Le niveau 2 est celui qui découpe réellement un document de wiki -
+   c'est lui qui reçoit la couleur d'accent, et lui seul : la teinte sert à
+   repérer les articulations d'un coup d'œil, pas à décorer chaque ligne.
+   Le niveau 1 se distingue par un filet plutôt que par une couleur, sans quoi
+   deux tons se disputeraient la tête de page. */
 .wiki-prose h1 {
-  @apply mt-6 text-xl font-semibold tracking-tight;
+  @apply mt-8 border-b pb-2 text-2xl font-semibold tracking-tight;
 }
 .wiki-prose h2 {
-  @apply mt-5 text-lg font-semibold tracking-tight;
+  @apply mt-6 text-lg font-semibold tracking-tight text-primary;
 }
 .wiki-prose h3 {
-  @apply mt-4 text-base font-semibold;
+  @apply mt-5 text-base font-semibold;
 }
 .wiki-prose h4 {
-  @apply mt-3 text-sm font-semibold;
+  @apply mt-4 text-sm font-semibold text-muted-foreground;
+}
+
+/* SURFACE DE LECTURE. Le `text-sm` de `.wiki-prose` convient à une description
+   de ticket ou à une cellule de tableau, où le texte est un renseignement parmi
+   d'autres. Sur la page d'un wiki, le texte EST la page : il mérite le corps et
+   l'interligne d'un document qu'on vient lire, pas d'un champ qu'on survole.
+   Classe à part, pour ne pas grossir les surfaces où le petit corps est juste. */
+.wiki-reading .wiki-prose {
+  @apply text-[0.9375rem] leading-7;
+}
+.wiki-reading .wiki-prose > * + * {
+  @apply mt-4;
 }
 .wiki-prose ul {
   @apply ml-5 list-disc space-y-1;
