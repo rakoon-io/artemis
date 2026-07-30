@@ -37,6 +37,8 @@
     "@dnd-kit/core": "latest",
     "@dnd-kit/sortable": "latest",
     "@dnd-kit/utilities": "latest",
+    "@milkdown/kit": "^7.21.3",
+    "@milkdown/react": "^7.21.3",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@prisma/client": "^6.1.0",
     "@radix-ui/react-avatar": "latest",

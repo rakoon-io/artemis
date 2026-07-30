@@ -47,6 +47,14 @@ export const wiki: WikiDict = {
     markdownHelpAfter: " to mention a task (it becomes a link).",
     nothingToPreview: "Nothing to preview yet.",
     createSubmit: "Create page",
+
+    // Bascule entre saisie assistee et Markdown brut
+    modeRich: "Formatted",
+    modeMarkdown: "Markdown",
+    modeAria: "Input mode",
+    richHint:
+      "Formatting shows as you type. The text is still stored as Markdown.",
+    loadingEditor: "Loading the editor…",
     titleRequired: "The title is required.",
     created: "Page created.",
     updated: "Page updated.",
@@ -60,6 +68,8 @@ export const wiki: WikiDict = {
       code: "Code",
       link: "Link",
       mention: "Mention a task",
+      strike: "Strikethrough",
+      orderedList: "Numbered list",
     },
   },
 

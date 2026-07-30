@@ -48,6 +48,14 @@ export const wiki = {
     markdownHelpAfter: " pour citer une tâche (elle devient un lien).",
     nothingToPreview: "Rien à prévisualiser pour l'instant.",
     createSubmit: "Créer la page",
+
+    // Bascule entre saisie assistee et Markdown brut
+    modeRich: "Mise en forme",
+    modeMarkdown: "Markdown",
+    modeAria: "Mode de saisie",
+    richHint:
+      "La mise en forme s'affiche pendant la saisie. Le texte reste enregistré en Markdown.",
+    loadingEditor: "Chargement de l'éditeur…",
     titleRequired: "Le titre est requis.",
     created: "Page créée.",
     updated: "Page mise à jour.",
@@ -61,6 +69,8 @@ export const wiki = {
       code: "Code",
       link: "Lien",
       mention: "Citer une tâche",
+      strike: "Barré",
+      orderedList: "Liste numérotée",
     },
   },
 

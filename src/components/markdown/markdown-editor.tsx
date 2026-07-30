@@ -1,21 +1,12 @@
 "use client";
 
 import { useRef, useState } from "react";
-import {
-  AtSign,
-  Bold,
-  Code,
-  Heading2,
-  Italic,
-  Link2,
-  List,
-  ListChecks,
-  Quote,
-} from "lucide-react";
+import { AtSign, Bold, Code, Heading2, Italic, Link2, List, ListChecks, Loader2, Quote } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import dynamic from "next/dynamic";
 import { WikiContent } from "@/components/wiki/wiki-content";
 import {
   detectMention,
@@ -94,6 +85,25 @@ function caretPosition(el: HTMLTextAreaElement, index: number) {
     parseFloat(computed.lineHeight) || parseFloat(computed.fontSize) * 1.2;
   document.body.removeChild(div);
   return { top, left, height };
+}
+
+/**
+ * L'éditeur riche pèse une centaine de kilo-octets : il n'est téléchargé qu'au
+ * moment où l'on ouvre une saisie, jamais à la lecture d'une page. `ssr: false`
+ * parce qu'il manipule le DOM directement (ProseMirror).
+ */
+const WysiwygEditor = dynamic(
+  () => import("./wysiwyg-editor").then((m) => m.WysiwygEditor),
+  { ssr: false, loading: LoadingEditor },
+);
+
+function LoadingEditor() {
+  return (
+    <div className="flex min-h-40 items-center justify-center rounded-md border text-sm text-muted-foreground">
+      <Loader2 className="mr-2 size-4 animate-spin" />
+      Chargement…
+    </div>
+  );
 }
 
 export function MarkdownEditor({
@@ -239,13 +249,70 @@ export function MarkdownEditor({
     { icon: AtSign, label: t.wiki.form.tools.mention, run: triggerMention },
   ];
 
+  // Saisie ASSISTÉE par défaut : c'est elle qui sert à qui n'écrit pas de
+  // Markdown, et l'autre reste à un clic. `richKey` force la reconstruction de
+  // l'éditeur riche quand on y revient, pour qu'il reparte du texte courant -
+  // il est maître de son contenu une fois monté (cf. wysiwyg-editor.tsx).
+  const [rich, setRich] = useState(true);
+  const [richKey, setRichKey] = useState(0);
+
+  const modeSwitch = (
+    <div className="flex items-center gap-1" role="group" aria-label={t.wiki.form.modeAria}>
+      <Button
+        type="button"
+        size="sm"
+        variant={rich ? "secondary" : "ghost"}
+        aria-pressed={rich}
+        disabled={disabled}
+        onClick={() => {
+          setRichKey((n) => n + 1);
+          setRich(true);
+        }}
+      >
+        {t.wiki.form.modeRich}
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant={rich ? "ghost" : "secondary"}
+        aria-pressed={!rich}
+        disabled={disabled}
+        onClick={() => setRich(false)}
+      >
+        {t.wiki.form.modeMarkdown}
+      </Button>
+    </div>
+  );
+
+  if (rich) {
+    return (
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          {modeSwitch}
+          {toolbarExtra}
+        </div>
+        <WysiwygEditor
+          key={richKey}
+          value={value}
+          onChange={onChange}
+          disabled={disabled}
+          placeholder={placeholder}
+        />
+        <p className="text-xs text-muted-foreground">{t.wiki.form.richHint}</p>
+      </div>
+    );
+  }
+
   return (
     <Tabs defaultValue="write">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <TabsList>
-          <TabsTrigger value="write">{t.wiki.form.tabWrite}</TabsTrigger>
-          <TabsTrigger value="preview">{t.wiki.form.tabPreview}</TabsTrigger>
-        </TabsList>
+        <div className="flex flex-wrap items-center gap-2">
+          {modeSwitch}
+          <TabsList>
+            <TabsTrigger value="write">{t.wiki.form.tabWrite}</TabsTrigger>
+            <TabsTrigger value="preview">{t.wiki.form.tabPreview}</TabsTrigger>
+          </TabsList>
+        </div>
         {toolbarExtra}
       </div>
 
