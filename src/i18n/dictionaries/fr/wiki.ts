@@ -58,7 +58,7 @@ export const wiki = {
     richPlaceholder:
       "Écrivez votre texte. Les boutons ci-dessus le mettent en forme.",
     richHint:
-      "La mise en forme s'affiche pendant la saisie. Le texte reste enregistré en Markdown.",
+      "La mise en forme s'affiche pendant la saisie. Le texte reste enregistré en Markdown. Tapez @ pour citer une tâche.",
     loadingEditor: "Chargement de l'éditeur…",
     titleRequired: "Le titre est requis.",
     created: "Page créée.",

@@ -296,9 +296,13 @@ export function MarkdownEditor({
           value={value}
           onChange={onChange}
           disabled={disabled}
-          // L'invite du mode brut parle de Markdown et de la citation par « @ » :
-          // deux choses qui n'ont pas cours ici. Donner la mauvaise consigne à
-          // qui a justement choisi de ne pas écrire de Markdown serait le comble.
+          // Les mêmes tickets qu'en saisie Markdown : la détection et le
+          // classement passent par le même module, les deux modes proposent
+          // donc exactement la même liste dans le même ordre.
+          tickets={tickets}
+          // L'invite du mode brut parle de MARKDOWN, ce qui n'a pas cours ici.
+          // La citation par « @ », elle, fonctionne désormais des deux côtés -
+          // c'est `richHint`, sous l'éditeur, qui le dit.
           placeholder={t.wiki.form.richPlaceholder}
         />
         <p className="text-xs text-muted-foreground">{t.wiki.form.richHint}</p>

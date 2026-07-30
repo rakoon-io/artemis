@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  AtSign,
   Bold,
   Code,
   Italic,
@@ -13,9 +14,13 @@ import {
 import {
   Editor,
   defaultValueCtx,
+  editorViewCtx,
   editorViewOptionsCtx,
   rootCtx,
 } from "@milkdown/kit/core";
+import { $prose } from "@milkdown/kit/utils";
+import { Plugin } from "@milkdown/kit/prose/state";
+import type { EditorView } from "@milkdown/kit/prose/view";
 import { commonmark } from "@milkdown/kit/preset/commonmark";
 import { gfm } from "@milkdown/kit/preset/gfm";
 import { history } from "@milkdown/kit/plugin/history";
@@ -33,6 +38,12 @@ import { toggleStrikethroughCommand } from "@milkdown/kit/preset/gfm";
 import { Milkdown, MilkdownProvider, useEditor, useInstance } from "@milkdown/react";
 import type { CmdKey } from "@milkdown/kit/core";
 import { Button } from "@/components/ui/button";
+import { MENTION_LIST_WIDTH, MentionList } from "./mention-list";
+import {
+  detectMention,
+  rankTickets,
+  type TicketRef,
+} from "@/lib/wiki-mentions";
 import { useDict } from "@/i18n/provider";
 import "@milkdown/kit/prose/view/style/prosemirror.css";
 
@@ -71,7 +82,14 @@ import "@milkdown/kit/prose/view/style/prosemirror.css";
 const CONTENT_CLASS =
   "wiki-prose relative min-h-40 bg-transparent px-3 py-2 outline-none";
 
-function Toolbar({ disabled }: { disabled?: boolean }) {
+function Toolbar({
+  disabled,
+  onMention,
+}: {
+  disabled?: boolean;
+  /** Absent = la surface n'a rien à citer, le bouton ne paraît pas. */
+  onMention?: () => void;
+}) {
   const t = useDict();
   const [loading, getEditor] = useInstance();
 
@@ -123,8 +141,37 @@ function Toolbar({ disabled }: { disabled?: boolean }) {
           <Icon />
         </Button>
       ))}
+      {/* CITER UNE TÂCHE, au même endroit que dans la saisie Markdown. Taper
+          « @ » à la main ouvre la même liste ; le bouton ne fait que rendre le
+          geste visible à qui ne le connaît pas. */}
+      {onMention && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-8"
+          title={t.wiki.form.tools.mention}
+          aria-label={t.wiki.form.tools.mention}
+          disabled={disabled || loading}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={onMention}
+        >
+          <AtSign />
+        </Button>
+      )}
     </div>
   );
+}
+
+/** Mention en cours de frappe, repérée dans le document ProseMirror. */
+interface RichMention {
+  /** Position du « @ » dans le document. */
+  from: number;
+  /** Position du curseur. */
+  to: number;
+  query: string;
+  top: number;
+  left: number;
 }
 
 function EditorSurface({
@@ -133,13 +180,119 @@ function EditorSurface({
   onEmptyChange,
   disabled,
   placeholder,
+  tickets,
+  anchorRef,
+  onMentionChange,
+  register,
 }: {
   value: string;
   onChange: (markdown: string) => void;
   onEmptyChange: (empty: boolean) => void;
   disabled?: boolean;
   placeholder?: string;
+  tickets: TicketRef[];
+  /** Boîte de référence pour positionner la liste (le conteneur `relative`). */
+  anchorRef: React.RefObject<HTMLDivElement | null>;
+  onMentionChange: (
+    mention: RichMention | null,
+    results: TicketRef[],
+    activeIndex: number,
+  ) => void;
+  /** Expose à la barre d'outils les deux gestes qui ont besoin de la vue. */
+  register: (api: {
+    trigger: () => void;
+    pick: (ticket: TicketRef) => void;
+  }) => void;
 }) {
+  /**
+   * L'éditeur est construit UNE FOIS (cf. l'en-tête). Ce qu'il doit lire ensuite
+   * passe donc par des références : une fermeture posée à la construction verrait
+   * sinon éternellement le premier rendu.
+   *
+   * Les références sont synchronisées dans un EFFET, jamais pendant le rendu :
+   * y écrire rendrait le composant impur, et le compilateur React le refuse.
+   */
+  const mentionRef = useRef<RichMention | null>(null);
+  const resultsRef = useRef<TicketRef[]>([]);
+  const indexRef = useRef(0);
+  const viewRef = useRef<EditorView | null>(null);
+  const ticketsRef = useRef(tickets);
+  const notifyRef = useRef(onMentionChange);
+  useEffect(() => {
+    ticketsRef.current = tickets;
+    notifyRef.current = onMentionChange;
+  });
+
+  const clear = useCallback(() => {
+    mentionRef.current = null;
+    resultsRef.current = [];
+    indexRef.current = 0;
+    notifyRef.current(null, [], 0);
+  }, []);
+
+  const pick = useCallback(
+    (ticket: TicketRef) => {
+      const view = viewRef.current;
+      const mention = mentionRef.current;
+      if (!view || !mention) return;
+      view.dispatch(
+        view.state.tr.insertText(`@${ticket.key} `, mention.from, mention.to),
+      );
+      view.focus();
+      clear();
+    },
+    [clear],
+  );
+
+  /**
+   * Recalcule la mention à partir de la sélection courante.
+   *
+   * Le texte examiné est celui du BLOC courant jusqu'au curseur : `detectMention`
+   * - le même que pour le Markdown brut - y retrouve le « @ » et sa requête. Les
+   * nœuds atomiques sont remplacés par un caractère unique pour que les décalages
+   * restent alignés sur les positions du document.
+   */
+  const refresh = useCallback(
+    (view: EditorView) => {
+      const { selection } = view.state;
+      if (!selection.empty) return clear();
+      const $from = selection.$from;
+      if (!$from.parent.isTextblock) return clear();
+      const textBefore = $from.parent.textBetween(
+        0,
+        $from.parentOffset,
+        undefined,
+        "\ufffc",
+      );
+      const found = detectMention(textBefore, textBefore.length);
+      if (!found) return clear();
+
+      const results = rankTickets(ticketsRef.current, found.query);
+      if (results.length === 0) return clear();
+
+      const from = $from.pos - ($from.parentOffset - found.start);
+      const coords = view.coordsAtPos(from);
+      const box = anchorRef.current?.getBoundingClientRect();
+      const mention: RichMention = {
+        from,
+        to: $from.pos,
+        query: found.query,
+        top: box ? coords.bottom - box.top + 4 : coords.bottom + 4,
+        left: box
+          ? Math.max(
+              0,
+              Math.min(coords.left - box.left, box.width - MENTION_LIST_WIDTH),
+            )
+          : coords.left,
+      };
+      mentionRef.current = mention;
+      resultsRef.current = results;
+      indexRef.current = Math.min(indexRef.current, results.length - 1);
+      notifyRef.current(mention, results, indexRef.current);
+    },
+    [anchorRef, clear],
+  );
+
   useEditor(
     (root) =>
       Editor.make()
@@ -156,6 +309,49 @@ function EditorSurface({
               // attend, pas offrir un rectangle muet.
               "data-placeholder": placeholder ?? "",
             },
+            /**
+             * Le PLUGIN ne voit pas la perte de focus : sortir de l'éditeur ne
+             * change ni le document ni la sélection, et la liste restait
+             * ouverte au-dessus d'un champ qu'elle ne concernait plus.
+             *
+             * Choisir une proposition à la souris ne déclenche pas ce cas : la
+             * liste neutralise `mousedown`, le focus ne quitte donc jamais
+             * l'éditeur.
+             */
+            handleDOMEvents: {
+              ...prev.handleDOMEvents,
+              blur: () => {
+                clear();
+                return false;
+              },
+            },
+            /**
+             * Tant que la liste est ouverte, elle CONSOMME les touches de
+             * navigation : sans cela, Entrée couperait le paragraphe sous la
+             * liste et les flèches déplaceraient le curseur au lieu de changer
+             * de proposition.
+             */
+            handleKeyDown: (_view: EditorView, event: KeyboardEvent) => {
+              const mention = mentionRef.current;
+              const results = resultsRef.current;
+              if (!mention || results.length === 0) return false;
+              if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                const step = event.key === "ArrowDown" ? 1 : -1;
+                indexRef.current =
+                  (indexRef.current + step + results.length) % results.length;
+                notifyRef.current(mention, results, indexRef.current);
+                return true;
+              }
+              if (event.key === "Enter" || event.key === "Tab") {
+                pick(results[Math.min(indexRef.current, results.length - 1)]);
+                return true;
+              }
+              if (event.key === "Escape") {
+                clear();
+                return true;
+              }
+              return false;
+            },
           }));
           ctx.get(listenerCtx).markdownUpdated((_, markdown, previous) => {
             // Le premier événement rejoue la valeur initiale : le laisser passer
@@ -163,17 +359,59 @@ function EditorSurface({
             if (previous !== undefined && markdown !== previous) onChange(markdown);
             onEmptyChange(!markdown.trim());
           });
+          register({
+            trigger: () => insertAt(ctx.get(editorViewCtx)),
+            pick,
+          });
         })
         .use(commonmark)
         .use(gfm)
         .use(history)
-        .use(listener),
+        .use(listener)
+        /**
+         * Plugin ProseMirror plutôt qu'un écouteur de frappe : sa méthode
+         * `update` est appelée à CHAQUE changement de vue - texte saisi, mais
+         * aussi flèche, clic, ou sélection posée autrement. Se contenter du
+         * clavier laisserait la liste ouverte après un clic ailleurs.
+         */
+        .use(
+          $prose(
+            () =>
+              new Plugin({
+                view: () => ({
+                  update: (view) => {
+                    viewRef.current = view;
+                    refresh(view);
+                  },
+                  destroy: clear,
+                }),
+              }),
+          ),
+        ),
     // Volontairement sans dépendances : l'éditeur ne se reconstruit pas à chaque
-    // frappe (cf. l'en-tête, « non contrôlé après montage »).
+    // frappe (cf. l'en-tête, « non contrôlé après montage »). `pick`, `clear` et
+    // `refresh` sont stables, les fermetures ci-dessus restent donc justes.
     [],
   );
 
   return <Milkdown />;
+}
+
+/**
+ * Insère un « @ » au curseur, ce qui ouvre la liste par le chemin ordinaire.
+ * Une espace est glissée devant s'il colle à un mot : « note@ » n'est pas une
+ * mention, et `detectMention` a raison de le refuser.
+ */
+function insertAt(view: EditorView) {
+  const { $from, empty } = view.state.selection;
+  if (!empty) return;
+  const before = $from.parent.textBetween(
+    Math.max(0, $from.parentOffset - 1),
+    $from.parentOffset,
+  );
+  const text = /[A-Za-z0-9]/.test(before) ? " @" : "@";
+  view.dispatch(view.state.tr.insertText(text, $from.pos, $from.pos));
+  view.focus();
 }
 
 export function WysiwygEditor({
@@ -181,31 +419,73 @@ export function WysiwygEditor({
   onChange,
   disabled,
   placeholder,
+  tickets = [],
 }: {
   value: string;
   onChange: (markdown: string) => void;
   disabled?: boolean;
   placeholder?: string;
+  /**
+   * Tickets citables. Vide = pas d'autocomplétion, et pas de bouton « @ » :
+   * une surface qui n'a rien à citer ne doit pas en proposer le geste.
+   */
+  tickets?: TicketRef[];
 }) {
+  const t = useDict();
   const [empty, setEmpty] = useState(() => !value.trim());
+  const [mention, setMention] = useState<RichMention | null>(null);
+  const [results, setResults] = useState<TicketRef[]>([]);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const anchorRef = useRef<HTMLDivElement | null>(null);
+  /** Gestes exposés par la surface une fois l'éditeur construit. */
+  const api = useRef<{
+    trigger: () => void;
+    pick: (ticket: TicketRef) => void;
+  } | null>(null);
 
   return (
     <MilkdownProvider>
       {/* UN SEUL cadre, qui englobe barre d'outils et saisie. Le composant rend
           un unique élément : sans cela, un `space-y-*` du parent viendrait
-          glisser une gouttière entre les deux et les désolidariser. */}
+          glisser une gouttière entre les deux et les désolidariser.
+          `relative` : la liste des mentions se positionne par rapport à lui. */}
       <div
+        ref={anchorRef}
         data-empty={empty ? "true" : undefined}
-        className="overflow-hidden rounded-md border border-input focus-within:ring-2 focus-within:ring-ring"
+        className="relative rounded-md border border-input focus-within:ring-2 focus-within:ring-ring"
       >
-        <Toolbar disabled={disabled} />
+        <Toolbar
+          disabled={disabled}
+          onMention={
+            tickets.length > 0 ? () => api.current?.trigger() : undefined
+          }
+        />
         <EditorSurface
           value={value}
           onChange={onChange}
           onEmptyChange={setEmpty}
           disabled={disabled}
           placeholder={placeholder}
+          tickets={tickets}
+          anchorRef={anchorRef}
+          onMentionChange={(next, list, index) => {
+            setMention(next);
+            setResults(list);
+            setActiveIndex(index);
+          }}
+          register={(next) => {
+            api.current = next;
+          }}
         />
+        {mention && (
+          <MentionList
+            results={results}
+            activeIndex={activeIndex}
+            label={t.wiki.form.tools.mention}
+            style={{ top: mention.top, left: mention.left }}
+            onPick={(ticket) => api.current?.pick(ticket)}
+          />
+        )}
       </div>
     </MilkdownProvider>
   );
