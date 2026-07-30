@@ -344,15 +344,13 @@ export default async function WikiPage({
                       aria-current={active ? "page" : undefined}
                       title={p.title}
                       className={cn(
-                        // La page ouverte se signale par la GRAISSE d'abord, un
-                        // aplat discret ensuite. Un rail de couleur à gauche se
-                        // voyait trop - et, arrondi par le coin du bouton, se
-                        // voyait mal. Le poids du texte suffit à repérer sa
-                        // place, sans peindre la colonne.
-                        "flex items-stretch rounded-md text-sm transition-colors",
+                        // Toute la ligne est cliquable, gouttière comprise, mais
+                        // elle ne porte AUCUN fond : la teinte est posée plus
+                        // bas, sur la seule étiquette.
+                        "group/page flex items-stretch text-sm transition-colors",
                         active
-                          ? "bg-accent font-semibold text-foreground"
-                          : "text-foreground/75 hover:bg-accent/50 hover:text-foreground",
+                          ? "text-foreground"
+                          : "text-foreground/75 hover:text-foreground",
                       )}
                     >
                       {Array.from({ length: depth }, (_, level) => (
@@ -362,7 +360,21 @@ export default async function WikiPage({
                           className="ml-3 w-0 self-stretch border-l"
                         />
                       ))}
-                      <span className="min-w-0 flex-1 py-2 pl-3 pr-3">
+                      {/* L'APLAT S'ARRÊTE AVANT LES FILETS.
+                          Peint sur la ligne entière, il passait par-dessus la
+                          gouttière : le filet de rappel traversait un rectangle
+                          arrondi d'une autre couleur, et venait mourir sur ses
+                          coins. Le filet dit la place de la page dans le plan,
+                          l'aplat dit qu'elle est ouverte - deux propos, deux
+                          surfaces, qui n'ont aucune raison de se superposer. */}
+                      <span
+                        className={cn(
+                          "ml-1 min-w-0 flex-1 rounded-md px-3 py-2 transition-colors",
+                          active
+                            ? "bg-accent font-semibold"
+                            : "group-hover/page:bg-accent/50",
+                        )}
+                      >
                         {/* Deux lignes plutôt qu'une troncature sèche : un
                             « Réunion hebdomadaire du 28 juill… » ne se
                             distingue pas de la semaine suivante. */}
