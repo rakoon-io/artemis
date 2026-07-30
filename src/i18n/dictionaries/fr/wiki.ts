@@ -208,8 +208,17 @@ export const wiki = {
     moveItemUp: "Monter le point {ref}",
     moveItemDown: "Descendre le point {ref}",
     notesKept: "Le texte libre de ce thème est conservé tel quel.",
-    noThemesYet: "Aucun thème. Ajoutez-en un pour commencer le compte rendu.",
-    newThemeTitle: "Nouveau thème",
+    noThemesYet: "Aucun thème pour l'instant.",
+    itemAria: "Point {ref}",
+    keyboardHint:
+      "Entrée : point suivant · Maj+Entrée : saut de ligne · Alt+↑/↓ : déplacer",
+
+    // Abandon d'une saisie en cours
+    discardTitle: "Abandonner les modifications ?",
+    discardDescription:
+      "Les thèmes et les points saisis depuis l'ouverture de l'éditeur seront perdus. La page reste telle qu'elle a été enregistrée la dernière fois.",
+    discardKeep: "Continuer à écrire",
+    discardConfirm: "Abandonner",
 
     // Sections repliables et sommaire des themes
     collapseAria: "Replier ou déplier le thème {letter}",

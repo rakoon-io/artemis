@@ -459,7 +459,11 @@ export default async function WikiPage({
                       </p>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  {/* `flex-wrap` : jusqu'à cinq commandes tiennent ici, soit
+                      770 pixels que rien ne repliait. Sur un téléphone, toute
+                      page du wiki débordait de près de 400 pixels et se lisait
+                      en glissant l'écran de côté. */}
+                  <div className="flex flex-wrap items-center gap-2">
                     <Button asChild variant="outline" size="sm">
                       <Link
                         href={`/projects/${project.key}/wiki/new?parent=${current.id}`}

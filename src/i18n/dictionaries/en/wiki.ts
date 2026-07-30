@@ -206,8 +206,17 @@ export const wiki: WikiDict = {
     moveItemUp: "Move item {ref} up",
     moveItemDown: "Move item {ref} down",
     notesKept: "The free text of this theme is kept as-is.",
-    noThemesYet: "No theme yet. Add one to start the minutes.",
-    newThemeTitle: "New theme",
+    noThemesYet: "No theme yet.",
+    itemAria: "Item {ref}",
+    keyboardHint:
+      "Enter: next item · Shift+Enter: line break · Alt+↑/↓: move",
+
+    // Abandon d'une saisie en cours
+    discardTitle: "Discard your changes?",
+    discardDescription:
+      "The themes and items entered since the editor was opened will be lost. The page stays as it was last saved.",
+    discardKeep: "Keep writing",
+    discardConfirm: "Discard",
 
     // Sections repliables et sommaire des themes
     collapseAria: "Collapse or expand theme {letter}",

@@ -30,8 +30,12 @@ export function ProjectNav({ projectKey, isAdmin }: ProjectNavProps) {
   ];
 
   return (
+    // Six onglets font 493 pixels : plus qu'un téléphone n'en offre. Sans
+    // `overflow-x-auto`, c'est la PAGE ENTIÈRE qui se décalait vers la droite et
+    // qu'il fallait faire glisser pour lire la moindre ligne. La barre défile
+    // désormais pour elle seule - et non l'inverse.
     <nav
-      className="flex items-center gap-1 border-b"
+      className="flex items-center gap-1 overflow-x-auto border-b"
       aria-label={t.settings.nav.ariaLabel}
     >
       {tabs.map((tab) => {
@@ -43,7 +47,7 @@ export function ProjectNav({ projectKey, isAdmin }: ProjectNavProps) {
             href={tab.href}
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors",
+              "-mb-px shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition-colors",
               isActive
                 ? "border-primary text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground",
