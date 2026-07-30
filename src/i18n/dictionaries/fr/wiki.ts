@@ -158,6 +158,39 @@ export const wiki = {
     description:
       "La page et ses éventuelles sous-pages seront définitivement supprimées. Cette action est irréversible.",
   },
+  // Ce qu'une page d'implementation documente, et depuis quand on l'a vue.
+  subjects: {
+    title: "Ce que cette page documente",
+    empty:
+      "Aucun sujet déclaré. Reliez cette page à un module ou à un composant pour qu'on la retrouve depuis le catalogue et depuis les tickets.",
+    edit: "Modifier",
+    dialogTitle: "Sujets documentés",
+    dialogDescription:
+      "Cochez les modules et composants dont parle cette page. Elle apparaîtra alors sur leur fiche, et sur les tickets qui les concernent.",
+    modules: "Modules",
+    components: "Composants",
+    catalogueEmpty:
+      "Ce projet n'a encore ni module ni composant. Déclarez-en depuis l'onglet Structure.",
+    saved: "Sujets enregistrés.",
+
+    // Fraicheur : ne vaut que pour l'implementation (cf. wiki-freshness).
+    freshness: {
+      fresh: "À jour",
+      ageing: "À relire",
+      stale: "Périmée",
+    },
+    checkedOn: "Vérifiée le {date}",
+    review: "Marquer comme relue",
+    reviewHint:
+      "Déclare la page toujours exacte, sans en modifier le contenu ni l'historique.",
+    reviewed: "Page marquée comme relue.",
+
+    // Sens de lecture inverse : depuis un module, un composant, un ticket.
+    documentedBy: "Documenté par",
+    documentedByEmpty: "Aucune page du wiki ne documente ceci.",
+    ticketDocs: "Documentation",
+  },
+
   // Sections predefinies du wiki : trois rapports au temps, pas trois dossiers.
   sections: {
     empty: "Aucune page pour l'instant.",

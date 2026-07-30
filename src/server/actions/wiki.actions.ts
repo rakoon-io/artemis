@@ -8,6 +8,7 @@ import {
   createMeetingPageSchema,
   createWikiPageSchema,
   setMeetingSchema,
+  setWikiPageSubjectsSchema,
   updateWikiPageSchema,
 } from "@/lib/validators";
 import {
@@ -16,7 +17,9 @@ import {
   ensureWikiSections,
   getWikiPage,
   listWikiPages,
+  markWikiPageReviewed,
   setMeetingDate,
+  setWikiPageSubjects,
   updateWikiPage,
 } from "@/server/services/wiki.service";
 import { withUser } from "./helpers";
@@ -170,5 +173,38 @@ export async function ensureWikiSectionsAction(
     await assertProjectAccess(user, projectId);
     const { filed } = await ensureWikiSections(projectId, user.id);
     return { ok: true, data: { filed } };
+  });
+}
+
+/**
+ * Déclare ce qu'une page DOCUMENTE. Ouvert à tout membre du projet, comme
+ * écrire la page : dire de quoi l'on parle fait partie de l'écriture.
+ */
+export async function setWikiPageSubjectsAction(
+  input: z.input<typeof setWikiPageSubjectsSchema>,
+): Promise<ActionResult> {
+  return withUser(async (user) => {
+    const data = setWikiPageSubjectsSchema.parse(input);
+    const page = await getWikiPage(data.pageId);
+    if (!page) return { ok: false, error: "Page introuvable." };
+    await assertProjectAccess(user, page.projectId);
+    await setWikiPageSubjects(data.pageId, data.moduleIds, data.componentIds);
+    return { ok: true };
+  });
+}
+
+/**
+ * Déclare une page RELUE aujourd'hui. Le contenu n'est pas touché : ce geste
+ * dit « c'est toujours vrai », pas « j'ai changé quelque chose ».
+ */
+export async function markWikiPageReviewedAction(
+  pageId: string,
+): Promise<ActionResult> {
+  return withUser(async (user) => {
+    const page = await getWikiPage(pageId);
+    if (!page) return { ok: false, error: "Page introuvable." };
+    await assertProjectAccess(user, page.projectId);
+    await markWikiPageReviewed(pageId);
+    return { ok: true };
   });
 }

@@ -106,6 +106,27 @@ export function getWikiSections(projectId: string) {
   return wikiService.listWikiSections(projectId);
 }
 
+/** Sujets declares par une page : modules et composants qu'elle documente. */
+export function getWikiPageSubjects(pageId: string) {
+  return wikiService.getWikiPageSubjects(pageId);
+}
+
+/**
+ * Pages documentant un module ou un composant. Sens de lecture INVERSE, celui
+ * qui fait du wiki un index du systeme plutot qu'un tas de documents.
+ */
+export function getPagesDocumenting(subjects: {
+  moduleIds?: string[];
+  componentIds?: string[];
+}) {
+  return wikiService.listPagesDocumenting(subjects);
+}
+
+/** Index de la documentation du projet : quelles pages decrivent quelle brique. */
+export function getDocumentationIndex(projectId: string) {
+  return wikiService.listDocumentationIndex(projectId);
+}
+
 /** Une page de wiki avec son contenu. */
 export function getWikiPage(id: string) {
   return wikiService.getWikiPage(id);

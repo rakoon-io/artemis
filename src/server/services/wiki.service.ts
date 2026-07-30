@@ -643,3 +643,168 @@ export function ensureWikiSections(projectId: string, authorId?: string | null) 
     return { sections: [...known.entries()].map(([kind, rootPageId]) => ({ kind, rootPageId })), filed };
   });
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * CE QU'UNE PAGE DOCUMENTE, ET DEPUIS QUAND ON L'A VUE
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Déclare les SUJETS d'une page : les modules et composants qu'elle documente.
+ *
+ * Remplacement intégral plutôt que patch : l'appelant envoie l'état voulu, le
+ * service l'établit. Un « ajouter / retirer » exigerait de connaître l'état
+ * courant au moment du clic, et deux personnes éditant la même page se
+ * défairaient mutuellement sans s'en apercevoir.
+ *
+ * Les identifiants sont FILTRÉS sur le projet de la page : un module d'un autre
+ * projet, glissé dans la requête, ne crée pas de lien - il disparaît, sans
+ * erreur ni lien fantôme.
+ */
+export function setWikiPageSubjects(
+  pageId: string,
+  moduleIds: string[],
+  componentIds: string[],
+) {
+  return prisma.$transaction(async (tx) => {
+    const page = await tx.wikiPage.findUnique({
+      where: { id: pageId },
+      select: { projectId: true },
+    });
+    if (!page) throw new Error("Page introuvable.");
+
+    const [modules, components] = await Promise.all([
+      moduleIds.length
+        ? tx.module.findMany({
+            where: { id: { in: moduleIds }, projectId: page.projectId },
+            select: { id: true },
+          })
+        : Promise.resolve([]),
+      componentIds.length
+        ? tx.component.findMany({
+            where: { id: { in: componentIds }, projectId: page.projectId },
+            select: { id: true },
+          })
+        : Promise.resolve([]),
+    ]);
+
+    await tx.wikiPageModule.deleteMany({ where: { pageId } });
+    await tx.wikiPageComponent.deleteMany({ where: { pageId } });
+    if (modules.length) {
+      await tx.wikiPageModule.createMany({
+        data: modules.map((m) => ({ pageId, moduleId: m.id })),
+      });
+    }
+    if (components.length) {
+      await tx.wikiPageComponent.createMany({
+        data: components.map((c) => ({ pageId, componentId: c.id })),
+      });
+    }
+    return { modules: modules.length, components: components.length };
+  });
+}
+
+/** Sujets déclarés par une page, avec de quoi les afficher. */
+export function getWikiPageSubjects(pageId: string) {
+  return prisma.$transaction([
+    prisma.wikiPageModule.findMany({
+      where: { pageId },
+      select: { module: { select: { id: true, name: true, color: true } } },
+      orderBy: { module: { name: "asc" } },
+    }),
+    prisma.wikiPageComponent.findMany({
+      where: { pageId },
+      select: {
+        component: { select: { id: true, name: true, color: true, kind: true } },
+      },
+      orderBy: { component: { name: "asc" } },
+    }),
+  ]);
+}
+
+/**
+ * Pages documentant un module ou un composant donné.
+ *
+ * C'est le sens de lecture INVERSE, celui qui fait du wiki un index du système :
+ * on part de la brique sur laquelle on travaille, et l'on trouve ce qui en est
+ * écrit. Sans lui, les liens ne serviraient qu'à décorer les pages.
+ */
+export function listPagesDocumenting(subjects: {
+  moduleIds?: string[];
+  componentIds?: string[];
+}) {
+  const moduleIds = subjects.moduleIds?.filter(Boolean) ?? [];
+  const componentIds = subjects.componentIds?.filter(Boolean) ?? [];
+  if (moduleIds.length === 0 && componentIds.length === 0) {
+    return Promise.resolve([]);
+  }
+  return prisma.wikiPage.findMany({
+    where: {
+      OR: [
+        ...(moduleIds.length
+          ? [{ modules: { some: { moduleId: { in: moduleIds } } } }]
+          : []),
+        ...(componentIds.length
+          ? [{ components: { some: { componentId: { in: componentIds } } } }]
+          : []),
+      ],
+    },
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      updatedAt: true,
+      reviewedAt: true,
+      projectId: true,
+    },
+    orderBy: { title: "asc" },
+  });
+}
+
+/**
+ * Déclare une page RELUE aujourd'hui : « je l'ai lue, c'est toujours vrai ».
+ *
+ * N'écrit pas de révision et ne touche pas au contenu - donc pas à `updatedAt`
+ * non plus. Une relecture n'est pas une modification : la faire apparaître dans
+ * l'historique noierait les vrais changements sous des lignes qui ne disent
+ * rien de ce que la page raconte.
+ */
+export function markWikiPageReviewed(pageId: string) {
+  return prisma.wikiPage.update({
+    where: { id: pageId },
+    data: { reviewedAt: new Date() },
+    select: { id: true, reviewedAt: true },
+  });
+}
+
+/**
+ * INDEX DE LA DOCUMENTATION d'un projet : quelles pages décrivent quelle brique.
+ *
+ * Deux requêtes pour tout le catalogue, et non une par module puis une par
+ * composant. La page Structure affiche des dizaines de briques : la lire ligne
+ * à ligne coûterait autant d'allers-retours que le projet compte d'entrées, pour
+ * un résultat identique.
+ */
+export async function listDocumentationIndex(projectId: string) {
+  const page = {
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      updatedAt: true,
+      reviewedAt: true,
+    },
+  } as const;
+  const [modules, components] = await Promise.all([
+    prisma.wikiPageModule.findMany({
+      where: { page: { projectId } },
+      select: { moduleId: true, page },
+      orderBy: { page: { title: "asc" } },
+    }),
+    prisma.wikiPageComponent.findMany({
+      where: { page: { projectId } },
+      select: { componentId: true, page },
+      orderBy: { page: { title: "asc" } },
+    }),
+  ]);
+  return { modules, components };
+}

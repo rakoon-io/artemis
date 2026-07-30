@@ -223,6 +223,8 @@ model Module {
   proposedBy   User?          @relation("moduleProposals", fields: [proposedById], references: [id], onDelete: SetNull)
   components   Component[]
   tickets      Ticket[]
+  // Pages du wiki qui documentent ce module.
+  wikiPages    WikiPageModule[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
@@ -255,6 +257,8 @@ model Component {
   proposedById String?
   proposedBy   User?          @relation("componentProposals", fields: [proposedById], references: [id], onDelete: SetNull)
   tickets      Ticket[]
+  // Pages du wiki qui documentent ce composant.
+  wikiPages    WikiPageComponent[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
@@ -419,9 +423,25 @@ model WikiPage {
   // dupliquerait un algorithme déjà testé.
   searchText  String?
 
+  // Date de la dernière RELECTURE déclarée : « j'ai relu, c'est toujours vrai ».
+  //
+  // Distincte d'`updatedAt`, et c'est tout l'intérêt : une page qui reste juste
+  // ne se modifie pas, et n'aurait donc jamais l'air fraîche si l'on ne jugeait
+  // que par sa dernière écriture. La fraîcheur retient la plus récente des deux
+  // (cf. `@/lib/wiki-freshness`) - modifier une page, c'est aussi la relire.
+  //
+  // Ne concerne en pratique que la section IMPLÉMENTATION : une spécification
+  // vit en versions figées, un compte rendu est daté et ne vieillit pas. Seule
+  // la documentation technique a pour mode de défaillance de devenir fausse
+  // sans que rien ne le signale.
+  reviewedAt  DateTime?
+
   revisions   WikiRevision[]
   // Renseigne uniquement si CETTE page est la racine d'un paquet de spécifications.
   specPackage SpecPackage?
+  // Sujets documentés par cette page : modules et composants du catalogue.
+  modules     WikiPageModule[]
+  components  WikiPageComponent[]
   // Renseigne uniquement si CETTE page est la racine d'une section prédéfinie.
   // L'appartenance des AUTRES pages ne se stocke pas : elle se calcule en
   // remontant les ancêtres (cf. `@/lib/wiki-tree`).
@@ -523,6 +543,37 @@ model WikiSection {
   // Une seule racine par genre et par projet : « les » Réunions, pas « des ».
   @@unique([projectId, kind])
   @@index([projectId])
+}
+
+// CE QU'UNE PAGE DOCUMENTE. Le wiki cesse d'être un tas de documents pour
+// devenir un index du système : depuis un module ou un composant, on trouve sa
+// documentation ; depuis un ticket, celle de ce sur quoi l'on travaille.
+//
+// DEUX TABLES plutôt qu'une seule portant `moduleId` ET `componentId` : dans la
+// table unique, une ligne aux deux colonnes nulles - ou aux deux remplies -
+// serait représentable, et il faudrait une contrainte de contrôle pour l'interdire
+// puis du code pour la respecter. Ici l'état invalide n'existe pas.
+//
+// Clef primaire COMPOSITE : le même lien ne peut être posé deux fois, sans
+// index supplémentaire ni identifiant de substitution dont personne ne se sert.
+model WikiPageModule {
+  pageId   String
+  page     WikiPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  moduleId String
+  module   Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@id([pageId, moduleId])
+  @@index([moduleId])
+}
+
+model WikiPageComponent {
+  pageId      String
+  page        WikiPage  @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  componentId String
+  component   Component @relation(fields: [componentId], references: [id], onDelete: Cascade)
+
+  @@id([pageId, componentId])
+  @@index([componentId])
 }
 
 model SpecPackage {

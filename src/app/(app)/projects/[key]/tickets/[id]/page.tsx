@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TicketTemplate } from "@prisma/client";
-import { ArrowLeft, Download, Paperclip } from "lucide-react";
+import { ArrowLeft, BookOpen, Download, Paperclip } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import {
   getSprints,
   getTicketDetail,
   getTicketPriorities,
+  getPagesDocumenting,
   getTicketRefs,
   getTicketTypes,
 } from "@/server/queries";
@@ -35,6 +36,7 @@ import {
   ModuleBadge,
 } from "@/components/ticket/ticket-fields";
 import { effectiveModule } from "@/lib/effective-module";
+import { DocumentingPages } from "@/components/wiki/documenting-pages";
 import { CommentForm } from "@/components/ticket/comment-form";
 import { CommentList } from "@/components/ticket/comment-list";
 import { DeleteTicketButton } from "@/components/ticket/delete-ticket-button";
@@ -89,6 +91,15 @@ export default async function TicketDetailPage({
   // citations « RKN-123 » en liens) autant qu'en édition (autocomplétion « @ »),
   // donc chargées quels que soient les droits.
   const ticketRefs = await getTicketRefs(ticket.projectId);
+
+  // DOCUMENTATION DE CE SUR QUOI L'ON TRAVAILLE. On part du module effectif et
+  // du composant du ticket, et l'on remonte aux pages du wiki qui les décrivent.
+  // C'est le paiement du lien page → catalogue : sans cette lecture inverse,
+  // déclarer les sujets d'une page n'aurait servi qu'à orner cette page.
+  const docs = await getPagesDocumenting({
+    moduleIds: ticketModule ? [ticketModule.id] : [],
+    componentIds: ticket.component ? [ticket.component.id] : [],
+  });
 
   let editData:
     | {
@@ -237,6 +248,23 @@ export default async function TicketDetailPage({
               />
             </CardContent>
           </Card>
+
+          {/* La doc n'apparaît QUE s'il y en a : une carte « aucune
+              documentation » sur chaque ticket serait un reproche permanent
+              plutôt qu'un renseignement. */}
+          {docs.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <BookOpen className="size-4" />
+                  {t.wiki.subjects.ticketDocs}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <DocumentingPages pages={docs} projectKey={project.key} />
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>

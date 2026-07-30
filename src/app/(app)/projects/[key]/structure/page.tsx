@@ -5,6 +5,7 @@ import { can, isAdmin } from "@/lib/policies";
 import { getAccessibleProjectByKey } from "@/server/access";
 import {
   getComponents,
+  getDocumentationIndex,
   getModules,
   getProposedComponents,
   getProposedModules,
@@ -28,6 +29,7 @@ import {
   ProposalQueue,
   type PendingProposal,
 } from "@/components/structure/proposal-queue";
+import { DocumentingPages } from "@/components/wiki/documenting-pages";
 import { getDictionary } from "@/i18n/server";
 
 /**
@@ -56,15 +58,37 @@ export default async function StructurePage({
   const admin = isAdmin(user);
   const canReview = can(user, "review_proposals");
 
-  const [modules, components, proposedModules, proposedComponents] =
+  const [modules, components, docIndex, proposedModules, proposedComponents] =
     await Promise.all([
       getModules(project.id),
       getComponents(project.id),
+      // Deux requêtes pour tout l'index, et non une par brique : la page en
+      // affiche des dizaines (cf. `listDocumentationIndex`).
+      getDocumentationIndex(project.id),
       // La file n'est chargée que pour qui peut la traiter : inutile de payer
       // deux requêtes pour un rapporteur qui ne la verra pas.
       canReview ? getProposedModules(project.id) : [],
       canReview ? getProposedComponents(project.id) : [],
     ]);
+
+  // Regroupement en mémoire : chaque brique reçoit les pages qui la décrivent.
+  const docsByModule = new Map<string, typeof docIndex.modules[number]["page"][]>();
+  for (const link of docIndex.modules) {
+    docsByModule.set(link.moduleId, [
+      ...(docsByModule.get(link.moduleId) ?? []),
+      link.page,
+    ]);
+  }
+  const docsByComponent = new Map<
+    string,
+    typeof docIndex.components[number]["page"][]
+  >();
+  for (const link of docIndex.components) {
+    docsByComponent.set(link.componentId, [
+      ...(docsByComponent.get(link.componentId) ?? []),
+      link.page,
+    ]);
+  }
 
   const proposals: PendingProposal[] = [
     ...proposedModules.map((m) => ({
@@ -169,6 +193,14 @@ export default async function StructurePage({
                         ))}
                       </div>
                     )}
+                    {/* Ce qui est ÉCRIT sur ce module. Rien ne s'affiche s'il
+                        n'y a rien : une ligne « aucune documentation » répétée
+                        sous chaque brique serait un reproche, pas un
+                        renseignement. */}
+                    <DocumentingPages
+                      pages={docsByModule.get(module.id) ?? []}
+                      projectKey={project.key}
+                    />
                   </li>
                 );
               })}
@@ -201,6 +233,10 @@ export default async function StructurePage({
                       {component.description}
                     </p>
                   )}
+                  <DocumentingPages
+                    pages={docsByComponent.get(component.id) ?? []}
+                    projectKey={project.key}
+                  />
                 </li>
               ))}
             </ul>

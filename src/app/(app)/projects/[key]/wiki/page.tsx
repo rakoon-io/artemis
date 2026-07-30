@@ -12,7 +12,12 @@ import {
 import { auth } from "@/auth";
 import { isAdmin } from "@/lib/policies";
 import { cn, formatDate } from "@/lib/utils";
-import { ancestorsOf, groupBySection, orderedTree } from "@/lib/wiki-tree";
+import {
+  ancestorsOf,
+  groupBySection,
+  orderedTree,
+  sectionOfPage,
+} from "@/lib/wiki-tree";
 import { MAX_REVISIONS_LISTED } from "@/server/services/wiki.service";
 import { getAccessibleProjectByKey } from "@/server/access";
 import {
@@ -21,7 +26,10 @@ import {
   getSpecPackageForPage,
   getSpecVersion,
   getSpecVersions,
+  getComponents,
+  getModules,
   getTicketKeys,
+  getWikiPageSubjects,
   getWikiPages,
   getWikiSections,
   resolveWikiPage,
@@ -36,6 +44,7 @@ import { MarkSpecButton, SpecPanel } from "@/components/wiki/spec-panel";
 import { MeetingControls } from "@/components/wiki/meeting-controls";
 import { NewMeetingButton } from "@/components/wiki/new-meeting-button";
 import { StructureWikiButton } from "@/components/wiki/structure-wiki-button";
+import { PageSubjects } from "@/components/wiki/page-subjects";
 import { MeetingView } from "@/components/wiki/meeting-view";
 import { PageOutline } from "@/components/wiki/page-outline";
 import { MeetingSection } from "@/components/wiki/meeting-editor";
@@ -192,6 +201,22 @@ export default async function WikiPage({
     wikiSections.find((s) => s.kind === "MEETING")?.rootPageId ?? null;
   const currentIsSectionRoot =
     !!current && wikiSections.some((s) => s.rootPageId === current.id);
+
+  // SUJETS ET FRAÎCHEUR : réservés à la section IMPLÉMENTATION, et à elle seule.
+  // Une spécification vit en versions figées, un compte rendu est daté et ne
+  // vieillit pas ; leur poser un badge « à relire » apprendrait à ignorer les
+  // badges. Le catalogue n'est chargé que dans ce cas, et pas sur chaque page.
+  const currentSection = current
+    ? sectionOfPage(allPages, wikiSections, current.id)
+    : null;
+  const documents = currentSection === "IMPLEMENTATION" && !frozen;
+  const [modules, components, subjects] = documents
+    ? await Promise.all([
+        getModules(project.id),
+        getComponents(project.id),
+        getWikiPageSubjects(current!.id),
+      ])
+    : [[], [], [[], []] as const];
 
   /**
    * Une ligne du plan. Fonction et non composant : elle vit dans le corps de la
@@ -679,6 +704,28 @@ export default async function WikiPage({
                     )}
                   </div>
                 </div>
+
+                {documents && current && (
+                  <PageSubjects
+                    pageId={current.id}
+                    modules={modules.map((m) => ({
+                      id: m.id,
+                      name: m.name,
+                      color: m.color,
+                    }))}
+                    components={components.map((c) => ({
+                      id: c.id,
+                      name: c.name,
+                      color: c.color,
+                      moduleId: c.moduleId,
+                    }))}
+                    selectedModuleIds={subjects[0].map((s) => s.module.id)}
+                    selectedComponentIds={subjects[1].map((s) => s.component.id)}
+                    updatedAt={current.updatedAt.toISOString()}
+                    reviewedAt={current.reviewedAt?.toISOString() ?? null}
+                    canEdit
+                  />
+                )}
 
                 {isSpecRoot && pack && (
                   <SpecPanel

@@ -561,6 +561,19 @@ async function main() {
     },
   });
 
+  // La page d'implémentation DÉCLARE son sujet : c'est ce lien qui la fait
+  // apparaître sur la fiche du composant et sur les tickets qui le concernent.
+  // Sans lui, la démo montrerait la mécanique sans montrer ce qu'elle rapporte.
+  const champPiecesJointes = await prisma.component.findFirst({
+    where: { projectId: project.id, name: "Champ pièces jointes" },
+    select: { id: true },
+  });
+  if (champPiecesJointes) {
+    await prisma.wikiPageComponent.create({
+      data: { pageId: implementation.id, componentId: champPiecesJointes.id },
+    });
+  }
+
   const wikiPages = [guide, conventions, reunion, implementation];
 
   // Texte de recherche : le seed écrit en base sans passer par les services, il

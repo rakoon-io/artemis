@@ -156,6 +156,39 @@ export const wiki: WikiDict = {
     description:
       "The page and any subpages will be permanently deleted. This action cannot be undone.",
   },
+  // Ce qu'une page d'implementation documente, et depuis quand on l'a vue.
+  subjects: {
+    title: "What this page documents",
+    empty:
+      "No subject declared. Link this page to a module or component so it can be found from the catalogue and from tickets.",
+    edit: "Edit",
+    dialogTitle: "Documented subjects",
+    dialogDescription:
+      "Tick the modules and components this page is about. It will then appear on their entry, and on the tickets that concern them.",
+    modules: "Modules",
+    components: "Components",
+    catalogueEmpty:
+      "This project has no module or component yet. Declare some from the Structure tab.",
+    saved: "Subjects saved.",
+
+    // Fraicheur : ne vaut que pour l'implementation (cf. wiki-freshness).
+    freshness: {
+      fresh: "Up to date",
+      ageing: "Due for review",
+      stale: "Out of date",
+    },
+    checkedOn: "Checked on {date}",
+    review: "Mark as reviewed",
+    reviewHint:
+      "Declares the page still accurate, without changing its content or history.",
+    reviewed: "Page marked as reviewed.",
+
+    // Sens de lecture inverse : depuis un module, un composant, un ticket.
+    documentedBy: "Documented by",
+    documentedByEmpty: "No wiki page documents this.",
+    ticketDocs: "Documentation",
+  },
+
   // Sections predefinies du wiki : trois rapports au temps, pas trois dossiers.
   sections: {
     empty: "No pages yet.",

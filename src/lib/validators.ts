@@ -387,6 +387,17 @@ export const createMeetingPageSchema = createWikiPageSchema.extend({
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Date attendue au format AAAA-MM-JJ"),
 });
 
+/**
+ * Sujets documentés par une page : les modules et composants qu'elle décrit.
+ * Les deux listes sont facultatives et par défaut vides - déclarer « cette page
+ * ne documente plus rien » doit être aussi simple que de tout décocher.
+ */
+export const setWikiPageSubjectsSchema = z.object({
+  pageId: z.string().min(1),
+  moduleIds: z.array(z.string().min(1)).max(50).default([]),
+  componentIds: z.array(z.string().min(1)).max(50).default([]),
+});
+
 // --- Paquets de spécifications (sous-arbres de wiki versionnés) ---
 
 export const markSpecSchema = z.object({
