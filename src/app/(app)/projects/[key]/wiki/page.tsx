@@ -175,14 +175,17 @@ export default async function WikiPage({
   // Sommaire de la page consultée. Pour un compte rendu, on ne retient que les
   // THÈMES : les sous-titres écrits dans le texte libre d'un thème ne sont pas
   // des sections du document, les lister brouillerait la navigation.
-  const meeting = current?.meetingDate ? parseMeeting(current.content) : null;
-  const outlineHeadings = current
-    ? meeting
-      ? extractOutline(current.content).filter(
-          (head) => head.level === meeting.headingLevel,
-        )
-      : extractOutline(current.content)
-    : [];
+  // Le sommaire décrit CE QUI EST AFFICHÉ : en consultant une révision figée,
+  // c'est son contenu d'alors qu'il faut décrire, pas celui de la page courante -
+  // les titres ont pu changer depuis, et les liens ne mèneraient nulle part.
+  const shownContent = frozen?.content ?? current?.content ?? "";
+  const meeting =
+    current?.meetingDate && !frozen ? parseMeeting(shownContent) : null;
+  const outlineHeadings = meeting
+    ? extractOutline(shownContent).filter(
+        (head) => head.level === meeting.headingLevel,
+      )
+    : extractOutline(shownContent);
   const outlineTitle = meeting ? t.wiki.meeting.themesOutline : undefined;
 
   // Les liens portent le SLUG quand la page en a un, l'identifiant sinon (page
@@ -646,7 +649,12 @@ export default async function WikiPage({
               Masquée sous `lg`, où elle est rendue au-dessus de l'article. */}
           {outlineHeadings.length > 1 && (
             <aside className="hidden shrink-0 lg:block lg:w-64 xl:w-72">
-              <div className="sticky top-6">
+              {/* `top-20` et non `top-6` : l'en-tête de l'application est
+                  lui-même collé en haut (`sticky top-0`, 57 px). Se coller plus
+                  haut ferait glisser le titre du sommaire DERRIÈRE lui dès le
+                  premier défilement - la liste restait lisible, mais son
+                  intitulé disparaissait. */}
+              <div className="sticky top-20">
                 <PageOutline headings={outlineHeadings} title={outlineTitle} />
               </div>
             </aside>

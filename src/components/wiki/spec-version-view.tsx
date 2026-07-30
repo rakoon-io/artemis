@@ -3,6 +3,8 @@ import { ArrowLeft, BookLock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { WikiContent } from "@/components/wiki/wiki-content";
+import { PageOutline } from "@/components/wiki/page-outline";
+import { anchorFor } from "@/lib/markdown-outline";
 import { formatDate } from "@/lib/utils";
 import { formatVersionLabel } from "@/lib/spec-package";
 import { getDictionary } from "@/i18n/server";
@@ -50,6 +52,17 @@ export async function SpecVersionView({
   const author =
     version.publishedBy?.name ?? version.publishedBy?.email ?? null;
 
+  // Un parcours unique et ordonné, comme pour un document Markdown : deux pages
+  // du même titre reçoivent ainsi des ancres distinctes.
+  const seen = new Map<string, number>();
+  const outline = version.pages.map((page, index) => ({
+    level: 2,
+    title: page.title,
+    anchor: anchorFor(page.title, seen),
+    depth: index === 0 ? 0 : 1,
+    line: index + 1,
+  }));
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -89,9 +102,15 @@ export async function SpecVersionView({
         </p>
       )}
 
+      {/* Une version publiée est un document d'un seul tenant, souvent long :
+          son sommaire liste ses PAGES, là où celui d'une page ordinaire liste
+          ses titres. Les ancres sont posées par la même fonction, si bien que
+          les liens aboutissent ici comme ailleurs. */}
+      <PageOutline headings={outline} />
+
       <div className="space-y-8">
         {version.pages.map((page, index) => (
-          <section key={page.id} className="space-y-2">
+          <section key={page.id} id={outline[index]?.anchor} className="scroll-mt-20 space-y-2">
             {/* Le chemin est rappelé sous le titre pour les chapitres, pas pour
                 la première page : c'est la racine, son chemin est son titre. */}
             <div className="space-y-0.5 border-b pb-2">

@@ -45,10 +45,10 @@ export async function PageOutline({
       </summary>
       <nav
         aria-label={t.wiki.outline.ariaLabel}
-        // Borné en hauteur et défilant : un sommaire de trente sections, dans
-        // une colonne collante, dépasserait sinon l'écran et deviendrait
-        // inatteignable par le bas.
-        className="flex max-h-[70vh] flex-col gap-0.5 overflow-y-auto px-3 pb-3"
+        // Borné à la hauteur RESTANTE sous l'en-tête collé et le décalage de la
+        // colonne : un sommaire de trente sections dépasserait sinon l'écran et
+        // deviendrait inatteignable par le bas.
+        className="flex max-h-[calc(100vh-9rem)] flex-col gap-0.5 overflow-y-auto px-3 pb-3"
       >
         {outline.map((head) => (
           <a
