@@ -30,6 +30,7 @@ import {
   getModules,
   getTicketKeys,
   getTicketRefs,
+  getWikiAttachments,
   getWikiPageSubjects,
   getWikiPages,
   getWikiSections,
@@ -48,6 +49,7 @@ import { StructureWikiButton } from "@/components/wiki/structure-wiki-button";
 import { PageSubjects } from "@/components/wiki/page-subjects";
 import { WikiPageForm } from "@/components/wiki/wiki-page-form";
 import { WikiPageContent } from "@/components/wiki/wiki-page-content";
+import { WikiAttachments } from "@/components/wiki/wiki-attachments";
 import {
   WikiParentInline,
   WikiTitleInline,
@@ -245,7 +247,13 @@ export default async function WikiPage({
 
   // Les références de tickets servent en ÉDITION EN PLACE autant qu'à la
   // création : l'autocomplétion « @ » existe des deux côtés.
-  const ticketRefs = await getTicketRefs(project.id);
+  const [ticketRefs, wikiFiles] = await Promise.all([
+    getTicketRefs(project.id),
+    // Les pièces jointes ne concernent que la page LUE, jamais une révision
+    // figée : celle-ci décrit un état passé, où le fichier d'aujourd'hui n'a
+    // pas sa place.
+    current && !frozen ? getWikiAttachments(current.id) : Promise.resolve([]),
+  ]);
   // Options de rangement : l'arbre privé de la page et de ses descendantes -
   // se ranger sous sa propre sous-page ferait un cycle.
   const parents = parentOptions(allPages, current?.id).map((node) => ({
@@ -932,6 +940,19 @@ export default async function WikiPage({
                     tickets={ticketRefs}
                     ticketMap={ticketMap}
                     ticketHints={ticketHints}
+                    canEdit
+                  />
+                )}
+
+                {current && !frozen && (
+                  <WikiAttachments
+                    pageId={current.id}
+                    files={wikiFiles.map((f) => ({
+                      id: f.id,
+                      filename: f.filename,
+                      contentType: f.contentType,
+                      size: f.size,
+                    }))}
                     canEdit
                   />
                 )}

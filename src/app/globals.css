@@ -332,6 +332,12 @@
 .wiki-prose pre code {
   @apply bg-transparent p-0 text-[1em];
 }
+.wiki-prose img {
+  /* Une capture d'écran collée fait souvent deux fois la largeur de la colonne :
+     sans plafond, elle déborderait de la page. La hauteur suit, et le fond
+     damier des images transparentes reste lisible grâce à la bordure. */
+  @apply my-2 h-auto max-w-full rounded-md border;
+}
 .wiki-prose blockquote {
   @apply border-l-2 border-border pl-4 italic text-muted-foreground;
 }

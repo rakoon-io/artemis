@@ -117,7 +117,22 @@ export async function deleteStored(key: string): Promise<void> {
 
 /** Clé objet dédiée pour une pièce jointe. */
 export function attachmentKey(ticketId: string, filename: string): string {
+  return `attachments/${ticketId}/${safeSuffix(filename)}`;
+}
+
+/**
+ * Clé objet d'une pièce jointe de PAGE DE WIKI. Préfixe distinct de celui des
+ * tickets : c'est lui que les routes vérifient pour savoir à qui appartient
+ * l'objet, et deux espaces séparés interdisent qu'une clé forgée de l'un serve
+ * à écrire dans l'autre.
+ */
+export function wikiFileKey(pageId: string, filename: string): string {
+  return `wiki/${pageId}/${safeSuffix(filename)}`;
+}
+
+/** Nom de fichier assaini, préfixé d'un aléa pour éviter les collisions. */
+function safeSuffix(filename: string): string {
   const safe = filename.replace(/[^\w.\-]+/g, "_").slice(-100);
   const rand = Math.random().toString(36).slice(2, 10);
-  return `attachments/${ticketId}/${rand}-${safe}`;
+  return `${rand}-${safe}`;
 }

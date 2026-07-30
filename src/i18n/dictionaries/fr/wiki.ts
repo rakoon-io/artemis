@@ -196,6 +196,24 @@ export const wiki = {
     ticketDocs: "Documentation",
   },
 
+  // Pieces jointes d'une page : documents deposes, images collees dans le texte.
+  files: {
+    title: "Pièces jointes",
+    empty: "Aucune pièce jointe.",
+    add: "Ajouter un fichier",
+    uploading: "Envoi en cours…",
+    uploaded: "Fichier ajouté.",
+    uploadFailed: "L'envoi a échoué.",
+    insert: "Insérer dans le texte",
+    inserted: "Citation copiée : collez-la dans le contenu.",
+    remove: "Retirer {name}",
+    removed: "Pièce jointe retirée.",
+    removeTitle: "Retirer « {name} » ?",
+    removeDescription:
+      "Le fichier sera définitivement supprimé. Le contenu de la page n'est pas modifié : s'il cite ce fichier, la citation restera visible et ne mènera plus nulle part.",
+    pasteHint: "Collez une image dans le texte pour l'y insérer directement.",
+  },
+
   // Sections predefinies du wiki : trois rapports au temps, pas trois dossiers.
   sections: {
     empty: "Aucune page pour l'instant.",

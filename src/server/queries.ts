@@ -1,5 +1,6 @@
 import { isAdmin, type PolicyUser } from "@/lib/policies";
 import * as columnService from "./services/column.service";
+import * as wikiAttachmentService from "./services/wiki-attachment.service";
 import * as componentService from "./services/component.service";
 import * as emailLogService from "./services/email-log.service";
 import * as labelService from "./services/label.service";
@@ -125,6 +126,11 @@ export function getPagesDocumenting(subjects: {
 /** Index de la documentation du projet : quelles pages decrivent quelle brique. */
 export function getDocumentationIndex(projectId: string) {
   return wikiService.listDocumentationIndex(projectId);
+}
+
+/** Pieces jointes d'une page : documents deposes et images collees. */
+export function getWikiAttachments(pageId: string) {
+  return wikiAttachmentService.listWikiAttachments(pageId);
 }
 
 /** Une page de wiki avec son contenu. */

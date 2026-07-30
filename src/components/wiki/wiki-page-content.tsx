@@ -10,6 +10,7 @@ import { WikiContent } from "@/components/wiki/wiki-content";
 import type { TicketHint } from "@/components/wiki/ticket-hover-link";
 import type { TicketRef } from "@/lib/wiki-mentions";
 import { updateWikiPageAction } from "@/server/actions/wiki.actions";
+import { uploadWikiFile, wikiFileHref } from "./wiki-file-upload";
 import { useDict } from "@/i18n/provider";
 import { fmt } from "@/i18n";
 
@@ -104,6 +105,18 @@ export function WikiPageContent({
           placeholder={t.wiki.form.contentPlaceholder}
           rows={ROWS}
           disabled={saving}
+          /* Une image collée est DÉPOSÉE sur la page, puis citée par son
+             adresse stable. Le texte n'embarque jamais l'image elle-même : une
+             capture d'écran en base64 pèserait plus que toute la page, et la
+             recherche plein texte l'indexerait. */
+          onPasteImage={async (file) => {
+            const done = await uploadWikiFile(pageId, file);
+            if (!done) {
+              toast.error(t.wiki.files.uploadFailed);
+              return null;
+            }
+            return { src: wikiFileHref(done.id), alt: done.filename };
+          }}
           onKeyDown={(event) => {
             if (event.key === "Escape") {
               event.preventDefault();

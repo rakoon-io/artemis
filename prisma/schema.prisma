@@ -90,6 +90,7 @@ model User {
   proposedModules    Module[]            @relation("moduleProposals")
   proposedComponents Component[]         @relation("componentProposals")
   wikiRevisions      WikiRevision[]
+  wikiAttachments    WikiAttachment[]
   specVersions       SpecVersion[]
 }
 
@@ -442,6 +443,7 @@ model WikiPage {
   // Sujets documentés par cette page : modules et composants du catalogue.
   modules     WikiPageModule[]
   components  WikiPageComponent[]
+  attachments WikiAttachment[]
   // Renseigne uniquement si CETTE page est la racine d'une section prédéfinie.
   // L'appartenance des AUTRES pages ne se stocke pas : elle se calcule en
   // remontant les ancêtres (cf. `@/lib/wiki-tree`).
@@ -556,6 +558,42 @@ model WikiSection {
 //
 // Clef primaire COMPOSITE : le même lien ne peut être posé deux fois, sans
 // index supplémentaire ni identifiant de substitution dont personne ne se sert.
+// PIÈCE JOINTE d'une page de wiki : un document déposé, ou une image collée
+// dans le texte.
+//
+// Table DISTINCTE d'`Attachment`, qui porte un `ticketId` non nul. Rendre cette
+// colonne facultative pour y loger aussi les pages aurait autorisé la ligne sans
+// propriétaire, et celle qui en a deux ; il aurait fallu une contrainte, puis du
+// code pour la respecter. Deux tables, aucun état invalide.
+//
+// L'objet lui-même vit dans le stockage (S3 ou disque) ; seules les métadonnées
+// sont ici. C'est `storageKey` qui l'y retrouve.
+//
+// ─────────────────────────────────────────────────────────────────────────────
+// L'ADRESSE ÉCRITE DANS LE MARKDOWN N'EST JAMAIS UNE URL SIGNÉE
+//
+// Une image collée s'écrit « ![](/api/wiki-files/<id>) » : une adresse STABLE,
+// que l'application résout à chaque lecture en signant une URL fraîche. Écrire
+// directement l'URL signée aurait produit une page dont les images cessent de
+// s'afficher au bout de quelques minutes - définitivement, puisque le texte
+// enregistré porterait une adresse périmée.
+model WikiAttachment {
+  id           String   @id @default(cuid())
+  pageId       String
+  page         WikiPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  filename     String
+  contentType  String
+  size         Int
+  storageKey   String
+  // `SetNull` : la pièce jointe survit à la suppression du compte qui l'a
+  // déposée - le document, lui, appartient au projet.
+  uploadedById String?
+  uploadedBy   User?    @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+
+  @@index([pageId])
+}
+
 model WikiPageModule {
   pageId   String
   page     WikiPage @relation(fields: [pageId], references: [id], onDelete: Cascade)

@@ -194,6 +194,24 @@ export const wiki: WikiDict = {
     ticketDocs: "Documentation",
   },
 
+  // Pieces jointes d'une page : documents deposes, images collees dans le texte.
+  files: {
+    title: "Attachments",
+    empty: "No attachments.",
+    add: "Add a file",
+    uploading: "Uploading…",
+    uploaded: "File added.",
+    uploadFailed: "Upload failed.",
+    insert: "Insert into the text",
+    inserted: "Reference copied: paste it into the content.",
+    remove: "Remove {name}",
+    removed: "Attachment removed.",
+    removeTitle: "Remove “{name}”?",
+    removeDescription:
+      "The file will be permanently deleted. The page content is not changed: if it references this file, the reference will remain visible and lead nowhere.",
+    pasteHint: "Paste an image into the text to insert it directly.",
+  },
+
   // Sections predefinies du wiki : trois rapports au temps, pas trois dossiers.
   sections: {
     empty: "No pages yet.",

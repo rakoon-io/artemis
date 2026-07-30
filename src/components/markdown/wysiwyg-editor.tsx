@@ -181,6 +181,7 @@ function EditorSurface({
   disabled,
   placeholder,
   tickets,
+  onPasteImage,
   anchorRef,
   onMentionChange,
   register,
@@ -191,6 +192,7 @@ function EditorSurface({
   disabled?: boolean;
   placeholder?: string;
   tickets: TicketRef[];
+  onPasteImage?: (file: File) => Promise<{ src: string; alt: string } | null>;
   /** Boîte de référence pour positionner la liste (le conteneur `relative`). */
   anchorRef: React.RefObject<HTMLDivElement | null>;
   onMentionChange: (
@@ -218,9 +220,11 @@ function EditorSurface({
   const viewRef = useRef<EditorView | null>(null);
   const ticketsRef = useRef(tickets);
   const notifyRef = useRef(onMentionChange);
+  const pasteRef = useRef(onPasteImage);
   useEffect(() => {
     ticketsRef.current = tickets;
     notifyRef.current = onMentionChange;
+    pasteRef.current = onPasteImage;
   });
 
   const clear = useCallback(() => {
@@ -326,6 +330,38 @@ function EditorSurface({
               },
             },
             /**
+             * COLLAGE D'IMAGE. On insère un VRAI NŒUD image, et non le texte
+             * « ![](…) » : écrit tel quel dans un document ProseMirror, il
+             * ressortirait échappé à la sérialisation - « !\[\]\(…\) » -,
+             * c'est-à-dire en toutes lettres au lieu d'une image.
+             *
+             * Le dépôt est asynchrone, la transaction ne peut donc pas se faire
+             * dans la foulée : on empêche le collage ordinaire, et l'on insère
+             * quand le fichier est arrivé, à la position d'alors.
+             */
+            handlePaste: (view: EditorView, event: ClipboardEvent) => {
+              const upload = pasteRef.current;
+              if (!upload || !event.clipboardData) return false;
+              const images = Array.from(event.clipboardData.files).filter((f) =>
+                f.type.startsWith("image/"),
+              );
+              if (images.length === 0) return false;
+              void (async () => {
+                for (const file of images) {
+                  const done = await upload(file);
+                  if (!done) continue;
+                  const type = view.state.schema.nodes.image;
+                  if (!type) continue;
+                  view.dispatch(
+                    view.state.tr.replaceSelectionWith(
+                      type.create({ src: done.src, alt: done.alt }),
+                    ),
+                  );
+                }
+              })();
+              return true;
+            },
+            /**
              * Tant que la liste est ouverte, elle CONSOMME les touches de
              * navigation : sans cela, Entrée couperait le paragraphe sous la
              * liste et les flèches déplaceraient le curseur au lieu de changer
@@ -420,11 +456,14 @@ export function WysiwygEditor({
   disabled,
   placeholder,
   tickets = [],
+  onPasteImage,
 }: {
   value: string;
   onChange: (markdown: string) => void;
   disabled?: boolean;
   placeholder?: string;
+  /** Dépose une image collée et rend de quoi la citer (cf. `MarkdownEditor`). */
+  onPasteImage?: (file: File) => Promise<{ src: string; alt: string } | null>;
   /**
    * Tickets citables. Vide = pas d'autocomplétion, et pas de bouton « @ » :
    * une surface qui n'a rien à citer ne doit pas en proposer le geste.
@@ -467,6 +506,7 @@ export function WysiwygEditor({
           disabled={disabled}
           placeholder={placeholder}
           tickets={tickets}
+          onPasteImage={onPasteImage}
           anchorRef={anchorRef}
           onMentionChange={(next, list, index) => {
             setMention(next);

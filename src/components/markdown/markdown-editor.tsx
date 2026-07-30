@@ -50,6 +50,15 @@ export interface MarkdownEditorProps {
   toolbarExtra?: React.ReactNode;
   /** Touches non gérées par l'autocomplétion (ex. ⌘+Entrée pour enregistrer). */
   onKeyDown?: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  /**
+   * COLLAGE D'IMAGE. Reçoit le fichier, le dépose où il doit l'être, et rend de
+   * quoi le citer - `null` si le dépôt échoue, auquel cas rien n'est inséré.
+   *
+   * L'éditeur ne sait pas où vont les fichiers, et c'est voulu : une page de
+   * wiki et un ticket ne les rangent pas au même endroit. Absent, le collage
+   * d'image retrouve le comportement du navigateur.
+   */
+  onPasteImage?: (file: File) => Promise<{ src: string; alt: string } | null>;
 }
 
 // Propriétés à copier sur le div miroir pour retrouver la position du curseur.
@@ -119,6 +128,7 @@ export function MarkdownEditor({
   disabled = false,
   toolbarExtra,
   onKeyDown,
+  onPasteImage,
 }: MarkdownEditorProps) {
   const t = useDict();
   const taRef = useRef<HTMLTextAreaElement | null>(null);
@@ -192,6 +202,38 @@ export function MarkdownEditor({
       ta.focus();
       ta.setSelectionRange(pos, pos);
     });
+  }
+
+  /** Insère du texte au curseur, sans passer par la sélection courante. */
+  function insertAtCaret(text: string) {
+    const ta = editor();
+    const start = ta ? ta.selectionStart : value.length;
+    const end = ta ? ta.selectionEnd : value.length;
+    const next = value.slice(0, start) + text + value.slice(end);
+    onChange(next);
+    const caret = start + text.length;
+    requestAnimationFrame(() => {
+      ta?.focus();
+      ta?.setSelectionRange(caret, caret);
+    });
+  }
+
+  /**
+   * Colle une IMAGE : on empêche le collage ordinaire - qui n'insérerait qu'un
+   * nom de fichier ou rien -, on dépose le fichier, puis on écrit sa citation au
+   * curseur. Un collage sans image suit son cours normal.
+   */
+  async function handlePaste(event: React.ClipboardEvent<HTMLTextAreaElement>) {
+    if (!onPasteImage) return;
+    const images = Array.from(event.clipboardData.files).filter((f) =>
+      f.type.startsWith("image/"),
+    );
+    if (images.length === 0) return;
+    event.preventDefault();
+    for (const file of images) {
+      const done = await onPasteImage(file);
+      if (done) insertAtCaret(`![${done.alt}](${done.src})\n`);
+    }
   }
 
   /** Recalcule l'état de mention et sa position (ancrée au curseur). */
@@ -300,6 +342,7 @@ export function MarkdownEditor({
           // classement passent par le même module, les deux modes proposent
           // donc exactement la même liste dans le même ordre.
           tickets={tickets}
+          onPasteImage={onPasteImage}
           // L'invite du mode brut parle de MARKDOWN, ce qui n'a pas cours ici.
           // La citation par « @ », elle, fonctionne désormais des deux côtés -
           // c'est `richHint`, sous l'éditeur, qui le dit.
@@ -355,6 +398,7 @@ export function MarkdownEditor({
             }}
             onClick={(e) => updateMention(e.currentTarget)}
             onKeyDown={handleKeyDown}
+            onPaste={(e) => void handlePaste(e)}
             placeholder={placeholder}
             rows={rows}
             disabled={disabled}

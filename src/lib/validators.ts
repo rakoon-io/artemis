@@ -398,6 +398,22 @@ export const setWikiPageSubjectsSchema = z.object({
   componentIds: z.array(z.string().min(1)).max(50).default([]),
 });
 
+/** Préparation du dépôt d'une pièce jointe sur une page de wiki. */
+export const wikiPresignSchema = z.object({
+  pageId: z.string().min(1),
+  filename: z.string().trim().min(1).max(255),
+  contentType: z.string().trim().min(1).max(120),
+});
+
+/** Enregistrement des métadonnées après un dépôt direct sur S3. */
+export const confirmWikiAttachmentSchema = z.object({
+  pageId: z.string().min(1),
+  filename: z.string().trim().min(1).max(255),
+  contentType: z.string().trim().min(1).max(120),
+  size: z.number().int().nonnegative().max(20 * 1024 * 1024),
+  storageKey: z.string().min(1).max(500),
+});
+
 // --- Paquets de spécifications (sous-arbres de wiki versionnés) ---
 
 export const markSpecSchema = z.object({
