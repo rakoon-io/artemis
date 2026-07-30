@@ -180,6 +180,17 @@ export const wiki = {
     marked: "Page suivie comme compte rendu.",
     unmarked: "La page n'est plus un compte rendu.",
 
+    // Construction assistee par l'IA
+    aiBuild: "Construire à partir de notes",
+    aiTitle: "Construire le compte rendu",
+    aiDescription:
+      "Collez les notes brutes de la réunion : les thèmes et les points en seront dégagés, chacun classé en information ou en action.",
+    aiPlaceholder: "Notes prises pendant la réunion…",
+    aiSubmit: "Analyser les notes",
+    aiReplace: "Les thèmes déjà saisis seront remplacés. Rien n'est enregistré tant que vous n'avez pas validé.",
+    aiDone: "{count} thème(s) proposés.",
+    kindToggle: "Changer la nature du point {ref}",
+
     // Edition graphique des points
     editItems: "Modifier les points",
     editing: "Édition des points",

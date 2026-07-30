@@ -9,6 +9,7 @@ import {
   Loader2,
   Pencil,
   Plus,
+  Sparkles,
   Trash2,
   X,
 } from "lucide-react";
@@ -17,12 +18,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { generateMeetingFromTextAction } from "@/server/actions/ai-meeting.actions";
 import {
   formatItemRef,
   parseMeeting,
@@ -77,6 +82,7 @@ export function MeetingEditor({
   pageTitle,
   parentId,
   content,
+  aiEnabled = false,
   onDone,
 }: {
   pageId: string;
@@ -88,6 +94,8 @@ export function MeetingEditor({
    */
   parentId: string | null;
   content: string;
+  /** L'IA est-elle configurée sur ce serveur ? Décidé côté serveur. */
+  aiEnabled?: boolean;
   onDone: () => void;
 }) {
   const t = useDict();
@@ -181,6 +189,25 @@ export function MeetingEditor({
         />
       </div>
 
+      {aiEnabled && (
+        <BuildFromNotes
+          pageId={pageId}
+          hasThemes={themes.length > 0}
+          disabled={pending}
+          onThemes={(proposes) =>
+            setThemes(
+              proposes.map((theme) => ({
+                title: theme.title,
+                items: theme.items,
+                // Rien à conserver : ces thèmes n'existaient pas.
+                notesBefore: "",
+                notesAfter: "",
+              })),
+            )
+          }
+        />
+      )}
+
       {themes.length === 0 && (
         <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
           {t.wiki.meeting.noThemesYet}
@@ -240,34 +267,35 @@ export function MeetingEditor({
               {theme.items.map((item, itemIndex) => {
                 const ref = formatItemRef(letter, itemIndex + 1);
                 return (
-                  <div key={itemIndex} className="flex flex-wrap items-start gap-2">
+                  <div
+                    key={itemIndex}
+                    className="group/row flex flex-wrap items-start gap-2"
+                  >
                     <span className="mt-2 w-14 shrink-0 font-mono text-xs text-muted-foreground">
                       {ref}
                     </span>
-                    <Select
-                      value={item.kind}
+                    {/* Une BASCULE plutôt qu'une liste déroulante : deux
+                        valeurs seulement, et un clic au lieu de deux. L'état est
+                        lu au premier coup d'œil, sans ouvrir quoi que ce soit. */}
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={item.kind === "action" ? "default" : "secondary"}
+                      className="w-32 shrink-0"
                       disabled={pending}
-                      onValueChange={(value) =>
+                      title={fmt(t.wiki.meeting.kindToggle, { ref })}
+                      aria-label={fmt(t.wiki.meeting.kindToggle, { ref })}
+                      aria-pressed={item.kind === "action"}
+                      onClick={() =>
                         patchItem(themeIndex, itemIndex, {
-                          kind: value as MeetingItemKind,
+                          kind: item.kind === "action" ? "info" : "action",
                         })
                       }
                     >
-                      <SelectTrigger
-                        className="w-40 shrink-0"
-                        aria-label={t.wiki.meeting.colKind}
-                      >
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="info">
-                          {t.wiki.meeting.kindInfo}
-                        </SelectItem>
-                        <SelectItem value="action">
-                          {t.wiki.meeting.kindAction}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                      {item.kind === "action"
+                        ? t.wiki.meeting.kindAction
+                        : t.wiki.meeting.kindInfo}
+                    </Button>
                     <Textarea
                       value={item.text}
                       onChange={(event) =>
@@ -281,6 +309,10 @@ export function MeetingEditor({
                       aria-label={fmt(t.wiki.meeting.colItem + " {ref}", { ref })}
                       className="min-w-48 flex-1 resize-y"
                     />
+                    {/* Déplacement et suppression révélés au survol ou au
+                        focus : trois boutons par ligne, affichés en permanence,
+                        pesaient plus lourd que le texte qu'ils encadrent. */}
+                    <span className="flex shrink-0 items-center opacity-0 transition-opacity group-hover/row:opacity-100 group-focus-within/row:opacity-100">
                     <IconButton
                       label={fmt(t.wiki.meeting.moveItemUp, { ref })}
                       disabled={pending || itemIndex === 0}
@@ -315,6 +347,7 @@ export function MeetingEditor({
                     >
                       <X />
                     </IconButton>
+                    </span>
                   </div>
                 );
               })}
@@ -381,6 +414,95 @@ export function MeetingEditor({
   );
 }
 
+/**
+ * Construction du compte rendu à partir de NOTES BRUTES, quand l'IA est
+ * configurée. Le modèle rend une structure - thèmes, points, nature - que
+ * l'éditeur remplit ; il n'écrit pas de Markdown, la mise en forme reste celle
+ * du module `meeting-minutes`.
+ *
+ * Rien n'est enregistré : les thèmes proposés sont un brouillon que l'on relit,
+ * corrige et valide. Annuler l'éditeur les efface sans laisser de trace - ce qui
+ * autorise à remplacer sans confirmation, en le disant.
+ */
+function BuildFromNotes({
+  pageId,
+  hasThemes,
+  disabled,
+  onThemes,
+}: {
+  pageId: string;
+  hasThemes: boolean;
+  disabled?: boolean;
+  onThemes: (themes: Array<{ title: string; items: DraftItem[] }>) => void;
+}) {
+  const t = useDict();
+  const [open, setOpen] = useState(false);
+  const [notes, setNotes] = useState("");
+  const [running, setRunning] = useState(false);
+
+  async function analyse() {
+    setRunning(true);
+    const res = await generateMeetingFromTextAction({ pageId, text: notes });
+    setRunning(false);
+    if (!res.ok) {
+      toast.error(res.error);
+      return;
+    }
+    const themes = res.data?.themes ?? [];
+    onThemes(themes);
+    toast.success(fmt(t.wiki.meeting.aiDone, { count: themes.length }));
+    setOpen(false);
+    setNotes("");
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(next) => !running && setOpen(next)}>
+      <DialogTrigger asChild>
+        <Button type="button" variant="outline" disabled={disabled}>
+          <Sparkles />
+          {t.wiki.meeting.aiBuild}
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{t.wiki.meeting.aiTitle}</DialogTitle>
+          <DialogDescription>{t.wiki.meeting.aiDescription}</DialogDescription>
+        </DialogHeader>
+        <Textarea
+          value={notes}
+          onChange={(event) => setNotes(event.target.value)}
+          placeholder={t.wiki.meeting.aiPlaceholder}
+          rows={12}
+          maxLength={20000}
+          disabled={running}
+          className="resize-y"
+          autoFocus
+        />
+        {hasThemes && (
+          <p className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
+            {t.wiki.meeting.aiReplace}
+          </p>
+        )}
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button type="button" variant="outline" disabled={running}>
+              {t.common.cancel}
+            </Button>
+          </DialogClose>
+          <Button
+            type="button"
+            disabled={running || !notes.trim()}
+            onClick={() => void analyse()}
+          >
+            {running && <Loader2 className="animate-spin" />}
+            {t.wiki.meeting.aiSubmit}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 /** Bouton d'action compact : l'intitulé accessible n'est jamais visuel. */
 function IconButton({
   label,
@@ -427,6 +549,7 @@ export function MeetingSection({
   parentId,
   content,
   canEdit,
+  aiEnabled,
   children,
 }: {
   pageId: string;
@@ -434,6 +557,7 @@ export function MeetingSection({
   parentId: string | null;
   content: string;
   canEdit: boolean;
+  aiEnabled?: boolean;
   children: ReactNode;
 }) {
   const t = useDict();
@@ -450,6 +574,7 @@ export function MeetingSection({
           pageTitle={pageTitle}
           parentId={parentId}
           content={content}
+          aiEnabled={aiEnabled}
           onDone={() => setEditing(false)}
         />
       </div>

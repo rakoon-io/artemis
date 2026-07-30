@@ -178,6 +178,17 @@ export const wiki: WikiDict = {
     marked: "Page now tracked as minutes.",
     unmarked: "The page is no longer minutes.",
 
+    // Construction assistee par l'IA
+    aiBuild: "Build from notes",
+    aiTitle: "Build the minutes",
+    aiDescription:
+      "Paste the raw meeting notes: themes and items will be extracted, each classed as information or action.",
+    aiPlaceholder: "Notes taken during the meeting…",
+    aiSubmit: "Analyse the notes",
+    aiReplace: "Themes already entered will be replaced. Nothing is saved until you confirm.",
+    aiDone: "{count} theme(s) proposed.",
+    kindToggle: "Change the type of item {ref}",
+
     // Edition graphique des points
     editItems: "Edit items",
     editing: "Editing items",

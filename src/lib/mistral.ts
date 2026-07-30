@@ -30,6 +30,7 @@
 // écrits dans le prompt doivent être EXACTEMENT ceux que l'analyseur relira.
 // Les recopier ici les ferait diverger au premier ajustement.
 import { REPORT_HEADINGS_FR } from "@/lib/ticket-template";
+import type { MeetingItemKind } from "@/lib/meeting-minutes";
 
 type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
@@ -521,4 +522,127 @@ export async function generateTicketDrafts(
     throw new Error("Aucun ticket n'a pu être extrait du texte fourni.");
   }
   return { drafts: drafts.slice(0, maxTickets), usage };
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * COMPTE RENDU DE RÉUNION à partir de notes brutes.
+ *
+ * Le modèle ne rédige pas de Markdown : il rend une STRUCTURE (thèmes, points,
+ * nature). C'est l'éditeur qui la met en forme, et la sérialisation reste celle
+ * du module `meeting-minutes` - une seule écriture du format, quelle qu'en soit
+ * la provenance. Demander du Markdown au modèle aurait introduit une seconde
+ * plume, avec ses variantes de puces et ses titres approximatifs.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/** Garde-fou : au-delà, un compte rendu n'est plus lisible. */
+export const MAX_MEETING_THEMES = 12;
+
+export interface MeetingDraftItem {
+  kind: MeetingItemKind;
+  text: string;
+}
+
+export interface MeetingDraftTheme {
+  title: string;
+  items: MeetingDraftItem[];
+}
+
+export interface GenerateMeetingResult {
+  themes: MeetingDraftTheme[];
+  usage: ChatUsage | null;
+}
+
+function buildMeetingPrompt(maxThemes: number): string {
+  return [
+    "Tu transformes des notes de réunion brutes en compte rendu structuré.",
+    "Regroupe les propos par THÈME (un sujet abordé), puis liste les POINTS de",
+    `chaque thème. Au maximum ${maxThemes} thèmes.`,
+    "",
+    "Réponds STRICTEMENT en JSON valide, sans texte ni balise autour :",
+    '{ "themes": [ { "title": string, "items": [ { "kind": "info"|"action", "text": string } ] } ] }',
+    "",
+    "Règles :",
+    "- title : le sujet, en français, court (max 80 caractères), sans numérotation",
+    "  ni lettre - elles sont attribuées automatiquement à l'affichage.",
+    '- kind : "action" si le point engage quelqu\'un à faire quelque chose ;',
+    '  "info" pour un constat, une décision actée, une information partagée.',
+    "- Dans le doute, choisis \"info\" : oublier une action est moins grave que",
+    "  d'en inventer une que personne n'a prise.",
+    "- text : une phrase claire et autonome, en français. Ne recopie pas le nom",
+    "  du thème dans le point.",
+    "- N'invente aucune information absente des notes.",
+    "- Ignore les salutations et le bavardage.",
+  ].join("\n");
+}
+
+/** Lit et normalise la réponse du modèle. Tout élément douteux est écarté. */
+function parseMeetingThemes(content: string): MeetingDraftTheme[] {
+  let data: unknown;
+  try {
+    data = JSON.parse(content);
+  } catch {
+    // Le modèle encadre parfois son JSON d'un bloc de code malgré la consigne.
+    const match = content.match(/\{[\s\S]*\}/);
+    if (!match) return [];
+    try {
+      data = JSON.parse(match[0]);
+    } catch {
+      return [];
+    }
+  }
+
+  const raw = (data as { themes?: unknown })?.themes;
+  if (!Array.isArray(raw)) return [];
+
+  return raw
+    .map((theme) => {
+      const t = theme as { title?: unknown; items?: unknown };
+      const title = typeof t.title === "string" ? t.title.trim().slice(0, 80) : "";
+      const items = Array.isArray(t.items)
+        ? t.items
+            .map((item) => {
+              const i = item as { kind?: unknown; text?: unknown };
+              const text = typeof i.text === "string" ? i.text.trim() : "";
+              // Toute valeur inattendue retombe sur « info », conformément à la
+              // règle du prompt : ne jamais inventer d'engagement.
+              const kind: MeetingItemKind = i.kind === "action" ? "action" : "info";
+              return { kind, text };
+            })
+            .filter((item) => item.text.length > 0)
+        : [];
+      return { title, items };
+    })
+    .filter((theme) => theme.title.length > 0);
+}
+
+/**
+ * Construit un compte rendu à partir de notes libres. Lève une erreur explicite
+ * (message FR) ; l'action la convertit en résultat.
+ */
+export async function generateMeetingDraft(
+  text: string,
+  maxThemes: number = MAX_MEETING_THEMES,
+): Promise<GenerateMeetingResult> {
+  const apiKey = process.env.MISTRAL_API_KEY;
+  if (!apiKey) throw new Error("L'intégration Mistral n'est pas configurée.");
+
+  const trimmed = text.trim();
+  if (!trimmed) throw new Error("Le texte à analyser est vide.");
+
+  const model = process.env.MISTRAL_MODEL || DEFAULT_MODEL;
+  const bounded = Math.max(1, Math.min(maxThemes, MAX_MEETING_THEMES));
+  const messages: ChatMessage[] = [
+    { role: "system", content: buildMeetingPrompt(bounded) },
+    { role: "user", content: trimmed },
+  ];
+
+  const { content, usage } = isBatchEnabled()
+    ? await callChatBatch(apiKey, model, messages)
+    : await callChatSync(apiKey, model, messages);
+
+  const themes = parseMeetingThemes(content).slice(0, bounded);
+  if (themes.length === 0) {
+    throw new Error("Aucun thème n'a pu être dégagé de ces notes.");
+  }
+  return { themes, usage };
 }

@@ -33,6 +33,7 @@ import { SpecVersionView } from "@/components/wiki/spec-version-view";
 import { highlightSegments, type Segment } from "@/lib/search-text";
 import { extractOutline } from "@/lib/markdown-outline";
 import { parseMeeting } from "@/lib/meeting-minutes";
+import { isMistralConfigured } from "@/lib/mistral";
 import { getDictionary } from "@/i18n/server";
 import { fmt } from "@/i18n";
 
@@ -567,6 +568,7 @@ export default async function WikiPage({
                     parentId={current.parentId}
                     content={current.content}
                     canEdit
+                    aiEnabled={isMistralConfigured()}
                   >
                     <MeetingView
                       content={current.content}

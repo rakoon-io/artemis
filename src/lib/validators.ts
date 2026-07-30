@@ -208,6 +208,16 @@ export const setMeetingSchema = z.object({
     .nullable(),
 });
 
+/** Construction d'un compte rendu à partir de notes libres (intégration Mistral). */
+export const generateMeetingFromTextSchema = z.object({
+  pageId: z.string().min(1),
+  text: z
+    .string()
+    .trim()
+    .min(1, "Collez les notes de la réunion.")
+    .max(20000, "Notes trop longues (20000 caractères maximum)."),
+});
+
 export const createLabelSchema = z.object({
   projectId: z.string().min(1),
   name: z.string().min(1).max(30),
