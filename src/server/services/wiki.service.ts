@@ -1,5 +1,11 @@
 import { prisma } from "@/lib/db";
 import { slugForTitle } from "@/lib/slug";
+import {
+  buildSearchText,
+  buildSnippet,
+  searchTerms,
+  toPrefixQuery,
+} from "@/lib/search-text";
 import { Prisma } from "@prisma/client";
 
 /** Service Wiki - pages de documentation par projet (autorisation dans les actions). */
@@ -22,38 +28,109 @@ export function listWikiPages(projectId: string) {
   });
 }
 
-/** Extrait de contenu autour de la première occurrence de la requête. */
-function makeSnippet(content: string, query: string, radius = 80): string {
-  const flat = content.replace(/\s+/g, " ").trim();
-  if (!flat) return "";
-  const idx = flat.toLowerCase().indexOf(query.toLowerCase());
-  if (idx < 0) {
-    return flat.length > radius * 2 ? `${flat.slice(0, radius * 2)}...` : flat;
-  }
-  const start = Math.max(0, idx - radius);
-  const end = Math.min(flat.length, idx + query.length + radius);
-  return `${start > 0 ? "..." : ""}${flat.slice(start, end)}${end < flat.length ? "..." : ""}`;
+/** Nombre de résultats par page. La liste latérale n'en montre pas davantage. */
+export const SEARCH_PAGE_SIZE = 10;
+
+export interface WikiSearchHit {
+  id: string;
+  title: string;
+  slug: string | null;
+  updatedAt: Date;
+  /** Extrait centré sur le premier terme trouvé, dans le texte d'origine. */
+  snippet: string;
+  truncatedStart: boolean;
+  truncatedEnd: boolean;
 }
 
-/** Recherche plein texte (titre + contenu) dans les pages du projet, avec extrait. */
-export async function searchWikiPages(projectId: string, query: string) {
-  const pages = await prisma.wikiPage.findMany({
-    where: {
-      projectId,
-      OR: [
-        { title: { contains: query, mode: "insensitive" } },
-        { content: { contains: query, mode: "insensitive" } },
-      ],
-    },
-    orderBy: { updatedAt: "desc" },
-    select: { id: true, title: true, content: true, updatedAt: true },
-  });
-  return pages.map((p) => ({
-    id: p.id,
-    title: p.title,
-    updatedAt: p.updatedAt,
-    snippet: makeSnippet(p.content, query),
-  }));
+export interface WikiSearchResult {
+  hits: WikiSearchHit[];
+  /** Total des pages correspondantes, toutes pages de résultats confondues. */
+  total: number;
+  page: number;
+  pageSize: number;
+  /** Termes retenus : le surlignage de l'extrait s'appuie dessus. */
+  terms: string[];
+}
+
+/**
+ * Recherche plein texte dans les pages d'un projet.
+ *
+ * Trois choses la distinguent de la recherche par sous-chaîne qu'elle remplace :
+ *
+ *  - les ACCENTS ne comptent plus. Texte indexé et requête passent par le même
+ *    repli (`@/lib/search-text`), si bien que « imperatif » trouve « impératif ».
+ *  - l'ORDRE DES MOTS ne compte plus. Les termes sont liés par ET dans la
+ *    `tsquery` ; « csv export » et « export csv » donnent le même résultat. Le
+ *    préfixe (`:*`) fait en outre que « recrut » trouve « recrutement ».
+ *  - les résultats sont CLASSÉS par pertinence (`ts_rank`) et non par date. Le
+ *    titre est répété dans le texte indexé, ce qui suffit à faire remonter une
+ *    page dont le titre porte le mot cherché.
+ *
+ * La requête est brute parce que Prisma ne sait exprimer ni `ts_rank` ni un
+ * `count` fenêtré. Les valeurs restent des PARAMÈTRES : `to_tsquery` ne reçoit
+ * que des lettres et des chiffres, garantis par `searchTerms`.
+ *
+ * Le total est ramené par `count(*) OVER ()` dans la même requête, plutôt qu'un
+ * second aller-retour dont le résultat pourrait déjà être périmé.
+ */
+export async function searchWikiPages(
+  projectId: string,
+  query: string,
+  page = 1,
+): Promise<WikiSearchResult> {
+  const terms = searchTerms(query);
+  const pageSize = SEARCH_PAGE_SIZE;
+  const current = Math.max(1, Math.floor(page));
+  if (terms.length === 0) {
+    return { hits: [], total: 0, page: current, pageSize, terms };
+  }
+
+  const rows = await prisma.$queryRaw<
+    Array<{
+      id: string;
+      title: string;
+      slug: string | null;
+      content: string;
+      updatedAt: Date;
+      total: bigint;
+    }>
+  >`
+    SELECT p.id,
+           p.title,
+           p.slug,
+           p.content,
+           p."updatedAt",
+           count(*) OVER () AS total
+    FROM "WikiPage" p,
+         to_tsquery('french', ${toPrefixQuery(terms)}) AS q
+    WHERE p."projectId" = ${projectId}
+      AND to_tsvector('french', COALESCE(p."searchText", '')) @@ q
+    ORDER BY ts_rank(to_tsvector('french', COALESCE(p."searchText", '')), q) DESC,
+             p."updatedAt" DESC
+    LIMIT ${pageSize} OFFSET ${(current - 1) * pageSize}
+  `;
+
+  return {
+    // L'extrait est calculé ici, sur les seules lignes rendues : `ts_headline`
+    // aurait produit du HTML à réinjecter, donc une porte ouverte à l'injection
+    // depuis le contenu d'une page.
+    hits: rows.map((row) => {
+      const snippet = buildSnippet(row.content, terms);
+      return {
+        id: row.id,
+        title: row.title,
+        slug: row.slug,
+        updatedAt: row.updatedAt,
+        snippet: snippet.text,
+        truncatedStart: snippet.truncatedStart,
+        truncatedEnd: snippet.truncatedEnd,
+      };
+    }),
+    total: Number(rows[0]?.total ?? 0),
+    page: current,
+    pageSize,
+    terms,
+  };
 }
 
 /** Une page avec son contenu et son auteur. */
@@ -158,6 +235,7 @@ export function createWikiPage(input: CreateWikiPageServiceInput) {
         authorId: input.authorId,
         parentId: input.parentId ?? null,
         slug: await freshSlug(tx, input.projectId, input.title),
+        searchText: buildSearchText(input.title, input.content),
       },
     });
     await tx.wikiRevision.create({
@@ -230,6 +308,9 @@ export function updateWikiPage(input: UpdateWikiPageServiceInput) {
         title: input.title,
         content: input.content,
         slug: nextSlug,
+        // Recalculé à chaque enregistrement : une page dont on corrige le texte
+        // doit redevenir trouvable par les mots qu'elle contient désormais.
+        searchText: buildSearchText(input.title, input.content),
         // `undefined` = ne pas toucher le parent ; `null` = remonter à la racine.
         ...(input.parentId !== undefined ? { parentId: input.parentId } : {}),
       },

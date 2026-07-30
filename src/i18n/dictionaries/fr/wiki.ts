@@ -134,6 +134,9 @@ export const wiki = {
     placeholder: "Rechercher...",
     ariaLabel: "Rechercher dans le wiki",
     clear: "Effacer la recherche",
+    previous: "Précédent",
+    next: "Suivant",
+    pageOf: "Page {current} / {total}",
   },
 
   // Suppression

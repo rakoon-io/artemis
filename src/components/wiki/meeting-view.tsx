@@ -7,7 +7,6 @@ import {
   type MeetingItemKind,
 } from "@/lib/meeting-minutes";
 import { extractOutline } from "@/lib/markdown-outline";
-import { PageOutline } from "./page-outline";
 import { WikiContent } from "./wiki-content";
 import type { TicketHint } from "./ticket-hover-link";
 import { getDictionary } from "@/i18n/server";
@@ -97,11 +96,6 @@ export async function MeetingView({
             : t.wiki.meeting.actionOne}
         </Badge>
       </a>
-
-      <PageOutline
-        headings={themeHeadings}
-        title={t.wiki.meeting.themesOutline}
-      />
 
       {meeting.themes.map((theme, index) => (
         // Section REPLIABLE, en `<details>` natif : le repli fonctionne sans

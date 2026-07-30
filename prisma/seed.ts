@@ -5,6 +5,7 @@ import { emptyReport, serializeReport } from "../src/lib/ticket-template";
 // Le seed écrit en base sans passer par les services : il doit donc poser
 // lui-même les slugs, sinon les pages de démo n'auraient pas d'URL lisible.
 import { slugify } from "../src/lib/slug";
+import { buildSearchText } from "../src/lib/search-text";
 import { specSubtree } from "../src/lib/spec-package";
 import bcrypt from "bcryptjs";
 import { generateNKeysBetween } from "fractional-indexing";
@@ -496,6 +497,15 @@ async function main() {
   // enregistrement, le seed passant outre les services doit le faire lui-même -
   // sans quoi la démo montrerait un historique vide sur des pages existantes.
   const wikiPages = [guide, conventions, reunion];
+
+  // Texte de recherche : le seed écrit en base sans passer par les services, il
+  // doit donc le poser lui-même - sinon la démo livrerait un wiki introuvable.
+  for (const page of wikiPages) {
+    await prisma.wikiPage.update({
+      where: { id: page.id },
+      data: { searchText: buildSearchText(page.title, page.content) },
+    });
+  }
   await prisma.wikiRevision.createMany({
     data: wikiPages.map((page) => ({
       pageId: page.id,

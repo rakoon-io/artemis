@@ -30,6 +30,9 @@ import { MeetingView } from "@/components/wiki/meeting-view";
 import { PageOutline } from "@/components/wiki/page-outline";
 import { MeetingSection } from "@/components/wiki/meeting-editor";
 import { SpecVersionView } from "@/components/wiki/spec-version-view";
+import { highlightSegments, type Segment } from "@/lib/search-text";
+import { extractOutline } from "@/lib/markdown-outline";
+import { parseMeeting } from "@/lib/meeting-minutes";
 import { getDictionary } from "@/i18n/server";
 import { fmt } from "@/i18n";
 
@@ -37,6 +40,8 @@ interface WikiListItem {
   id: string;
   title: string;
   snippet?: string;
+  truncatedStart?: boolean;
+  truncatedEnd?: boolean;
 }
 
 /**
@@ -49,12 +54,20 @@ export default async function WikiPage({
   searchParams,
 }: {
   params: Promise<{ key: string }>;
-  searchParams: Promise<{ page?: string; q?: string; spec?: string; rev?: string }>;
+  searchParams: Promise<{
+    page?: string;
+    q?: string;
+    p?: string;
+    spec?: string;
+    rev?: string;
+  }>;
 }) {
   const { key } = await params;
   const sp = await searchParams;
   const requestedId = sp.page;
   const q = (sp.q ?? "").trim();
+  // Page de RÉSULTATS (`p`), à ne pas confondre avec la page de wiki lue (`page`).
+  const resultPage = Math.max(1, Number(sp.p) || 1);
 
   const session = await auth();
   const project = await getAccessibleProjectByKey(session?.user, key);
@@ -87,9 +100,9 @@ export default async function WikiPage({
   const admin = isAdmin(session?.user);
   const t = await getDictionary();
 
-  const results = q ? await searchWikiPages(project.id, q) : null;
+  const results = q ? await searchWikiPages(project.id, q, resultPage) : null;
   const list: WikiListItem[] =
-    results ?? allPages.map((p) => ({ id: p.id, title: p.title }));
+    results?.hits ?? allPages.map((p) => ({ id: p.id, title: p.title }));
 
   // Ce que porte l'URL est un SLUG (« guide-du-projet »), et non plus un
   // identifiant : l'adresse se lit et se met en favori. Les anciens liens en
@@ -159,11 +172,27 @@ export default async function WikiPage({
     </Button>
   );
 
+  // Sommaire de la page consultée. Pour un compte rendu, on ne retient que les
+  // THÈMES : les sous-titres écrits dans le texte libre d'un thème ne sont pas
+  // des sections du document, les lister brouillerait la navigation.
+  const meeting = current?.meetingDate ? parseMeeting(current.content) : null;
+  const outlineHeadings = current
+    ? meeting
+      ? extractOutline(current.content).filter(
+          (head) => head.level === meeting.headingLevel,
+        )
+      : extractOutline(current.content)
+    : [];
+  const outlineTitle = meeting ? t.wiki.meeting.themesOutline : undefined;
+
   // Les liens portent le SLUG quand la page en a un, l'identifiant sinon (page
   // antérieure à la fonctionnalité, en attente du script de reprise). La table
   // est construite sur les pages déjà chargées : les résultats de recherche, qui
   // ne renvoient pas le slug, y trouvent le leur sans requête de plus.
   const slugById = new Map(allPages.map((page) => [page.id, page.slug]));
+  const resultPageHref = (n: number) =>
+    `/projects/${project.key}/wiki?q=${encodeURIComponent(q)}&p=${n}`;
+
   const pageHref = (id: string) => {
     const handle = slugById.get(id) ?? id;
     return q
@@ -200,10 +229,10 @@ export default async function WikiPage({
         <div className="flex flex-col gap-6 md:flex-row">
           <aside className="shrink-0 space-y-3 md:w-64">
             <WikiSearch projectKey={project.key} initialQuery={q} />
-            {q && (
+            {q && results && (
               <p className="px-1 text-xs text-muted-foreground">
-                {list.length} {t.wiki.index.result}
-                {list.length > 1 ? "s" : ""}{" "}
+                {results.total} {t.wiki.index.result}
+                {results.total > 1 ? "s" : ""}{" "}
                 {fmt(t.wiki.index.forQuery, { q })}
               </p>
             )}
@@ -234,8 +263,27 @@ export default async function WikiPage({
                         {p.title}
                       </span>
                       {p.snippet && (
-                        <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                          {p.snippet}
+                        <span className="mt-0.5 block text-xs text-muted-foreground">
+                          {p.truncatedStart && "…"}
+                          {highlightSegments(
+                            p.snippet,
+                            results?.terms ?? [],
+                          ).map((segment: Segment, index: number) =>
+                            segment.match ? (
+                              // Surligné comme du TEXTE, jamais comme du HTML
+                              // reçu de la base : rien à échapper, rien à
+                              // injecter depuis le contenu d'une page.
+                              <mark
+                                key={index}
+                                className="rounded-sm bg-primary/20 text-foreground"
+                              >
+                                {segment.text}
+                              </mark>
+                            ) : (
+                              <span key={index}>{segment.text}</span>
+                            ),
+                          )}
+                          {p.truncatedEnd && "…"}
                         </span>
                       )}
                     </Link>
@@ -261,6 +309,39 @@ export default async function WikiPage({
                 ))
               )}
             </nav>
+
+            {/* Pagination des résultats : la liste latérale en montre dix, une
+                recherche large n'a plus à être tronquée en silence. */}
+            {q && results && results.total > results.pageSize && (
+              <div className="flex items-center justify-between gap-2 px-1 pt-1">
+                {results.page > 1 ? (
+                  <Link
+                    href={resultPageHref(results.page - 1)}
+                    className="rounded-md border px-2 py-1 text-xs transition-colors hover:bg-accent/50"
+                  >
+                    {t.wiki.search.previous}
+                  </Link>
+                ) : (
+                  <span />
+                )}
+                <span className="text-xs text-muted-foreground">
+                  {fmt(t.wiki.search.pageOf, {
+                    current: results.page,
+                    total: Math.ceil(results.total / results.pageSize),
+                  })}
+                </span>
+                {results.page * results.pageSize < results.total ? (
+                  <Link
+                    href={resultPageHref(results.page + 1)}
+                    className="rounded-md border px-2 py-1 text-xs transition-colors hover:bg-accent/50"
+                  >
+                    {t.wiki.search.next}
+                  </Link>
+                ) : (
+                  <span />
+                )}
+              </div>
+            )}
 
             {/* Section dédiée au SUIVI DES RÉUNIONS, distincte de l'arborescence :
                 un compte rendu se retrouve par sa date, pas par sa place dans le
@@ -299,6 +380,14 @@ export default async function WikiPage({
           </aside>
 
           <div className="min-w-0 flex-1">
+            {/* Sous `lg`, le sommaire se place au-dessus du texte : une colonne
+                de plus y serait illisible. Au-delà, il passe à droite et SUIT le
+                défilement - c'est là qu'il sert, sur un document long. */}
+            {outlineHeadings.length > 1 && (
+              <div className="mb-4 lg:hidden">
+                <PageOutline headings={outlineHeadings} title={outlineTitle} />
+              </div>
+            )}
             {current ? (
               <article className="space-y-4">
                 <div className="flex flex-wrap items-start justify-between gap-3 border-b pb-4">
@@ -555,6 +644,16 @@ export default async function WikiPage({
               </p>
             )}
           </div>
+
+          {/* Colonne du sommaire : collante, elle suit le défilement du texte.
+              Masquée sous `lg`, où elle est rendue au-dessus de l'article. */}
+          {outlineHeadings.length > 1 && (
+            <aside className="hidden shrink-0 lg:block lg:w-60">
+              <div className="sticky top-6">
+                <PageOutline headings={outlineHeadings} title={outlineTitle} />
+              </div>
+            </aside>
+          )}
         </div>
       )}
     </div>

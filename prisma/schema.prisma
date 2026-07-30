@@ -396,6 +396,17 @@ model WikiPage {
   slug        String?
   slugAliases WikiPageSlug[]
 
+  // Titre et contenu REPLIÉS pour la recherche : sans accents, en minuscules
+  // (cf. `@/lib/search-text`). C'est cette colonne qu'indexe le GIN plein texte,
+  // et non `content` : la configuration `french` de PostgreSQL ne replie pas les
+  // accents de façon fiable, et l'extension `unaccent` aurait imposé un
+  // `CREATE EXTENSION` sur chaque base.
+  //
+  // NULLABLE comme `slug`, et pour la même raison : les pages antérieures sont
+  // reprises par script (`npm run db:backfill-wiki`), non par du SQL qui
+  // dupliquerait un algorithme déjà testé.
+  searchText  String?
+
   revisions   WikiRevision[]
   // Renseigne uniquement si CETTE page est la racine d'un paquet de spécifications.
   specPackage SpecPackage?

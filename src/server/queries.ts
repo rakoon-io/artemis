@@ -116,8 +116,12 @@ export function getMeetingPages(projectId: string) {
   return wikiService.listMeetingPages(projectId);
 }
 
-export function searchWikiPages(projectId: string, query: string) {
-  return wikiService.searchWikiPages(projectId, query);
+export function searchWikiPages(
+  projectId: string,
+  query: string,
+  page?: number,
+) {
+  return wikiService.searchWikiPages(projectId, query, page);
 }
 
 /** Clés de tickets du projet, pour lier les citations dans le wiki. */

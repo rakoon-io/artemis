@@ -133,6 +133,9 @@ export const wiki: WikiDict = {
     placeholder: "Search...",
     ariaLabel: "Search the wiki",
     clear: "Clear search",
+    previous: "Previous",
+    next: "Next",
+    pageOf: "Page {current} / {total}",
   },
 
   // Delete
