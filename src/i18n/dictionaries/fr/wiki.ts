@@ -48,6 +48,7 @@ export const wiki = {
     markdownHelpAfter: " pour citer une tâche (elle devient un lien).",
     nothingToPreview: "Rien à prévisualiser pour l'instant.",
     createSubmit: "Créer la page",
+    clickToWrite: "Cette page est vide. Cliquez ici pour l'écrire.",
     willBeCreatedUnder: "Sera créée sous « {parent} »",
     willBeCreatedAtRoot: "Sera créée à la racine du wiki.",
 

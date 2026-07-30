@@ -4,7 +4,6 @@ import {
   BookMarked,
   CalendarDays,
   FileText,
-  Pencil,
   Plus,
   Wrench,
 } from "lucide-react";
@@ -48,6 +47,11 @@ import { NewMeetingButton } from "@/components/wiki/new-meeting-button";
 import { StructureWikiButton } from "@/components/wiki/structure-wiki-button";
 import { PageSubjects } from "@/components/wiki/page-subjects";
 import { WikiPageForm } from "@/components/wiki/wiki-page-form";
+import { WikiPageContent } from "@/components/wiki/wiki-page-content";
+import {
+  WikiParentInline,
+  WikiTitleInline,
+} from "@/components/wiki/wiki-page-fields";
 import { MeetingView } from "@/components/wiki/meeting-view";
 import { PageOutline } from "@/components/wiki/page-outline";
 import { MeetingSection } from "@/components/wiki/meeting-editor";
@@ -95,7 +99,7 @@ export default async function WikiPage({
     p?: string;
     spec?: string;
     rev?: string;
-    /** « points » (compte rendu), « page » (titre/contenu), « new » (création). */
+    /** « points » (compte rendu) ou « new » (création). */
     edit?: string;
     /** Parent proposé à la création. */
     parent?: string;
@@ -218,8 +222,10 @@ export default async function WikiPage({
 
   // ÉCRIRE SANS QUITTER L'ENDROIT. Le formulaire remplace l'article dans la
   // colonne de lecture ; le plan, la section et le sommaire ne bougent pas.
-  const formMode =
-    sp.edit === "new" ? "new" : sp.edit === "page" && current ? "page" : null;
+  // Seule la CRÉATION garde un formulaire : une page qui n'existe pas encore n'a
+  // rien sur quoi cliquer. Tout le reste - titre, rangement, contenu - se
+  // modifie en place, là où il s'affiche.
+  const formMode = sp.edit === "new" ? "new" : null;
 
   /**
    * Parent proposé à la création, du plus explicite au plus contextuel :
@@ -237,20 +243,16 @@ export default async function WikiPage({
     : null;
   const newParentId = askedParent ?? sectionRootHere;
 
-  const [ticketRefs, parents] = formMode
-    ? await Promise.all([
-        getTicketRefs(project.id),
-        Promise.resolve(
-          parentOptions(allPages, formMode === "page" ? current!.id : undefined).map(
-            (node) => ({
-              id: node.page.id,
-              title: node.page.title,
-              depth: node.depth,
-            }),
-          ),
-        ),
-      ])
-    : [[], []];
+  // Les références de tickets servent en ÉDITION EN PLACE autant qu'à la
+  // création : l'autocomplétion « @ » existe des deux côtés.
+  const ticketRefs = await getTicketRefs(project.id);
+  // Options de rangement : l'arbre privé de la page et de ses descendantes -
+  // se ranger sous sa propre sous-page ferait un cycle.
+  const parents = parentOptions(allPages, current?.id).map((node) => ({
+    id: node.page.id,
+    title: node.page.title,
+    depth: node.depth,
+  }));
 
   /** Adresse d'une page en mode formulaire, sans perdre la recherche en cours. */
   const formHref = (mode: "page" | "new", parentId?: string | null) => {
@@ -631,20 +633,18 @@ export default async function WikiPage({
               <article className="space-y-4 rounded-xl border bg-card p-4 shadow-sm sm:p-8">
                 <div className="space-y-1 border-b pb-4">
                   <h2 className="text-xl font-semibold tracking-tight">
-                    {formMode === "new" ? t.wiki.newPage : t.wiki.form.editTitle}
+                    {t.wiki.newPage}
                   </h2>
                   {/* OÙ la page va naître, dit en toutes lettres : le menu
                       déroulant plus bas le répète, mais on ne le lit qu'après
                       s'être demandé où l'on était. */}
-                  {formMode === "new" && (
-                    <p className="text-sm text-muted-foreground">
-                      {newParentId
-                        ? fmt(t.wiki.form.willBeCreatedUnder, {
-                            parent: pageById.get(newParentId)?.title ?? "",
-                          })
-                        : t.wiki.form.willBeCreatedAtRoot}
-                    </p>
-                  )}
+                  <p className="text-sm text-muted-foreground">
+                    {newParentId
+                      ? fmt(t.wiki.form.willBeCreatedUnder, {
+                          parent: pageById.get(newParentId)?.title ?? "",
+                        })
+                      : t.wiki.form.willBeCreatedAtRoot}
+                  </p>
                 </div>
                 <WikiPageForm
                   projectId={project.id}
@@ -657,16 +657,6 @@ export default async function WikiPage({
                       ? pageHref(current.id)
                       : `/projects/${project.key}/wiki`
                   }
-                  page={
-                    formMode === "page" && current
-                      ? {
-                          id: current.id,
-                          title: current.title,
-                          content: current.content,
-                          parentId: current.parentId,
-                        }
-                      : undefined
-                  }
                 />
               </article>
             ) : current ? (
@@ -678,26 +668,47 @@ export default async function WikiPage({
               <article className="wiki-reading space-y-4 rounded-xl border bg-card p-4 shadow-sm sm:p-8">
                 <div className="flex flex-wrap items-start justify-between gap-3 border-b pb-4">
                   <div className="space-y-1">
-                    {trail.length > 0 && (
-                      <nav
-                        aria-label={t.wiki.index.breadcrumbLabel}
-                        className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground"
-                      >
-                        {trail.map((a) => (
-                          <span key={a.id} className="flex items-center gap-1">
-                            <Link
-                              href={pageHref(a.id)}
-                              className="hover:text-foreground hover:underline"
-                            >
-                              {a.title}
-                            </Link>
-                            <span aria-hidden>/</span>
-                          </span>
-                        ))}
-                      </nav>
-                    )}
-                    <h2 className="text-xl font-semibold tracking-tight">
-                      {current.title}
+                    {/* FIL D'ARIANE, dont le DERNIER maillon est le rangement
+                        lui-même : le parent d'une page, c'est là qu'on le lit,
+                        c'est donc là qu'on doit pouvoir le changer. L'afficher
+                        une seconde fois sous le fil, comme un champ de plus,
+                        disait deux fois la même chose. */}
+                    <nav
+                      aria-label={t.wiki.index.breadcrumbLabel}
+                      className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground"
+                    >
+                      {trail.slice(0, -1).map((a) => (
+                        <span key={a.id} className="flex items-center gap-1">
+                          <Link
+                            href={pageHref(a.id)}
+                            className="hover:text-foreground hover:underline"
+                          >
+                            {a.title}
+                          </Link>
+                          <span aria-hidden>/</span>
+                        </span>
+                      ))}
+                      {frozen ? (
+                        trail.length > 0 && <span>{trail[trail.length - 1].title}</span>
+                      ) : (
+                        <WikiParentInline
+                          pageId={current.id}
+                          title={current.title}
+                          content={current.content}
+                          parentId={current.parentId}
+                          parents={parents}
+                          canEdit
+                        />
+                      )}
+                    </nav>
+                    <h2>
+                      <WikiTitleInline
+                        pageId={current.id}
+                        title={current.title}
+                        parentId={current.parentId}
+                        content={current.content}
+                        canEdit={!frozen}
+                      />
                     </h2>
                     <p className="text-xs text-muted-foreground">
                       {current.author?.name ??
@@ -793,14 +804,6 @@ export default async function WikiPage({
                       >
                         <Plus />
                         {t.wiki.index.subpage}
-                      </Link>
-                    </Button>
-                    <Button asChild variant="outline" size="sm">
-                      <Link
-                        href={formHref("page")}
-                      >
-                        <Pencil />
-                        {t.common.edit}
                       </Link>
                     </Button>
                     <MeetingControls
@@ -910,19 +913,20 @@ export default async function WikiPage({
                       ticketHints={ticketHints}
                     />
                   </MeetingSection>
-                ) : current.content.trim() ? (
-                  <WikiContent
-                    content={current.content}
+                ) : (
+                  // Contenu MODIFIABLE EN PLACE : le rendu devient l'éditeur au
+                  // clic, sans quitter la page ni ouvrir de formulaire.
+                  <WikiPageContent
+                    pageId={current.id}
+                    pageTitle={current.title}
+                    parentId={current.parentId}
+                    value={current.content}
                     projectKey={project.key}
+                    tickets={ticketRefs}
                     ticketMap={ticketMap}
                     ticketHints={ticketHints}
+                    canEdit
                   />
-                ) : (
-                  <p className="text-sm italic text-muted-foreground">
-                    {fmt(t.wiki.index.emptyContentHint, {
-                      action: t.common.edit,
-                    })}
-                  </p>
                 )}
 
                 {/* Historique : une révision par enregistrement qui a changé le
