@@ -103,6 +103,11 @@ export function getWikiPage(id: string) {
 }
 
 /** Recherche dans les pages de wiki du projet (titre + contenu). */
+/** Comptes rendus de réunion du projet, du plus récent au plus ancien. */
+export function getMeetingPages(projectId: string) {
+  return wikiService.listMeetingPages(projectId);
+}
+
 export function searchWikiPages(projectId: string, query: string) {
   return wikiService.searchWikiPages(projectId, query);
 }

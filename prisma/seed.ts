@@ -452,10 +452,44 @@ async function main() {
     },
   });
 
+  // --- Compte rendu de réunion : démontre thèmes, natures d'items et actions ---
+  // La structure vit dans le Markdown (cf. src/lib/meeting-minutes.ts) : un thème
+  // par titre de niveau 2, un point par puce, « (action) » ou une case à cocher
+  // pour ce qui engage. Les lettres A/B et les références A-01… sont déduites à
+  // l'affichage, rien de tout cela n'est stocké.
+  const reunion = await prisma.wikiPage.create({
+    data: {
+      projectId: project.id,
+      title: "Réunion hebdomadaire du 28 juillet",
+      meetingDate: new Date("2026-07-28"),
+      authorId: admin.id,
+      content: [
+        "Présents : Admin Rakoon, Rémy Rapporteur.",
+        "Ordre du jour : avancement du tableau Kanban et préparation du lot 2.",
+        "",
+        "## Tableau Kanban",
+        "",
+        "- (info) La limite de WIP par colonne est en production depuis lundi.",
+        "- (action) Corriger le déplacement au clavier sur Firefox, cf. RKN-2.",
+        "- (action) Documenter les raccourcis du tableau dans le wiki.",
+        "",
+        "## Préparation du lot 2",
+        "",
+        "- (info) Le périmètre est arrêté : notifications e-mail et export CSV.",
+        "- [ ] Chiffrer l'export CSV avant vendredi.",
+        "- (info) La recette client est calée au 12 août.",
+        "",
+        "## Divers",
+        "",
+        "- (info) Prochaine réunion le 4 août, même heure.",
+      ].join("\n"),
+    },
+  });
+
   // Révision initiale de chaque page : l'application en écrit une à chaque
   // enregistrement, le seed passant outre les services doit le faire lui-même -
   // sans quoi la démo montrerait un historique vide sur des pages existantes.
-  const wikiPages = [guide, conventions];
+  const wikiPages = [guide, conventions, reunion];
   await prisma.wikiRevision.createMany({
     data: wikiPages.map((page) => ({
       pageId: page.id,
@@ -502,7 +536,7 @@ async function main() {
 
   console.log(
     `Seed OK : projet RKN, ${samples.length} tickets, ${DEFAULT_MODULES.length} modules, ` +
-      `${DEFAULT_COMPONENTS.length} composants, 3 sprints, 2 pages wiki.\n` +
+      `${DEFAULT_COMPONENTS.length} composants, 3 sprints, 3 pages wiki.\n` +
       `  Admin      : admin@rakoon.io / ***MOT-DE-PASSE-RETIRE*** (accès à tous les projets)\n` +
       `  Rapporteur : rapporteur@rakoon.io / ***MOT-DE-PASSE-RETIRE*** (membre de RKN)\n` +
       `  Assistant  : bot@rakoon.io (compte de service MCP, membre de RKN)`,

@@ -4,12 +4,17 @@ import type { z } from "zod";
 import { assert, isAdmin } from "@/lib/policies";
 import { assertProjectAccess } from "@/server/access";
 import { descendantIds } from "@/lib/wiki-tree";
-import { createWikiPageSchema, updateWikiPageSchema } from "@/lib/validators";
+import {
+  createWikiPageSchema,
+  setMeetingSchema,
+  updateWikiPageSchema,
+} from "@/lib/validators";
 import {
   createWikiPage,
   deleteWikiPage,
   getWikiPage,
   listWikiPages,
+  setMeetingDate,
   updateWikiPage,
 } from "@/server/services/wiki.service";
 import { withUser } from "./helpers";
@@ -92,6 +97,27 @@ export async function deleteWikiPageAction(id: string): Promise<ActionResult> {
     const existing = await getWikiPage(id);
     if (!existing) return { ok: false, error: "Page introuvable." };
     await deleteWikiPage(id);
+    return { ok: true };
+  });
+}
+
+/**
+ * Déclare une page comme compte rendu de réunion, ou retire ce marqueur.
+ * Ouvert à tout membre du projet, comme écrire une page : tenir un compte rendu
+ * fait partie du travail courant, ce n'est pas un réglage d'administration.
+ *
+ * Retirer le marqueur ne touche PAS au contenu - la page redevient simplement
+ * une page ordinaire, et rien de ce qui a été écrit n'est perdu.
+ */
+export async function setMeetingAction(
+  input: z.input<typeof setMeetingSchema>,
+): Promise<ActionResult> {
+  return withUser(async (user) => {
+    const data = setMeetingSchema.parse(input);
+    const page = await getWikiPage(data.pageId);
+    if (!page) return { ok: false, error: "Page introuvable." };
+    await assertProjectAccess(user, page.projectId);
+    await setMeetingDate(data.pageId, data.meetingDate);
     return { ok: true };
   });
 }

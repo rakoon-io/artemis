@@ -25,6 +25,8 @@ import { WikiContent } from "@/components/wiki/wiki-content";
 import { WikiSearch } from "@/components/wiki/wiki-search";
 import { DeleteWikiPageButton } from "@/components/wiki/delete-wiki-page-button";
 import { MarkSpecButton, SpecPanel } from "@/components/wiki/spec-panel";
+import { MeetingControls } from "@/components/wiki/meeting-controls";
+import { MeetingView } from "@/components/wiki/meeting-view";
 import { SpecVersionView } from "@/components/wiki/spec-version-view";
 import { getDictionary } from "@/i18n/server";
 import { fmt } from "@/i18n";
@@ -91,6 +93,15 @@ export default async function WikiPage({
   const selected = selectedId ? await getWikiPage(selectedId) : null;
   const current =
     selected && selected.projectId === project.id ? selected : null;
+
+  // Suivi des réunions : extrait des pages déjà chargées, sans requête de plus.
+  // Une page datée EST un compte rendu (cf. `WikiPage.meetingDate`).
+  const meetings = allPages
+    .filter((page) => page.meetingDate)
+    .sort(
+      (a, b) =>
+        new Date(b.meetingDate!).getTime() - new Date(a.meetingDate!).getTime(),
+    );
 
   const ticketMap: Record<string, string> = Object.fromEntries(
     ticketKeys.map((t) => [t.key.toUpperCase(), t.id]),
@@ -226,6 +237,41 @@ export default async function WikiPage({
                 ))
               )}
             </nav>
+
+            {/* Section dédiée au SUIVI DES RÉUNIONS, distincte de l'arborescence :
+                un compte rendu se retrouve par sa date, pas par sa place dans le
+                plan de la documentation. */}
+            {!q && (
+              <div className="space-y-1 border-t pt-3">
+                <p className="px-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  {t.wiki.meeting.sectionTitle}
+                </p>
+                {meetings.length === 0 ? (
+                  <p className="px-3 py-1.5 text-xs text-muted-foreground">
+                    {t.wiki.meeting.sectionEmpty}
+                  </p>
+                ) : (
+                  meetings.map((page) => (
+                    <Link
+                      key={page.id}
+                      href={pageHref(page.id)}
+                      aria-current={page.id === current?.id ? "page" : undefined}
+                      className={cn(
+                        "block rounded-md px-3 py-1.5 text-sm transition-colors",
+                        page.id === current?.id
+                          ? "bg-accent text-accent-foreground"
+                          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                      )}
+                    >
+                      <span className="block truncate">{page.title}</span>
+                      <span className="block text-xs text-muted-foreground">
+                        {formatDate(page.meetingDate!)}
+                      </span>
+                    </Link>
+                  ))
+                )}
+              </div>
+            )}
           </aside>
 
           <div className="min-w-0 flex-1">
@@ -264,6 +310,18 @@ export default async function WikiPage({
                     {/* Signalé sur TOUTE page du paquet, pas seulement la
                         racine : en arrivant sur un chapitre par la recherche,
                         on doit savoir qu'on lit une spécification et laquelle. */}
+                    {current.meetingDate && (
+                      <p className="flex flex-wrap items-center gap-2 pt-1">
+                        <Badge variant="secondary">
+                          {t.wiki.meeting.badge}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {fmt(t.wiki.meeting.heldOn, {
+                            date: formatDate(current.meetingDate),
+                          })}
+                        </span>
+                      </p>
+                    )}
                     {pack && (
                       <p className="flex flex-wrap items-center gap-2 pt-1">
                         <Badge variant="secondary">
@@ -301,6 +359,10 @@ export default async function WikiPage({
                         {t.common.edit}
                       </Link>
                     </Button>
+                    <MeetingControls
+                      pageId={current.id}
+                      meetingDate={current.meetingDate}
+                    />
                     {admin && !pack && (
                       <MarkSpecButton
                         projectId={project.id}
@@ -373,6 +435,15 @@ export default async function WikiPage({
                       </p>
                     )}
                   </div>
+                ) : current.meetingDate && current.content.trim() ? (
+                  // Compte rendu : thèmes en tableaux, récapitulatif des actions
+                  // en fin de page. Une révision figée, elle, se lit toujours
+                  // telle qu'elle a été enregistrée (branche ci-dessus).
+                  <MeetingView
+                    content={current.content}
+                    projectKey={project.key}
+                    ticketMap={ticketMap}
+                  />
                 ) : current.content.trim() ? (
                   <WikiContent
                     content={current.content}

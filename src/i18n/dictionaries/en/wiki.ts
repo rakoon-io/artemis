@@ -134,4 +134,45 @@ export const wiki: WikiDict = {
     description:
       "The page and any subpages will be permanently deleted. This action cannot be undone.",
   },
+  // Comptes rendus de reunion. La structure (themes, items) vit dans le Markdown
+  // de la page : ces libelles ne decrivent que l'affichage et les commandes.
+  meeting: {
+    badge: "Minutes",
+    sectionTitle: "Meetings",
+    sectionEmpty: "No minutes yet.",
+    heldOn: "Meeting of {date}",
+
+    // Declarer / retirer le marqueur
+    mark: "Meeting minutes",
+    markAria: "Mark this page as meeting minutes",
+    dialogTitle: "Meeting minutes",
+    dialogDescription:
+      "Dating the page adds it to the meeting log and lays its themes out as tables.",
+    dateLabel: "Meeting date",
+    dateRequired: "The meeting date is required.",
+    submit: "Mark as minutes",
+    unmark: "Remove the marker",
+    unmarkHint: "The page content is kept as-is.",
+    marked: "Page now tracked as minutes.",
+    unmarked: "The page is no longer minutes.",
+
+    // Lecture du compte rendu
+    gotoActions: "Jump to the action summary",
+    actionsTitle: "Action summary",
+    actionsEmpty: "No action was decided during this meeting.",
+    themeLabel: "Theme {letter}",
+    colRef: "Ref.",
+    colKind: "Type",
+    colItem: "Item",
+    colTheme: "Theme",
+    colAction: "Action",
+    kindInfo: "Information",
+    kindAction: "Action",
+    actionOne: "action",
+    actionOther: "actions",
+    noThemes:
+      "This page is dated as a meeting but has no theme yet: add one level-2 heading per theme.",
+    help:
+      "One level-2 heading per theme (lettered A, B, C…), one bullet per item. Prefix with \u201c(action)\u201d or tick the checkbox for an action; with no marker the item is information.",
+  },
 };

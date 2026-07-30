@@ -376,6 +376,13 @@ model WikiPage {
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
+  // Date de la réunion dont cette page est le compte rendu. Non nulle = la page
+  // EST un compte rendu : un seul champ sert donc de marqueur et porte
+  // l'information dont le suivi a besoin pour trier. La structure du compte
+  // rendu (thèmes, items) vit dans le Markdown et n'est pas stockée : un thème
+  // n'existe que le temps d'une réunion (cf. `@/lib/meeting-minutes`).
+  meetingDate DateTime?
+
   revisions   WikiRevision[]
   // Renseigne uniquement si CETTE page est la racine d'un paquet de spécifications.
   specPackage SpecPackage?

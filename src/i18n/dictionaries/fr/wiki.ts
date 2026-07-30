@@ -135,6 +135,47 @@ export const wiki = {
     description:
       "La page et ses éventuelles sous-pages seront définitivement supprimées. Cette action est irréversible.",
   },
+  // Comptes rendus de reunion. La structure (themes, items) vit dans le Markdown
+  // de la page : ces libelles ne decrivent que l'affichage et les commandes.
+  meeting: {
+    badge: "Compte rendu",
+    sectionTitle: "Réunions",
+    sectionEmpty: "Aucun compte rendu pour l'instant.",
+    heldOn: "Réunion du {date}",
+
+    // Declarer / retirer le marqueur
+    mark: "Compte rendu de réunion",
+    markAria: "Déclarer cette page comme compte rendu de réunion",
+    dialogTitle: "Compte rendu de réunion",
+    dialogDescription:
+      "Dater la page la fait entrer dans le suivi des réunions et met ses thèmes en tableaux.",
+    dateLabel: "Date de la réunion",
+    dateRequired: "La date de la réunion est requise.",
+    submit: "Marquer comme compte rendu",
+    unmark: "Retirer le marqueur",
+    unmarkHint: "Le contenu de la page est conservé tel quel.",
+    marked: "Page suivie comme compte rendu.",
+    unmarked: "La page n'est plus un compte rendu.",
+
+    // Lecture du compte rendu
+    gotoActions: "Aller au récapitulatif des actions",
+    actionsTitle: "Récapitulatif des actions",
+    actionsEmpty: "Aucune action décidée pendant cette réunion.",
+    themeLabel: "Thème {letter}",
+    colRef: "Réf.",
+    colKind: "Nature",
+    colItem: "Point",
+    colTheme: "Thème",
+    colAction: "Action",
+    kindInfo: "Information",
+    kindAction: "Action",
+    actionOne: "action",
+    actionOther: "actions",
+    noThemes:
+      "Cette page est datée comme réunion mais ne comporte aucun thème : ajoutez un titre de niveau 2 par thème.",
+    help:
+      "Un titre de niveau 2 par thème (numérotés A, B, C…), une puce par point. Préfixez « (action) » ou cochez la case pour une action ; sans marqueur, le point est une information.",
+  },
 };
 
 export type WikiDict = typeof wiki;

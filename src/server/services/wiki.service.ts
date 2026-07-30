@@ -7,7 +7,15 @@ export function listWikiPages(projectId: string) {
   return prisma.wikiPage.findMany({
     where: { projectId },
     orderBy: { title: "asc" },
-    select: { id: true, title: true, parentId: true, updatedAt: true },
+    select: {
+      id: true,
+      title: true,
+      parentId: true,
+      updatedAt: true,
+      // Marqueur de compte rendu : la section « Réunions » se construit à partir
+      // de cette même liste, sans requête supplémentaire.
+      meetingDate: true,
+    },
   });
 }
 
@@ -179,6 +187,32 @@ export function getPageRevision(id: string) {
 
 export function deleteWikiPage(id: string) {
   return prisma.wikiPage.delete({ where: { id } });
+}
+
+/**
+ * Comptes rendus de réunion du projet, du plus récent au plus ancien. Une page
+ * est un compte rendu dès qu'elle porte une date de réunion : il n'y a pas de
+ * table dédiée, la structure du compte rendu vivant dans le Markdown.
+ */
+export function listMeetingPages(projectId: string) {
+  return prisma.wikiPage.findMany({
+    where: { projectId, meetingDate: { not: null } },
+    orderBy: [{ meetingDate: "desc" }, { title: "asc" }],
+    select: { id: true, title: true, meetingDate: true, updatedAt: true },
+  });
+}
+
+/**
+ * Déclare (ou retire) une page comme compte rendu de réunion. `null` retire le
+ * marqueur SANS toucher au contenu : la page redevient une page ordinaire, rien
+ * n'est perdu, et la remarquer plus tard la réaffiche telle quelle.
+ */
+export function setMeetingDate(pageId: string, meetingDate: string | null) {
+  return prisma.wikiPage.update({
+    where: { id: pageId },
+    data: { meetingDate: meetingDate ? new Date(meetingDate) : null },
+    select: { id: true, meetingDate: true },
+  });
 }
 
 /** Couples (clé, id) des tickets du projet - pour lier les citations « RKN-123 ». */

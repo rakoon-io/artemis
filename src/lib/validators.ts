@@ -195,6 +195,19 @@ export const updateSprintSchema = z
     path: ["endDate"],
   });
 
+/**
+ * Déclaration d'une page de wiki comme compte rendu de réunion. `meetingDate`
+ * à `null` retire le marqueur ; la date sert de marqueur ET de clef de tri du
+ * suivi, elle est donc requise dès qu'on déclare une réunion.
+ */
+export const setMeetingSchema = z.object({
+  pageId: z.string().min(1),
+  meetingDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Date attendue au format AAAA-MM-JJ")
+    .nullable(),
+});
+
 export const createLabelSchema = z.object({
   projectId: z.string().min(1),
   name: z.string().min(1).max(30),
