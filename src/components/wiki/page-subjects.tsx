@@ -101,14 +101,66 @@ export function PageSubjects({
     router.refresh();
   }
 
+  /**
+   * La DATE n'est dite que s'il y a eu une RELECTURE DÉCLARÉE - le seul cas où
+   * elle apprend quelque chose. Sans relecture, la date de vérification est
+   * celle de la dernière modification, déjà écrite deux lignes plus haut : la
+   * répéter n'ajouterait qu'une ligne à lire. Le badge, lui, suffit à alerter.
+   */
+  const alerting = level === "ageing" || level === "stale";
+  const showDate = Boolean(reviewedAt);
+
   return (
-    <section className="space-y-3 rounded-lg border p-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="flex items-center gap-2 text-sm font-medium">
-          <Wrench className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-          {t.wiki.subjects.title}
-        </p>
-        {canEdit && (
+    /* UNE LIGNE, pas un encart.
+       Ces renseignements sont des MÉTADONNÉES de la page - au même titre que
+       son auteur et sa date -, pas une section de son contenu. Encadrés,
+       titrés et pourvus de deux boutons, ils occupaient le haut de l'écran et
+       repoussaient plus bas le texte qu'on venait lire.
+       Les commandes ne se montrent qu'au survol ou au focus : modifier les
+       sujets et déclarer une relecture sont des gestes rares. */
+    <div className="group/subjects flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+      <Wrench className="size-3.5 shrink-0" aria-hidden />
+
+      {nothing ? (
+        <span title={t.wiki.subjects.emptyHint}>{t.wiki.subjects.empty}</span>
+      ) : (
+        <span className="flex flex-wrap items-center gap-1.5">
+          {[...chosenModules, ...chosenComponents].map((entry) => (
+            <span
+              key={entry.id}
+              className="inline-flex items-center gap-1.5 rounded-md border px-1.5 py-0.5 text-foreground"
+            >
+              <span
+                className="size-1.5 shrink-0 rounded-full"
+                style={{ backgroundColor: entry.color }}
+                aria-hidden
+              />
+              {entry.name}
+            </span>
+          ))}
+        </span>
+      )}
+
+      {/* Le badge de fraîcheur ne paraît QUE s'il alerte. « À jour » sur chaque
+          page apprendrait à ne plus lire les badges - même règle que dans les
+          listes de documentation. */}
+      {alerting && (
+        <Badge
+          variant="outline"
+          className={cn("font-normal", FRESHNESS_STYLE[level])}
+        >
+          {t.wiki.subjects.freshness[level]}
+        </Badge>
+      )}
+      {showDate && (
+        <span>
+          ·{" "}
+          {fmt(t.wiki.subjects.reviewedOn, { date: formatDate(checked) })}
+        </span>
+      )}
+
+      {canEdit && (
+        <span className="flex shrink-0 items-center opacity-0 transition-opacity group-hover/subjects:opacity-100 group-focus-within/subjects:opacity-100 pointer-coarse:opacity-100">
           <SubjectsDialog
             pageId={pageId}
             modules={modules}
@@ -116,63 +168,25 @@ export function PageSubjects({
             selectedModuleIds={selectedModuleIds}
             selectedComponentIds={selectedComponentIds}
           />
-        )}
-      </div>
-
-      {nothing ? (
-        <p className="text-xs text-muted-foreground">{t.wiki.subjects.empty}</p>
-      ) : (
-        <div className="flex flex-wrap gap-1.5">
-          {chosenModules.map((m) => (
-            <Badge key={m.id} variant="outline" className="gap-1.5">
-              <span
-                className="size-2 shrink-0 rounded-full"
-                style={{ backgroundColor: m.color }}
-                aria-hidden
-              />
-              {m.name}
-            </Badge>
-          ))}
-          {chosenComponents.map((c) => (
-            <Badge key={c.id} variant="outline" className="gap-1.5">
-              <span
-                className="size-2 shrink-0 rounded-full"
-                style={{ backgroundColor: c.color }}
-                aria-hidden
-              />
-              {c.name}
-            </Badge>
-          ))}
-        </div>
-      )}
-
-      {/* FRAÎCHEUR. Une doc technique ne se trompe pas bruyamment : elle cesse
-          simplement d'être vraie, et rien ne le signale tant que quelqu'un n'a
-          pas suivi une procédure qui n'existe plus. */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
-        <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          {level && (
-            <Badge variant="outline" className={cn("font-normal", FRESHNESS_STYLE[level])}>
-              {t.wiki.subjects.freshness[level]}
-            </Badge>
-          )}
-          {fmt(t.wiki.subjects.checkedOn, { date: formatDate(checked) })}
-        </p>
-        {canEdit && (
           <Button
             type="button"
-            variant="outline"
-            size="sm"
+            variant="ghost"
+            size="icon"
+            className="size-7 text-muted-foreground"
             disabled={reviewing}
             onClick={() => void review()}
-            title={t.wiki.subjects.reviewHint}
+            title={t.wiki.subjects.review}
+            aria-label={t.wiki.subjects.review}
           >
-            {reviewing ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
-            {t.wiki.subjects.review}
+            {reviewing ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <CheckCircle2 />
+            )}
           </Button>
-        )}
-      </div>
-    </section>
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -243,9 +257,15 @@ function SubjectsDialog({
       }}
     >
       <DialogTrigger asChild>
-        <Button type="button" variant="outline" size="sm">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-7 text-muted-foreground"
+          title={t.wiki.subjects.edit}
+          aria-label={t.wiki.subjects.edit}
+        >
           <Pencil />
-          {t.wiki.subjects.edit}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">

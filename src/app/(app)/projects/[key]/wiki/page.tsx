@@ -753,6 +753,34 @@ export default async function WikiPage({
                         )}
                       </p>
                     )}
+                    {/* Sujets et fraîcheur : des MÉTADONNÉES, au même titre que
+                        l'auteur et la date - donc ici, sous le titre, et non en
+                        encart au-dessus du texte qu'on vient lire. */}
+                    {documents && current && (
+                      <div className="pt-1.5">
+                        <PageSubjects
+                          pageId={current.id}
+                          modules={modules.map((m) => ({
+                            id: m.id,
+                            name: m.name,
+                            color: m.color,
+                          }))}
+                          components={components.map((c) => ({
+                            id: c.id,
+                            name: c.name,
+                            color: c.color,
+                            moduleId: c.moduleId,
+                          }))}
+                          selectedModuleIds={subjects[0].map((s) => s.module.id)}
+                          selectedComponentIds={subjects[1].map(
+                            (s) => s.component.id,
+                          )}
+                          updatedAt={current.updatedAt.toISOString()}
+                          reviewedAt={current.reviewedAt?.toISOString() ?? null}
+                          canEdit
+                        />
+                      </div>
+                    )}
                   </div>
                   {/* `flex-wrap` : jusqu'à cinq commandes tiennent ici, soit
                       770 pixels que rien ne repliait. Sur un téléphone, toute
@@ -800,28 +828,6 @@ export default async function WikiPage({
                     )}
                   </div>
                 </div>
-
-                {documents && current && (
-                  <PageSubjects
-                    pageId={current.id}
-                    modules={modules.map((m) => ({
-                      id: m.id,
-                      name: m.name,
-                      color: m.color,
-                    }))}
-                    components={components.map((c) => ({
-                      id: c.id,
-                      name: c.name,
-                      color: c.color,
-                      moduleId: c.moduleId,
-                    }))}
-                    selectedModuleIds={subjects[0].map((s) => s.module.id)}
-                    selectedComponentIds={subjects[1].map((s) => s.component.id)}
-                    updatedAt={current.updatedAt.toISOString()}
-                    reviewedAt={current.reviewedAt?.toISOString() ?? null}
-                    canEdit
-                  />
-                )}
 
                 {isSpecRoot && pack && (
                   <SpecPanel

@@ -163,8 +163,9 @@ export const wiki = {
   // Ce qu'une page d'implementation documente, et depuis quand on l'a vue.
   subjects: {
     title: "Ce que cette page documente",
-    empty:
-      "Aucun sujet déclaré. Reliez cette page à un module ou à un composant pour qu'on la retrouve depuis le catalogue et depuis les tickets.",
+    empty: "Aucun sujet déclaré",
+    emptyHint:
+      "Reliez cette page à un module ou à un composant pour qu'on la retrouve depuis le catalogue et depuis les tickets.",
     edit: "Modifier",
     dialogTitle: "Sujets documentés",
     dialogDescription:
@@ -182,6 +183,7 @@ export const wiki = {
       stale: "Périmée",
     },
     checkedOn: "Vérifiée le {date}",
+    reviewedOn: "Relue le {date}",
     review: "Marquer comme relue",
     reviewHint:
       "Déclare la page toujours exacte, sans en modifier le contenu ni l'historique.",

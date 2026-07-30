@@ -161,8 +161,9 @@ export const wiki: WikiDict = {
   // Ce qu'une page d'implementation documente, et depuis quand on l'a vue.
   subjects: {
     title: "What this page documents",
-    empty:
-      "No subject declared. Link this page to a module or component so it can be found from the catalogue and from tickets.",
+    empty: "No subject declared",
+    emptyHint:
+      "Link this page to a module or component so it can be found from the catalogue and from tickets.",
     edit: "Edit",
     dialogTitle: "Documented subjects",
     dialogDescription:
@@ -180,6 +181,7 @@ export const wiki: WikiDict = {
       stale: "Out of date",
     },
     checkedOn: "Checked on {date}",
+    reviewedOn: "Reviewed on {date}",
     review: "Mark as reviewed",
     reviewHint:
       "Declares the page still accurate, without changing its content or history.",
