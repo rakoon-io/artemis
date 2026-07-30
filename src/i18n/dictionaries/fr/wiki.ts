@@ -121,6 +121,14 @@ export const wiki = {
     truncated: "Seules les {count} révisions les plus récentes sont affichées.",
   },
 
+  // Sommaire : arborescence des sections d'une page, pour naviguer dans un
+  // document long sans le faire defiler.
+  outline: {
+    title: "Sommaire",
+    ariaLabel: "Sommaire de la page",
+    empty: "Cette page ne comporte aucune section.",
+  },
+
   // Recherche
   search: {
     placeholder: "Rechercher...",
@@ -176,6 +184,11 @@ export const wiki = {
     notesKept: "Le texte libre de ce thème est conservé tel quel.",
     noThemesYet: "Aucun thème. Ajoutez-en un pour commencer le compte rendu.",
     newThemeTitle: "Nouveau thème",
+
+    // Sections repliables et sommaire des themes
+    collapseAria: "Replier ou déplier le thème {letter}",
+    themesOutline: "Thèmes de la réunion",
+    itemsCount: "{count} point(s)",
 
     // Lecture du compte rendu
     gotoActions: "Aller au récapitulatif des actions",

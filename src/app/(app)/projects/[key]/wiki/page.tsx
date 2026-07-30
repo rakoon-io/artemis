@@ -27,6 +27,7 @@ import { DeleteWikiPageButton } from "@/components/wiki/delete-wiki-page-button"
 import { MarkSpecButton, SpecPanel } from "@/components/wiki/spec-panel";
 import { MeetingControls } from "@/components/wiki/meeting-controls";
 import { MeetingView } from "@/components/wiki/meeting-view";
+import { PageOutline } from "@/components/wiki/page-outline";
 import { MeetingSection } from "@/components/wiki/meeting-editor";
 import { SpecVersionView } from "@/components/wiki/spec-version-view";
 import { getDictionary } from "@/i18n/server";
@@ -483,12 +484,15 @@ export default async function WikiPage({
                     />
                   </MeetingSection>
                 ) : current.content.trim() ? (
-                  <WikiContent
-                    content={current.content}
-                    projectKey={project.key}
-                    ticketMap={ticketMap}
-                    ticketHints={ticketHints}
-                  />
+                  <div className="space-y-4">
+                    <PageOutline content={current.content} />
+                    <WikiContent
+                      content={current.content}
+                      projectKey={project.key}
+                      ticketMap={ticketMap}
+                      ticketHints={ticketHints}
+                    />
+                  </div>
                 ) : (
                   <p className="text-sm italic text-muted-foreground">
                     {fmt(t.wiki.index.emptyContentHint, {

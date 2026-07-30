@@ -120,6 +120,14 @@ export const wiki: WikiDict = {
     truncated: "Only the {count} most recent revisions are shown.",
   },
 
+  // Sommaire : arborescence des sections d'une page, pour naviguer dans un
+  // document long sans le faire defiler.
+  outline: {
+    title: "Contents",
+    ariaLabel: "Page contents",
+    empty: "This page has no sections.",
+  },
+
   // Search
   search: {
     placeholder: "Search...",
@@ -175,6 +183,11 @@ export const wiki: WikiDict = {
     notesKept: "The free text of this theme is kept as-is.",
     noThemesYet: "No theme yet. Add one to start the minutes.",
     newThemeTitle: "New theme",
+
+    // Sections repliables et sommaire des themes
+    collapseAria: "Collapse or expand theme {letter}",
+    themesOutline: "Meeting themes",
+    itemsCount: "{count} item(s)",
 
     // Lecture du compte rendu
     gotoActions: "Jump to the action summary",

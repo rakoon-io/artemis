@@ -1,4 +1,4 @@
-import { ListChecks } from "lucide-react";
+import { ChevronRight, ListChecks } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   ACTIONS_ANCHOR,
@@ -6,6 +6,8 @@ import {
   parseMeeting,
   type MeetingItemKind,
 } from "@/lib/meeting-minutes";
+import { extractOutline } from "@/lib/markdown-outline";
+import { PageOutline } from "./page-outline";
 import { WikiContent } from "./wiki-content";
 import type { TicketHint } from "./ticket-hover-link";
 import { getDictionary } from "@/i18n/server";
@@ -58,6 +60,13 @@ export async function MeetingView({
   }
 
   const actions = meetingActions(meeting);
+
+  // Ancres des thèmes : reprises du sommaire général, filtrées au niveau des
+  // thèmes. Les recalculer ici risquerait de les décaler d'un cran par rapport
+  // à celles que pose le rendu Markdown, et les liens ne mèneraient nulle part.
+  const themeHeadings = extractOutline(content).filter(
+    (head) => head.level === meeting.headingLevel,
+  );
   const kindLabel: Record<MeetingItemKind, string> = {
     info: t.wiki.meeting.kindInfo,
     action: t.wiki.meeting.kindAction,
@@ -89,14 +98,37 @@ export async function MeetingView({
         </Badge>
       </a>
 
-      {meeting.themes.map((theme) => (
-        <section key={theme.letter} className="space-y-2">
-          <h3 className="flex flex-wrap items-baseline gap-2 text-base font-semibold tracking-tight">
+      <PageOutline
+        headings={themeHeadings}
+        title={t.wiki.meeting.themesOutline}
+      />
+
+      {meeting.themes.map((theme, index) => (
+        // Section REPLIABLE, en `<details>` natif : le repli fonctionne sans
+        // JavaScript, s'ouvre au clavier et reste accessible. L'ancre est posée
+        // sur le `<details>` lui-même, dont le résumé demeure visible une fois
+        // replié : un lien du sommaire aboutit donc toujours quelque part.
+        <details
+          key={theme.letter}
+          id={themeHeadings[index]?.anchor}
+          open
+          className="group/theme scroll-mt-6 space-y-2"
+        >
+          <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2 text-base font-semibold tracking-tight [&::-webkit-details-marker]:hidden">
+            <ChevronRight
+              className="size-4 shrink-0 text-muted-foreground transition-transform group-open/theme:rotate-90"
+              aria-label={fmt(t.wiki.meeting.collapseAria, {
+                letter: theme.letter,
+              })}
+            />
             <span className="rounded-md border bg-muted px-2 py-0.5 font-mono text-sm">
               {theme.letter}
             </span>
             {theme.title}
-          </h3>
+            <Badge variant="secondary" className="font-normal">
+              {fmt(t.wiki.meeting.itemsCount, { count: theme.items.length })}
+            </Badge>
+          </summary>
 
           {theme.notesBefore && (
             <WikiContent
@@ -163,7 +195,7 @@ export async function MeetingView({
               ticketHints={ticketHints}
             />
           )}
-        </section>
+        </details>
       ))}
 
       <section id={ACTIONS_ANCHOR} className="space-y-2 scroll-mt-6">

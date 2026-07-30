@@ -1,7 +1,9 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
+import { extractOutline } from "@/lib/markdown-outline";
 import { TicketHoverLink, type TicketHint } from "./ticket-hover-link";
 import { linkifyTicketKeys } from "@/lib/wiki-markdown";
 
@@ -32,7 +34,41 @@ export function WikiContent({
 }) {
   const source = linkifyTicketKeys(content, ticketMap, projectKey);
 
+  // Ancres de section, pour que le sommaire ait où pointer.
+  //
+  // Elles sont calculées sur le contenu BRUT, jamais sur le texte lié : un titre
+  // qui cite un ticket (« ## Suivi RKN-2 ») voit sa clef remplacée par un lien
+  // Markdown, et l'ancre dérivée de ce texte-là ne correspondrait plus à celle
+  // du sommaire. La liaison n'ajoutant ni ne retirant aucun titre, la
+  // correspondance par POSITION reste exacte.
+  const anchorByLine = new Map(
+    extractOutline(content).map((head) => [head.line, head.anchor]),
+  );
+  const heading = (level: 1 | 2 | 3 | 4 | 5 | 6) => {
+    const Tag = `h${level}` as const;
+    return function Heading({
+      node,
+      children,
+    }: {
+      node?: { position?: { start?: { line?: number } } };
+      children?: ReactNode;
+    }) {
+      const line = node?.position?.start?.line;
+      return (
+        <Tag id={line ? anchorByLine.get(line) : undefined} className="scroll-mt-6">
+          {children}
+        </Tag>
+      );
+    };
+  };
+
   const components: Components = {
+    h1: heading(1),
+    h2: heading(2),
+    h3: heading(3),
+    h4: heading(4),
+    h5: heading(5),
+    h6: heading(6),
     a({ href, children }) {
       const url = href ?? "";
       if (url.startsWith("/")) {
