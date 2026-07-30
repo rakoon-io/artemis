@@ -7,8 +7,6 @@ import { toast } from "sonner";
 import { fmt } from "@/i18n";
 import { useDict } from "@/i18n/provider";
 import {
-  ArrowRight,
-  CalendarRange,
   Check,
   Flag,
   FolderInput,
@@ -24,16 +22,18 @@ import {
   setSprintStateAction,
 } from "@/server/actions/sprint.actions";
 import { setTicketSprintAction } from "@/server/actions/ticket.actions";
-import { EditSprintDialog } from "./edit-sprint-dialog";
+import {
+  SprintDatesInline,
+  SprintGoalInline,
+  SprintNameInline,
+} from "./sprint-inline-fields";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import {
   Dialog,
@@ -53,7 +53,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { formatDate } from "@/lib/utils";
 
 /** Ticket rattaché à un sprint (ou au backlog), champs d'affichage. */
 export interface SprintTicketRow {
@@ -232,7 +231,6 @@ export function SprintCard({
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   const meta = STATE_META[sprint.state];
-  const isLot = !sprint.startDate && !sprint.endDate;
 
   async function changeState(next: SprintState, message: string) {
     setPending(true);
@@ -264,41 +262,34 @@ export function SprintCard({
     <Card className="flex flex-col">
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-2">
-          <CardTitle className="text-base">{sprint.name}</CardTitle>
+          <div className="min-w-0 flex-1">
+            <SprintNameInline
+              sprintId={sprint.id}
+              value={sprint.name}
+              canEdit
+            />
+          </div>
           <div className="flex items-center gap-2">
             <Badge variant="secondary">
               {tickets.length}{" "}
               {tickets.length > 1 ? t.sprints.ticketOther : t.sprints.ticketOne}
             </Badge>
             <Badge variant={meta.variant}>{t.sprints[meta.labelKey]}</Badge>
-            {/* Le crayon est ici, et non dans le pied de carte avec les actions
-                de planification : les champs qu'il ouvre - nom, objectif, dates -
-                sont précisément ceux affichés dans cet en-tête. */}
-            <EditSprintDialog sprint={sprint} />
           </div>
         </div>
-        {sprint.goal ? (
-          <CardDescription>{sprint.goal}</CardDescription>
-        ) : (
-          <CardDescription className="italic">
-            {t.sprints.noGoal}
-          </CardDescription>
-        )}
-        <p className="flex flex-wrap items-center gap-1.5 pt-1 text-sm text-muted-foreground">
-          {isLot ? (
-            <>
-              <Flag className="size-4 shrink-0" />
-              {t.sprints.lotNoDates}
-            </>
-          ) : (
-            <>
-              <CalendarRange className="size-4 shrink-0" />
-              {formatDate(sprint.startDate)}
-              <ArrowRight className="size-3 shrink-0" />
-              {formatDate(sprint.endDate)}
-            </>
-          )}
-        </p>
+        {/* Nom, objectif et dates s'éditent EN PLACE, là où on les lit. Il n'y a
+            volontairement plus de dialogue « Modifier » : deux chemins pour le
+            même champ finissent toujours par diverger. L'état, lui, garde ses
+            boutons dédiés dans le pied de carte. */}
+        <SprintGoalInline sprintId={sprint.id} value={sprint.goal} canEdit />
+        <div className="pt-1">
+          <SprintDatesInline
+            sprintId={sprint.id}
+            startDate={sprint.startDate}
+            endDate={sprint.endDate}
+            canEdit
+          />
+        </div>
       </CardHeader>
       <CardContent className="flex-1">
         {tickets.length === 0 ? (

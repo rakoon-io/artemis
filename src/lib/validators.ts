@@ -167,6 +167,34 @@ export const createSprintSchema = z
     path: ["endDate"],
   });
 
+/**
+ * Mise à jour PARTIELLE d'un sprint : chaque champ absent reste inchangé
+ * (convention `undefined` = ne pas toucher, appliquée par le service). C'est ce
+ * qui permet l'édition en place, où l'on n'enregistre qu'un champ à la fois sans
+ * réémettre les autres - donc sans écraser une valeur modifiée entre-temps.
+ *
+ * Les deux règles de dates sont conservées telles quelles : elles ne se
+ * déclenchent que si au moins une date est soumise, et l'interface envoie
+ * toujours les deux ensemble.
+ */
+export const updateSprintSchema = z
+  .object({
+    id: z.string().min(1),
+    name: z.string().min(1).max(80).optional(),
+    goal: z.string().max(500).optional().nullable(),
+    startDate: z.string().optional().nullable(),
+    endDate: z.string().optional().nullable(),
+  })
+  .refine(
+    (d) =>
+      !d.startDate || !d.endDate || new Date(d.endDate) > new Date(d.startDate),
+    { message: "La date de fin doit être postérieure au début", path: ["endDate"] },
+  )
+  .refine((d) => (d.startDate ? !!d.endDate : !d.endDate), {
+    message: "Renseigner les deux dates, ou aucune",
+    path: ["endDate"],
+  });
+
 export const createLabelSchema = z.object({
   projectId: z.string().min(1),
   name: z.string().min(1).max(30),

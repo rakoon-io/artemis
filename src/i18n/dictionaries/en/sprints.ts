@@ -38,11 +38,9 @@ export const sprints: SprintsDict = {
   datesHint: "Fill in both dates, or none.",
   createSubmit: "Create sprint",
 
-  // Boite de dialogue de modification (memes champs que la creation)
-  editSprint: "Edit sprint",
-  editSprintAria: "Edit sprint {name}",
-  editDescription:
-    "Rename it, adjust its goal or its dates. Clearing both dates turns it back into a plain batch.",
+  // Edition en place sur la carte (nom, objectif, dates)
+  datesField: "the dates",
+  clearDates: "Clear dates",
 
   // Sprint card: states (badge)
   statePlanned: "Planned",

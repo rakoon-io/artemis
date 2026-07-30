@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { SprintState } from "@prisma/client";
 import { assertProjectAccess } from "@/server/access";
-import { createSprintSchema } from "@/lib/validators";
+import { createSprintSchema, updateSprintSchema } from "@/lib/validators";
 import {
   createSprint,
   deleteSprint,
@@ -44,23 +44,23 @@ export async function createSprintAction(
   });
 }
 
-/** Met à jour un sprint (nom, objectif, dates). */
+/**
+ * Met à jour un sprint : nom, objectif et/ou dates. PARTIEL - un champ absent
+ * reste inchangé, ce qui permet à l'édition en place de n'envoyer que le champ
+ * touché plutôt que de réémettre tout le sprint (et d'écraser au passage ce qu'un
+ * autre aurait modifié entre-temps).
+ *
+ * L'état n'est pas modifiable ici : il a son action dédiée, `setSprintStateAction`.
+ */
 export async function updateSprintAction(
-  id: string,
-  input: z.input<typeof createSprintSchema>,
+  input: z.input<typeof updateSprintSchema>,
 ): Promise<ActionResult<{ id: string }>> {
   return withUser<{ id: string }>(async (user) => {
-    if (!(await assertSprintAccess(user, id))) {
+    const data = updateSprintSchema.parse(input);
+    if (!(await assertSprintAccess(user, data.id))) {
       return { ok: false, error: "Sprint introuvable." };
     }
-    const data = createSprintSchema.parse(input);
-    const sprint = await updateSprint({
-      id,
-      name: data.name,
-      goal: data.goal,
-      startDate: data.startDate,
-      endDate: data.endDate,
-    });
+    const sprint = await updateSprint(data);
     revalidateBoardAndList();
     return { ok: true, data: { id: sprint.id } };
   });

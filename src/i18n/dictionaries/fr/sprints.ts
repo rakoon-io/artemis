@@ -38,11 +38,9 @@ export const sprints = {
   datesHint: "Renseignez les deux dates, ou aucune.",
   createSubmit: "Créer le sprint",
 
-  // Boite de dialogue de modification (memes champs que la creation)
-  editSprint: "Modifier le sprint",
-  editSprintAria: "Modifier le sprint {name}",
-  editDescription:
-    "Renommez-le, ajustez son objectif ou ses dates. Retirer les deux dates le ramène à un simple lot.",
+  // Edition en place sur la carte (nom, objectif, dates)
+  datesField: "les dates",
+  clearDates: "Retirer les dates",
 
   // Carte de sprint : etats (badge)
   statePlanned: "Planifié",
