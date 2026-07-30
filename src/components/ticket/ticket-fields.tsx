@@ -1,4 +1,4 @@
-import type { ComponentKind } from "@prisma/client";
+import type { ComponentKind, TicketTemplate } from "@prisma/client";
 import { Blocks, FileText, Server, type LucideIcon } from "lucide-react";
 import type { ModuleRef } from "@/lib/effective-module";
 import type {
@@ -31,6 +31,12 @@ export type TicketTypeOption = {
   name: string;
   color: string;
   order?: number;
+  /**
+   * Modèle imposé à la description des tickets de ce type. Absent = `NONE`
+   * (description libre) : les surfaces qui ne s'en soucient pas n'ont rien à
+   * transmettre. Cf. `@/lib/ticket-template`.
+   */
+  template?: TicketTemplate;
 };
 export type PriorityOption = {
   id: string;

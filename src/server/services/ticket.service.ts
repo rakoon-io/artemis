@@ -1,7 +1,11 @@
 import { prisma } from "@/lib/db";
 import { rankAfter } from "@/lib/rank";
 import { moduleIdForTicket } from "@/lib/effective-module";
-import { Prisma } from "@prisma/client";
+import {
+  checkReportDescription,
+  reportRequirementMessage,
+} from "@/lib/ticket-template";
+import { Prisma, TicketTemplate } from "@prisma/client";
 
 /**
  * Service Ticket - accès données pur (autorisation dans les actions).
@@ -27,6 +31,25 @@ const componentSelect = {
     module: moduleSelect,
   },
 } as const;
+
+/**
+ * Impose les rubriques du modèle porté par le type, s'il en porte un.
+ *
+ * Point d'application UNIQUE de la règle : toutes les voies de création passent
+ * par ce service - formulaire, ajout rapide, IA, MCP -, aucune ne peut donc y
+ * échapper. C'est la traduction de « l'UI masque, le serveur impose » : le
+ * formulaire structuré n'est qu'un confort, la contrainte est ici.
+ */
+function assertReportTemplate(
+  type: { name: string; template: TicketTemplate },
+  description: string | null | undefined,
+): void {
+  if (type.template !== TicketTemplate.REPORT) return;
+  const check = checkReportDescription(description);
+  if (!check.ok) {
+    throw new Error(reportRequirementMessage(type.name, check.missing));
+  }
+}
 
 export interface CreateTicketServiceInput {
   projectId: string;
@@ -73,17 +96,28 @@ export function createTicket(input: CreateTicketServiceInput, reporterId: string
     });
     const rank = rankAfter(last?.rank ?? null);
 
-    // Type & priorité : à défaut d'id fourni, on prend le 1er du projet (order min).
-    let typeId = input.typeId;
-    if (!typeId) {
-      const firstType = await tx.ticketType.findFirst({
-        where: { projectId: input.projectId },
-        orderBy: { order: "asc" },
-        select: { id: true },
-      });
-      if (!firstType) throw new Error("Le projet ne possède aucun type de ticket.");
-      typeId = firstType.id;
+    // Type : à défaut d'id fourni - ou si l'id ne relève pas de ce projet -, on
+    // retient un type du projet, comme le font déjà sprint, composant et assigné.
+    const types = await tx.ticketType.findMany({
+      where: { projectId: input.projectId },
+      orderBy: { order: "asc" },
+      select: { id: true, name: true, template: true },
+    });
+    if (types.length === 0) {
+      throw new Error("Le projet ne possède aucun type de ticket.");
     }
+    const type =
+      types.find((candidate) => candidate.id === input.typeId) ??
+      // Sans type explicite, on préfère un type qui n'impose PAS de modèle.
+      // C'est ce qui laisse vivre l'ajout rapide du Kanban (un titre, rien
+      // d'autre) une fois le modèle activé sur « Bug », et le geste reste juste :
+      // une capture à la volée est une tâche à trier, pas un rapport qualifié.
+      types.find((candidate) => candidate.template === TicketTemplate.NONE) ??
+      types[0];
+
+    assertReportTemplate(type, input.description);
+    const typeId = type.id;
+
     let priorityId = input.priorityId;
     if (!priorityId) {
       const firstPriority = await tx.ticketPriority.findFirst({
@@ -313,7 +347,10 @@ export function getTicketById(id: string) {
       reporter: true,
       assignee: true,
       sprint: true,
-      type: { select: { id: true, name: true, color: true } },
+      // `template` n'est chargé QU'ICI : seule la page de détail a besoin de
+      // savoir si la description doit suivre le modèle. Les listes et le Kanban
+      // affichent le type, ils n'en éditent pas la description.
+      type: { select: { id: true, name: true, color: true, template: true } },
       priority: { select: { id: true, name: true, color: true } },
       component: componentSelect,
       module: moduleSelect,
@@ -359,11 +396,26 @@ export function updateTicket(input: UpdateTicketServiceInput) {
     const ticket = await tx.ticket.findUnique({
       where: { id },
       // `componentId` est nécessaire pour trancher l'invariant du module quand
-      // l'appelant ne touche pas au composant (mise à jour partielle).
-      select: { projectId: true, componentId: true },
+      // l'appelant ne touche pas au composant (mise à jour partielle) ;
+      // `typeId`, pour savoir quel modèle s'applique quand le type n'est pas
+      // lui-même modifié.
+      select: { projectId: true, componentId: true, typeId: true },
     });
     if (!ticket) throw new Error("Ticket introuvable.");
     const { projectId } = ticket;
+
+    // Modèle de ticket : contrôlé UNIQUEMENT lorsque la description est soumise.
+    // L'imposer à toute mise à jour rendrait immodifiable l'historique du
+    // projet - on ne pourrait plus même réassigner un ticket rédigé avant
+    // l'activation du modèle. La contrainte porte sur l'ÉCRITURE d'une
+    // description, jamais sur l'existence d'un ticket.
+    if (rest.description !== undefined) {
+      const type = await tx.ticketType.findFirst({
+        where: { id: rest.typeId ?? ticket.typeId, projectId },
+        select: { name: true, template: true },
+      });
+      if (type) assertReportTemplate(type, rest.description);
+    }
 
     // M3 - cohérence projet : on n'applique sprint/assigné/labels que s'ils sont valides.
     // Un sprint hors projet ou un assigné inexistant est ignoré (valeur non appliquée) ;

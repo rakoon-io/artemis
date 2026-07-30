@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { TicketTemplate } from "@prisma/client";
 
 /**
  * Service Type de ticket - accès données pur (autorisation dans les actions).
@@ -17,6 +18,8 @@ export interface CreateTicketTypeServiceInput {
   projectId: string;
   name: string;
   color: string;
+  /** Rubriques imposées à la description (défaut : aucune). */
+  template?: TicketTemplate;
 }
 
 /** Crée un type placé en fin de liste (order = max + 1). */
@@ -31,6 +34,7 @@ export async function createTicketType(input: CreateTicketTypeServiceInput) {
       projectId: input.projectId,
       name: input.name,
       color: input.color,
+      template: input.template ?? TicketTemplate.NONE,
       order,
     },
   });
@@ -40,14 +44,22 @@ export interface UpdateTicketTypeServiceInput {
   id: string;
   name?: string;
   color?: string;
+  template?: TicketTemplate;
 }
 
+/**
+ * Met à jour un type. Changer son modèle n'exige RIEN des tickets déjà écrits :
+ * la contrainte ne s'applique qu'à l'écriture d'une description (cf.
+ * `ticket.service.ts`), sans quoi activer un modèle rendrait immodifiable tout
+ * l'historique du projet.
+ */
 export function updateTicketType(input: UpdateTicketTypeServiceInput) {
   return prisma.ticketType.update({
     where: { id: input.id },
     data: {
       ...(input.name !== undefined ? { name: input.name } : {}),
       ...(input.color !== undefined ? { color: input.color } : {}),
+      ...(input.template !== undefined ? { template: input.template } : {}),
     },
   });
 }

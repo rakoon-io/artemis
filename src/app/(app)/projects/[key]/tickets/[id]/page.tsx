@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { TicketTemplate } from "@prisma/client";
 import { ArrowLeft, Download, Paperclip } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -232,6 +233,7 @@ export default async function TicketDetailPage({
                 projectKey={project.key}
                 tickets={ticketRefs}
                 canEdit={canEdit}
+                requiresReport={ticket.type.template === TicketTemplate.REPORT}
               />
             </CardContent>
           </Card>

@@ -25,11 +25,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { TicketTemplate } from "@prisma/client";
+import {
+  emptyReport,
+  missingReportSections,
+  serializeReport,
+} from "@/lib/ticket-template";
 import { createTicketAction } from "@/server/actions/ticket.actions";
 import { AttachmentField, usePendingAttachments } from "./attachment-field";
 import { LabelMultiSelect } from "./label-multi-select";
 import { ComponentSelect } from "./component-select";
 import { ModuleSelect } from "./module-select";
+import { ReportFields } from "./report-fields";
 import {
   NO_ASSIGNEE,
   NO_COMPONENT,
@@ -43,7 +50,7 @@ import {
   type SprintOption,
   type TicketTypeOption,
 } from "./ticket-fields";
-import { useDict } from "@/i18n/provider";
+import { useDict, useLocale } from "@/i18n/provider";
 import { fmt } from "@/i18n";
 
 /**
@@ -75,10 +82,15 @@ export function CreateTicketDialog({
 }) {
   const router = useRouter();
   const t = useDict();
+  const locale = useLocale();
   const attachments = usePendingAttachments();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  // Rapport structuré, tenu SÉPARÉMENT de la description libre : changer de type
+  // en cours de saisie bascule d'un mode à l'autre sans rien effacer, et
+  // revenir en arrière retrouve ce qui avait été écrit.
+  const [report, setReport] = useState(emptyReport());
   const [typeId, setTypeId] = useState<string>(types[0]?.id ?? "");
   const [priorityId, setPriorityId] = useState<string>(priorities[0]?.id ?? "");
   const [componentId, setComponentId] = useState<string>(NO_COMPONENT);
@@ -87,6 +99,13 @@ export function CreateTicketDialog({
   const [sprintId, setSprintId] = useState<string>(NO_SPRINT);
   const [labelIds, setLabelIds] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+
+  // Le type choisi peut imposer un rapport structuré : la description libre cède
+  // alors la place aux rubriques. Le serveur applique la même règle - ceci n'est
+  // qu'un guidage à la saisie.
+  const requiresReport =
+    types.find((option) => option.id === typeId)?.template ===
+    TicketTemplate.REPORT;
 
   // Module : dérivé du composant dès qu'il y en a un (invariant serveur), et
   // saisissable seulement pour une demande à grosse maille, sans composant.
@@ -101,6 +120,7 @@ export function CreateTicketDialog({
     attachments.clear();
     setTitle("");
     setDescription("");
+    setReport(emptyReport());
     setTypeId(types[0]?.id ?? "");
     setPriorityId(priorities[0]?.id ?? "");
     setComponentId(NO_COMPONENT);
@@ -123,12 +143,23 @@ export function CreateTicketDialog({
       toast.error(t.ticketForm.titleRequired);
       return;
     }
+    if (requiresReport && missingReportSections(report).length > 0) {
+      toast.error(t.ticketTemplate.requiredHint);
+      return;
+    }
+
+    // Les rubriques sont écrites dans la langue de qui rédige : c'est ce texte
+    // qui restera lisible tel quel dans le Markdown. La relecture, elle, ne
+    // dépend d'aucune langue (cf. `@/lib/ticket-template`).
+    const composed = requiresReport
+      ? serializeReport(report, locale)
+      : description.trim();
 
     setSubmitting(true);
     const result = await createTicketAction({
       projectId,
       title: trimmed,
-      description: description.trim() ? description.trim() : undefined,
+      description: composed ? composed : undefined,
       typeId: typeId || undefined,
       priorityId: priorityId || undefined,
       componentId: componentId === NO_COMPONENT ? null : componentId,
@@ -191,17 +222,27 @@ export function CreateTicketDialog({
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="ticket-description">{t.ticketForm.descriptionLabel}</Label>
-            <Textarea
-              id="ticket-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+          {requiresReport ? (
+            <ReportFields
+              idPrefix="ticket-report"
+              value={report}
+              onChange={setReport}
               onPaste={(e) => attachments.pasteImages(e)}
-              placeholder={t.ticketForm.descriptionPlaceholderCreate}
-              rows={4}
+              rows={3}
             />
-          </div>
+          ) : (
+            <div className="space-y-1.5">
+              <Label htmlFor="ticket-description">{t.ticketForm.descriptionLabel}</Label>
+              <Textarea
+                id="ticket-description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                onPaste={(e) => attachments.pasteImages(e)}
+                placeholder={t.ticketForm.descriptionPlaceholderCreate}
+                rows={4}
+              />
+            </div>
+          )}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
@@ -321,9 +362,21 @@ export function CreateTicketDialog({
           <AttachmentField
             attachments={attachments}
             id="ticket-paste"
-            onInsertText={(text) =>
-              setDescription((prev) => (prev ? `${prev}\n${text}` : text))
-            }
+            onInsertText={(text) => {
+              // Un journal ou une trace collés décrivent CE QUI S'EST PASSÉ :
+              // leur place est dans « Observation », pas dans « Contexte » qui
+              // recueille les conditions de l'essai.
+              if (requiresReport) {
+                setReport((prev) => ({
+                  ...prev,
+                  observation: prev.observation
+                    ? `${prev.observation}\n${text}`
+                    : text,
+                }));
+                return;
+              }
+              setDescription((prev) => (prev ? `${prev}\n${text}` : text));
+            }}
           />
 
           <DialogFooter>

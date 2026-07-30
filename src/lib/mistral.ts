@@ -26,6 +26,11 @@
  * fonctionnalité) ; `generateTicketDrafts` lève une erreur explicite si appelé.
  */
 
+// Seul import du module, et volontairement local : les intitulés de rubriques
+// écrits dans le prompt doivent être EXACTEMENT ceux que l'analyseur relira.
+// Les recopier ici les ferait diverger au premier ajustement.
+import { REPORT_HEADINGS_FR } from "@/lib/ticket-template";
+
 type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
 interface BatchJob {
@@ -99,6 +104,13 @@ export interface GenerateTicketDraftsOptions {
    * valeurs EXACTES attendues en sortie pour permettre le rapprochement.
    */
   components?: string[];
+  /**
+   * Noms des types qui IMPOSENT un rapport structuré. Le modèle doit alors
+   * produire une description en rubriques, sinon le service refusera la création
+   * (cf. `@/lib/ticket-template`) et le brouillon serait perdu au dernier
+   * moment. Mieux vaut le lui dire d'emblée que le corriger après coup.
+   */
+  reportTypes?: string[];
   /** Limite haute de tickets à produire (bornée par `MAX_GENERATED_TICKETS`). */
   maxTickets?: number;
   /**
@@ -171,6 +183,7 @@ function buildSystemPrompt(opts: {
   types?: string[];
   priorities?: string[];
   components?: string[];
+  reportTypes?: string[];
   maxTickets: number;
   context?: string;
 }): string {
@@ -210,6 +223,21 @@ function buildSystemPrompt(opts: {
     "Règles :",
     "- title : concis (max 200 caractères), en français, à l'impératif si possible.",
     "- description : détails utiles issus du texte (contexte, critères). Peut être vide (\"\").",
+    // Les intitulés viennent du module qui les relira : prompt et analyseur ne
+    // peuvent donc pas diverger. Le modèle rédige en français, on lui donne
+    // logiquement les intitulés français.
+    ...(opts.reportTypes?.length
+      ? [
+          `- EXCEPTION pour les types suivants : ${opts.reportTypes.join(", ")}. La description doit`,
+          "  alors suivre EXACTEMENT cette structure Markdown, dans cet ordre, chaque rubrique non vide :",
+          `  « ## ${REPORT_HEADINGS_FR.observation} » (ce qui se produit), puis`,
+          `  « ## ${REPORT_HEADINGS_FR.expected} » (ce qui devrait se produire à la place), puis`,
+          `  « ## ${REPORT_HEADINGS_FR.context} » (conditions, environnement, étapes).`,
+          `  Une 4e rubrique « ## ${REPORT_HEADINGS_FR.specs} » est facultative.`,
+          "  Si le texte ne dit rien d'une rubrique obligatoire, écris-y ce que le texte permet",
+          "  d'en déduire, sans inventer de fait ; à défaut, choisis un autre type.",
+        ]
+      : []),
     `- type : l'un de ces types EXACTS si pertinent, sinon null : ${typeList}.`,
     `- priority : l'une de ces priorités EXACTES si pertinent, sinon null : ${prioList}.`,
     componentList
@@ -476,6 +504,7 @@ export async function generateTicketDrafts(
         types: options.types,
         priorities: options.priorities,
         components: options.components,
+        reportTypes: options.reportTypes,
         maxTickets,
         context: options.context,
       }),

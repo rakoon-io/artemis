@@ -1,15 +1,24 @@
 import { ComponentKind, PrismaClient, Role, SprintState } from "@prisma/client";
+// Type seul : voir project.service.ts (evaluation au chargement du module).
+import type { TicketTemplate } from "@prisma/client";
+import { emptyReport, serializeReport } from "../src/lib/ticket-template";
 import bcrypt from "bcryptjs";
 import { generateNKeysBetween } from "fractional-indexing";
 
 const prisma = new PrismaClient();
 
 // Jeux par défaut - alignés sur project.service.ts (order = index dans le tableau).
-const DEFAULT_TICKET_TYPES = [
-  { name: "Bug", color: "#EF4444" },
-  { name: "Fonctionnalité", color: "#6366F1" },
-  { name: "Tâche", color: "#0EA5E9" },
-  { name: "Maintenance", color: "#64748B" },
+// « Bug » impose le modèle de rapport, comme dans project.service.ts : un défaut
+// se signale par ce qu'on a vu, ce qu'on attendait et dans quelles conditions.
+const DEFAULT_TICKET_TYPES: ReadonlyArray<{
+  name: string;
+  color: string;
+  template: TicketTemplate;
+}> = [
+  { name: "Bug", color: "#EF4444", template: "REPORT" },
+  { name: "Fonctionnalité", color: "#6366F1", template: "NONE" },
+  { name: "Tâche", color: "#0EA5E9", template: "NONE" },
+  { name: "Maintenance", color: "#64748B", template: "NONE" },
 ];
 const DEFAULT_TICKET_PRIORITIES = [
   { name: "Basse", color: "#94A3B8" },
@@ -321,19 +330,27 @@ async function main() {
     sprint?: string;
     component?: string;
     module?: string;
+    /** Description libre (types sans modèle imposé). */
+    description?: string;
+    /**
+     * Rapport structuré, pour les tickets de type « Bug » : ce type impose le
+     * modèle `REPORT` dans les projets neufs, la démo doit donc le respecter -
+     * sinon elle montrerait des bugs non conformes à leur propre type.
+     */
+    report?: { observation: string; expected: string; context: string; specs?: string };
   }> = [
     { title: "Coller une image du presse-papier à la création", type: "Fonctionnalité", priority: "Haute", column: "En cours", labels: ["feature"], assignee: admin.id, sprint: "Sprint 1", component: "Champ pièces jointes" },
-    { title: "Le drag & drop clavier ne fonctionne pas sur Firefox", type: "Bug", priority: "Urgente", column: "À faire", labels: ["bug", "urgent"], sprint: "Sprint 1", component: "Tableau Kanban" },
+    { title: "Le drag & drop clavier ne fonctionne pas sur Firefox", type: "Bug", priority: "Urgente", column: "À faire", labels: ["bug", "urgent"], sprint: "Sprint 1", component: "Tableau Kanban", report: { observation: "Sur le tableau Kanban, prendre une carte avec Espace puis la déplacer avec les flèches n'a aucun effet : la carte reste dans sa colonne et aucune annonce vocale n'est émise.", expected: "La carte suit les flèches de colonne en colonne, et un message vocal annonce la colonne visée puis la validation du dépôt, comme sur Chrome.", context: "Firefox 128 (macOS 15) et Firefox 128 (Windows 11). Chrome 127 et Safari 18 se comportent correctement. Reproduit sur le projet RKN avec le compte rapporteur.", specs: "L'exigence d'accessibilité impose que le Kanban soit entièrement jouable au clavier." } },
     { title: "Ajouter la limite de WIP par colonne", type: "Fonctionnalité", priority: "Moyenne", column: "Terminé", labels: ["feature"], assignee: admin.id, sprint: "Sprint 0", component: "Tableau Kanban" },
     { title: "Migrer le schéma Prisma en production", type: "Maintenance", priority: "Moyenne", column: "En revue", assignee: admin.id, sprint: "Sprint 1" },
     { title: "Filtrer la vue liste par sprint", type: "Tâche", priority: "Basse", column: "Terminé", assignee: reporter.id, sprint: "Sprint 0", component: "Vue liste" },
-    { title: "Erreur 500 à la suppression d'une colonne pleine", type: "Bug", priority: "Haute", column: "À faire", labels: ["bug"], component: "Paramètres du projet" },
+    { title: "Erreur 500 à la suppression d'une colonne pleine", type: "Bug", priority: "Haute", column: "À faire", labels: ["bug"], component: "Paramètres du projet", report: { observation: "Supprimer depuis les Paramètres une colonne contenant encore des tickets renvoie une erreur 500 ; la colonne subsiste et aucun message n'explique le refus.", expected: "Soit la suppression est refusée avec un message indiquant combien de tickets bloquent, soit les tickets sont réaffectés à la première colonne, mais jamais une erreur brute.", context: "Paramètres → Colonnes, colonne « En revue » contenant 3 tickets. Reproduit en local et sur la recette." } },
     { title: "Configurer MinIO pour les pièces jointes", type: "Maintenance", priority: "Moyenne", column: "Terminé", assignee: admin.id, sprint: "Sprint 0", component: "Champ pièces jointes" },
-    { title: "Thème sombre : contraste insuffisant sur les badges", type: "Bug", priority: "Basse", column: "En cours", labels: ["bug"], component: "Sélecteur de labels" },
+    { title: "Thème sombre : contraste insuffisant sur les badges", type: "Bug", priority: "Basse", column: "En cours", labels: ["bug"], component: "Sélecteur de labels", report: { observation: "En thème sombre, le texte des badges de label sur fond teinté descend à un rapport de contraste d\u0027environ 2,8:1 : les libellés clairs deviennent illisibles.", expected: "Le texte des badges reste lisible dans les deux thèmes, avec un contraste d\u0027au moins 4,5:1.", context: "Thème sombre, vue liste et détail d\u0027un ticket. Mesuré au vérificateur de contraste sur les labels « feature » et « documentation ».", specs: "Critère WCAG 2.1 AA, 1.4.3 Contraste minimum." } },
     { title: "Rédiger le guide de contribution (wiki)", type: "Tâche", priority: "Basse", column: "Backlog", labels: ["documentation"], component: "Wiki" },
     { title: "Notifications e-mail sur assignation", type: "Fonctionnalité", priority: "Moyenne", column: "Backlog", labels: ["feature"], sprint: "Sprint 2", component: "Notifications e-mail" },
-    { title: "Ajouter un export CSV de la vue liste", type: "Fonctionnalité", priority: "Basse", column: "Backlog", component: "Vue liste" },
-    { title: "Mon mot de passe oublié ne reçoit pas d'e-mail", type: "Bug", priority: "Urgente", column: "À faire", labels: ["bug", "urgent"], assignee: reporter.id, component: "Notifications e-mail" },
+    { title: "Ajouter un export CSV de la vue liste", type: "Fonctionnalité", priority: "Basse", column: "Backlog", component: "Vue liste", description: "Exporter les tickets **filtrés** de la vue liste au format CSV (séparateur `;`, encodage UTF-8 avec BOM pour Excel).\n\nColonnes : clé, titre, type, priorité, statut, assigné, sprint, module, composant, mise à jour." },
+    { title: "Mon mot de passe oublié ne reçoit pas d'e-mail", type: "Bug", priority: "Urgente", column: "À faire", labels: ["bug", "urgent"], assignee: reporter.id, component: "Notifications e-mail", report: { observation: "Après une demande de réinitialisation, aucun e-mail n\u0027arrive. Le journal des envois indique le statut ÉCHEC sans détail.", expected: "L\u0027e-mail de réinitialisation parvient au destinataire en moins d\u0027une minute, et un échec d\u0027envoi est affiché à l\u0027utilisateur au lieu d\u0027un succès trompeur.", context: "Adresses en @exemple.fr, environnement de recette, SMTP interne. Reproduit trois fois de suite le 28/07." } },
     // Les deux tickets suivants n'ont aucun composant (ils touchent plusieurs
     // écrans à la fois) mais portent leur PROPRE module : ils démontrent la
     // qualification à grosse maille, quand aucun composant précis ne convient.
@@ -360,6 +377,11 @@ async function main() {
         number,
         key: `RKN-${number}`,
         title: s.title,
+        // Un rapport structuré est sérialisé par le module qui le relira : la
+        // démo utilise donc exactement le format que l'application impose.
+        description: s.report
+          ? serializeReport({ ...emptyReport(), ...s.report }, "fr")
+          : (s.description ?? null),
         typeId: type(s.type).id,
         priorityId: priority(s.priority).id,
         columnId: col(s.column).id,

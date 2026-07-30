@@ -147,7 +147,11 @@ async function main() {
         "L'assistant en est le rapporteur. Type, priorite, composant, module et " +
         "assigne sont optionnels ; sans valeur, les defauts du projet s'appliquent. " +
         "Preferer le composant quand la demande vise une brique precise ; le module " +
-        "sert aux demandes a grosse maille et n'est retenu qu'a defaut de composant.",
+        "sert aux demandes a grosse maille et n'est retenu qu'a defaut de composant. " +
+        "Certains types imposent un MODELE de description : la creation echoue alors " +
+        "tant que la description ne comporte pas les rubriques Markdown attendues " +
+        "(## Observation, ## Attendu, ## Contexte ; ## Alignement aux specifications " +
+        "est facultatif). Le message d'erreur nomme les rubriques manquantes.",
       inputSchema: {
         project: z.string().describe("Cle du projet, ex. RKN"),
         title: z.string().min(1).max(200).describe("Titre du ticket"),
@@ -155,7 +159,10 @@ async function main() {
           .string()
           .max(20000)
           .optional()
-          .describe("Description du ticket (Markdown)"),
+          .describe(
+            "Description du ticket (Markdown). Si le type impose un modele, " +
+              "structurer en rubriques : ## Observation / ## Attendu / ## Contexte.",
+          ),
         type: z
           .string()
           .optional()
@@ -251,7 +258,9 @@ async function main() {
       title: "Mettre a jour un ticket",
       description:
         "Met a jour le titre et/ou la description d'un ticket. Reserve aux tickets " +
-        "pris en charge par l'assistant.",
+        "pris en charge par l'assistant. La description remplace l'ancienne : si le " +
+        "type impose un modele, la nouvelle doit elle aussi porter les rubriques " +
+        "(## Observation, ## Attendu, ## Contexte), sinon la mise a jour est refusee.",
       inputSchema: {
         key: z.string().describe("Cle du ticket, ex. RKN-3"),
         title: z.string().min(1).max(200).optional(),

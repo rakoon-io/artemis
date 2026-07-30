@@ -11,6 +11,7 @@ import {
 import { getProjectById } from "@/server/services/project.service";
 import { listComponents } from "@/server/services/component.service";
 import { listModules } from "@/server/services/module.service";
+import { TicketTemplate } from "@prisma/client";
 import { listTicketTypes } from "@/server/services/tickettype.service";
 import { listTicketPriorities } from "@/server/services/ticketpriority.service";
 
@@ -103,6 +104,11 @@ export async function suggestTicketsForProject(
     // retour à la ligne serait présenté sous deux graphies différentes au modèle,
     // et le rapprochement par nom échouerait.
     components: named.map((c) => collapse(c.name)),
+    // Les types qui exigent un rapport : le modele doit produire les rubriques,
+    // faute de quoi la creation echouerait apres coup.
+    reportTypes: types
+      .filter((type) => type.template === TicketTemplate.REPORT)
+      .map((type) => type.name),
     context,
     maxTickets: MAX_GENERATED_TICKETS,
   });

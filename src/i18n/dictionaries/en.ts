@@ -4,6 +4,7 @@ import { board } from "./en/board";
 import { tickets } from "./en/tickets";
 import { ticketForm } from "./en/ticketForm";
 import { ticketDetail } from "./en/ticketDetail";
+import { ticketTemplate } from "./en/ticketTemplate";
 import { aiTickets } from "./en/aiTickets";
 import { sprints } from "./en/sprints";
 import { wiki } from "./en/wiki";
@@ -81,6 +82,7 @@ export const en: Messages = {
   tickets,
   ticketForm,
   ticketDetail,
+  ticketTemplate,
   aiTickets,
   sprints,
   wiki,

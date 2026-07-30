@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ComponentKind, Role } from "@prisma/client";
+import { ComponentKind, Role, TicketTemplate } from "@prisma/client";
 
 /** Schémas Zod partagés client/serveur - validation à chaque frontière. */
 
@@ -174,16 +174,26 @@ export const createLabelSchema = z.object({
 });
 
 // --- Types de tickets (configurables par projet) ---
+
+/**
+ * Modèle de ticket imposé par le type : quelles rubriques la description doit
+ * comporter (cf. `@/lib/ticket-template`). Absent = `NONE`, soit le
+ * comportement historique : description entièrement libre.
+ */
+export const ticketTemplateSchema = z.nativeEnum(TicketTemplate);
+
 export const createTicketTypeSchema = z.object({
   projectId: z.string().min(1),
   name: z.string().min(1).max(40),
   color: hex,
+  template: ticketTemplateSchema.optional(),
 });
 
 export const updateTicketTypeSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1).max(40).optional(),
   color: hex.optional(),
+  template: ticketTemplateSchema.optional(),
 });
 
 export const reorderTicketTypesSchema = z.object({

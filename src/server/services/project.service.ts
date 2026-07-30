@@ -1,4 +1,9 @@
 import { prisma } from "@/lib/db";
+// Import de TYPE uniquement : ce tableau est evalue au chargement du module,
+// et y dereferencer l'objet enum de Prisma (`TicketTemplate.REPORT`) le rend
+// tributaire de l'ordre d'initialisation du client genere. Les litteraux sont
+// verifies par le type, sans rien exiger a l'execution.
+import type { TicketTemplate } from "@prisma/client";
 
 /**
  * Service Projet - accès données pur (aucune autorisation ici : voir les actions).
@@ -14,13 +19,28 @@ export const DEFAULT_COLUMNS = [
   "Terminé",
 ] as const;
 
-/** Types de tickets créés par défaut à la naissance d'un projet (order 0..3). */
-export const DEFAULT_TICKET_TYPES = [
-  { name: "Bug", color: "#EF4444" },
-  { name: "Fonctionnalité", color: "#6366F1" },
-  { name: "Tâche", color: "#0EA5E9" },
-  { name: "Maintenance", color: "#64748B" },
-] as const;
+/**
+ * Types de tickets créés par défaut à la naissance d'un projet (order 0..3).
+ *
+ * « Bug » est le seul à imposer un modèle : un défaut se signale par ce qu'on a
+ * vu, ce qu'on attendait et dans quelles conditions - sans ces trois éléments il
+ * n'est pas exploitable. Une tâche ou une fonctionnalité se décrivent librement,
+ * leur en imposer la forme n'apporterait rien.
+ *
+ * Ce défaut ne vaut QUE pour les projets créés ensuite : la migration laisse les
+ * types existants en `NONE`, et c'est à l'administrateur d'activer le modèle
+ * projet par projet depuis Paramètres → Types.
+ */
+export const DEFAULT_TICKET_TYPES: ReadonlyArray<{
+  name: string;
+  color: string;
+  template: TicketTemplate;
+}> = [
+  { name: "Bug", color: "#EF4444", template: "REPORT" },
+  { name: "Fonctionnalité", color: "#6366F1", template: "NONE" },
+  { name: "Tâche", color: "#0EA5E9", template: "NONE" },
+  { name: "Maintenance", color: "#64748B", template: "NONE" },
+];
 
 /** Priorités de tickets créées par défaut à la naissance d'un projet (order 0..3). */
 export const DEFAULT_TICKET_PRIORITIES = [

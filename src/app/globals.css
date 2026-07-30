@@ -272,6 +272,13 @@
 .wiki-prose > * + * {
   @apply mt-3;
 }
+/* Une description de ticket commence désormais souvent par « ## Observation » :
+   la marge haute du titre creuserait alors un vide en tête de carte. Les marges
+   des titres servent à les DÉTACHER de ce qui précède ; en première position il
+   n'y a rien à détacher. */
+.wiki-prose > :first-child {
+  @apply mt-0;
+}
 .wiki-prose h1 {
   @apply mt-6 text-xl font-semibold tracking-tight;
 }

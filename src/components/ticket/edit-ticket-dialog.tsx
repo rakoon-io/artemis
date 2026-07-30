@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { TicketTemplate } from "@prisma/client";
 import { updateTicketAction } from "@/server/actions/ticket.actions";
 import { AttachmentField, usePendingAttachments } from "./attachment-field";
 import { LabelMultiSelect } from "./label-multi-select";
@@ -105,6 +106,13 @@ export function EditTicketDialog({
   const [labelIds, setLabelIds] = useState<string[]>(ticket.labelIds);
   const [submitting, setSubmitting] = useState(false);
 
+  // Dérivé du type SÉLECTIONNÉ, pas de celui d'origine : basculer ici un ticket
+  // vers « Bug » retire aussitôt le champ libre, au lieu de laisser soumettre une
+  // description que le serveur refuserait.
+  const requiresReport =
+    types.find((option) => option.id === typeId)?.template ===
+    TicketTemplate.REPORT;
+
   // Module : dérivé du composant dès qu'il y en a un (invariant serveur), et
   // saisissable seulement pour une demande à grosse maille, sans composant.
   const componentModule =
@@ -144,7 +152,14 @@ export function EditTicketDialog({
     const result = await updateTicketAction({
       id: ticket.id,
       title: trimmed,
-      description: description.trim() ? description.trim() : null,
+      // Type à modèle : la description n'est pas transmise du tout (`undefined`
+      // = ne pas toucher). Ce dialogue n'a qu'un champ libre, incapable de
+      // produire un rapport valide ; l'envoyer ferait échouer un simple
+      // changement d'assigné sur un ticket rédigé avant l'activation du modèle.
+      // La description se modifie sur la page, dans son éditeur dédié.
+      ...(requiresReport
+        ? {}
+        : { description: description.trim() ? description.trim() : null }),
       typeId,
       priorityId,
       componentId: componentId === NO_COMPONENT ? null : componentId,
@@ -197,17 +212,23 @@ export function EditTicketDialog({
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="edit-description">{t.ticketForm.descriptionLabel}</Label>
-            <Textarea
-              id="edit-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              onPaste={(e) => attachments.pasteImages(e)}
-              placeholder={t.ticketForm.descriptionPlaceholderEdit}
-              rows={4}
-            />
-          </div>
+          {requiresReport ? (
+            <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+              {t.ticketTemplate.editInPlace}
+            </p>
+          ) : (
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-description">{t.ticketForm.descriptionLabel}</Label>
+              <Textarea
+                id="edit-description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                onPaste={(e) => attachments.pasteImages(e)}
+                placeholder={t.ticketForm.descriptionPlaceholderEdit}
+                rows={4}
+              />
+            </div>
+          )}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
@@ -327,8 +348,13 @@ export function EditTicketDialog({
           <AttachmentField
             attachments={attachments}
             id="edit-paste"
-            onInsertText={(text) =>
-              setDescription((prev) => (prev ? `${prev}\n${text}` : text))
+            // Sans champ de description ici, il n'y a nulle part où insérer :
+            // le bouton disparaît plutôt que d'écrire dans le vide.
+            onInsertText={
+              requiresReport
+                ? undefined
+                : (text) =>
+                    setDescription((prev) => (prev ? `${prev}\n${text}` : text))
             }
           />
 

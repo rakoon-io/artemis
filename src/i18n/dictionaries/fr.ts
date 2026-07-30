@@ -3,6 +3,7 @@ import { board } from "./fr/board";
 import { tickets } from "./fr/tickets";
 import { ticketForm } from "./fr/ticketForm";
 import { ticketDetail } from "./fr/ticketDetail";
+import { ticketTemplate } from "./fr/ticketTemplate";
 import { aiTickets } from "./fr/aiTickets";
 import { sprints } from "./fr/sprints";
 import { wiki } from "./fr/wiki";
@@ -85,6 +86,7 @@ export const fr = {
   tickets,
   ticketForm,
   ticketDetail,
+  ticketTemplate,
   aiTickets,
   sprints,
   wiki,

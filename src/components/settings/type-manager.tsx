@@ -23,7 +23,16 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { InlineEdit } from "@/components/ui/inline-edit";
+import { TicketTemplate } from "@prisma/client";
 import { useDict } from "@/i18n/provider";
 import { fmt } from "@/i18n";
 
@@ -32,6 +41,8 @@ export interface TicketTypeItem {
   id: string;
   name: string;
   color: string;
+  /** Rubriques imposées à la description des tickets de ce type. */
+  template: TicketTemplate;
 }
 
 /**
@@ -153,6 +164,14 @@ export function TypeManager({
                   className="font-medium"
                   onSave={(next) => saveType(type.id, next)}
                 />
+                {/* Signalé dans la liste : sans cela, rien ne distinguerait un
+                    type qui exige un rapport d'un type ordinaire, et l'on ne
+                    comprendrait pas pourquoi le formulaire change de forme. */}
+                {type.template === TicketTemplate.REPORT && (
+                  <Badge variant="secondary" className="mt-1">
+                    {t.ticketTemplate.badge}
+                  </Badge>
+                )}
               </div>
               <span className="font-mono text-xs uppercase text-muted-foreground">
                 {type.color}
@@ -193,6 +212,7 @@ function EditTypeDialog({ type }: { type: TicketTypeItem }) {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [color, setColor] = useState(type.color);
+  const [template, setTemplate] = useState<TicketTemplate>(type.template);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -203,7 +223,12 @@ function EditTypeDialog({ type }: { type: TicketTypeItem }) {
     }
 
     setSubmitting(true);
-    const res = await updateTicketTypeAction({ id: type.id, name, color });
+    const res = await updateTicketTypeAction({
+      id: type.id,
+      name,
+      color,
+      template,
+    });
     setSubmitting(false);
     if (!res.ok) {
       toast.error(res.error);
@@ -217,7 +242,10 @@ function EditTypeDialog({ type }: { type: TicketTypeItem }) {
   function onOpenChange(next: boolean) {
     if (submitting) return;
     setOpen(next);
-    if (next) setColor(type.color);
+    if (next) {
+      setColor(type.color);
+      setTemplate(type.template);
+    }
   }
 
   return (
@@ -260,6 +288,37 @@ function EditTypeDialog({ type }: { type: TicketTypeItem }) {
               className="h-9 w-12 cursor-pointer rounded-md border border-input bg-transparent p-1"
               aria-label={t.taxonomy.types.colorAria}
             />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor={`type-template-${type.id}`}>
+              {t.ticketTemplate.fieldLabel}
+            </Label>
+            <Select
+              value={template}
+              onValueChange={(value) => setTemplate(value as TicketTemplate)}
+            >
+              <SelectTrigger
+                id={`type-template-${type.id}`}
+                aria-label={t.ticketTemplate.fieldAria}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={TicketTemplate.NONE}>
+                  {t.ticketTemplate.none}
+                </SelectItem>
+                <SelectItem value={TicketTemplate.REPORT}>
+                  {t.ticketTemplate.report}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            {/* La conséquence du choix est écrite sous le champ : elle engage
+                tous les futurs tickets de ce type, pas seulement l'affichage. */}
+            <p className="text-xs text-muted-foreground">
+              {template === TicketTemplate.REPORT
+                ? t.ticketTemplate.reportHint
+                : t.ticketTemplate.noneHint}
+            </p>
           </div>
           <DialogFooter>
             <DialogClose asChild>

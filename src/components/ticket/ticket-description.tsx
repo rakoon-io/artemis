@@ -8,8 +8,16 @@ import { Button } from "@/components/ui/button";
 import { MarkdownEditor } from "@/components/markdown/markdown-editor";
 import { WikiContent } from "@/components/wiki/wiki-content";
 import type { TicketRef } from "@/lib/wiki-mentions";
+import {
+  emptyReport,
+  missingReportSections,
+  parseReport,
+  serializeReport,
+  type ReportBody,
+} from "@/lib/ticket-template";
 import { updateTicketAction } from "@/server/actions/ticket.actions";
-import { useDict } from "@/i18n/provider";
+import { ReportFields } from "./report-fields";
+import { useDict, useLocale } from "@/i18n/provider";
 import { fmt } from "@/i18n";
 
 /**
@@ -28,11 +36,27 @@ import { fmt } from "@/i18n";
  *     liens deviendraient inatteignables). Le clic est capté sur un conteneur
  *     ordinaire qui ignore les clics visant un élément interactif, et un vrai
  *     bouton « Modifier » assure l'accès au clavier.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * DEUX MODES D'ÉDITION quand le type impose un rapport
+ *
+ * Le formulaire de rubriques n'est proposé que si l'on peut GARANTIR de tout
+ * restituer : soit la description se relit proprement (`parseReport`), soit elle
+ * est vide. Sinon - description libre héritée d'avant l'activation du modèle,
+ * titres inhabituels - c'est l'éditeur Markdown qui s'ouvre, avec un mot
+ * d'explication. Jamais de formulaire pré-rempli à moitié : ce serait la seule
+ * façon de perdre du texte, et c'est le seul dommage irréparable ici.
+ *
+ * La bascule vers le Markdown est toujours ouverte (on sérialise, rien ne
+ * bouge) ; la bascule inverse ne s'ouvre que lorsque le texte courant se relit.
  */
 
 /** Hauteurs du champ, en lignes : confortable par défaut, généreuse une fois agrandi. */
 const ROWS_DEFAULT = 10;
 const ROWS_EXPANDED = 28;
+/** Idem pour chaque rubrique du formulaire, bien plus courtes individuellement. */
+const REPORT_ROWS_DEFAULT = 4;
+const REPORT_ROWS_EXPANDED = 10;
 
 export function TicketDescription({
   ticketId,
@@ -40,6 +64,7 @@ export function TicketDescription({
   projectKey,
   tickets,
   canEdit,
+  requiresReport = false,
 }: {
   ticketId: string;
   value: string | null;
@@ -47,14 +72,20 @@ export function TicketDescription({
   /** Tickets du projet : citations « @ » et résolution des liens en lecture. */
   tickets: TicketRef[];
   canEdit: boolean;
+  /** Le type du ticket impose-t-il les rubriques du rapport ? */
+  requiresReport?: boolean;
 }) {
   const router = useRouter();
   const t = useDict();
+  const locale = useLocale();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value ?? "");
   const [pending, setPending] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [syncedValue, setSyncedValue] = useState(value ?? "");
+  const [report, setReport] = useState<ReportBody>(emptyReport());
+  const [extra, setExtra] = useState("");
+  const [structured, setStructured] = useState(false);
 
   // Réalignement sur la valeur serveur après rafraîchissement, jamais pendant
   // une saisie (on écraserait le brouillon en cours).
@@ -72,8 +103,37 @@ export function TicketDescription({
     field: t.ticketForm.descriptionLabel,
   });
 
+  /** Ouvre l'éditeur en choisissant le mode que la description permet. */
+  function beginEdit() {
+    setDraft(canonical);
+    if (requiresReport) {
+      const parsed = parseReport(canonical);
+      if (parsed) {
+        setReport(parsed.sections);
+        setExtra(parsed.extra);
+        setStructured(true);
+      } else if (!canonical.trim()) {
+        setReport(emptyReport());
+        setExtra("");
+        setStructured(true);
+      } else {
+        // Description libre : on ne devine pas où la ranger, on l'ouvre telle quelle.
+        setStructured(false);
+      }
+    } else {
+      setStructured(false);
+    }
+    setEditing(true);
+  }
+
   async function save() {
-    const next = draft.trim();
+    if (structured && missingReportSections(report).length > 0) {
+      toast.error(t.ticketTemplate.requiredHint);
+      return;
+    }
+    const next = structured
+      ? serializeReport(report, locale, extra)
+      : draft.trim();
     if (next === canonical.trim()) {
       setEditing(false);
       return;
@@ -89,6 +149,7 @@ export function TicketDescription({
       toast.error(res.error); // on reste en édition : la saisie n'est pas perdue
       return;
     }
+    setDraft(next);
     setSyncedValue(next);
     setEditing(false);
     toast.success(t.common.inline.saved);
@@ -101,8 +162,94 @@ export function TicketDescription({
   }
 
   if (editing) {
+    // Repasser au formulaire suppose que le Markdown courant se relise ; sinon
+    // le bouton reste inerte plutôt que de proposer une conversion approximative.
+    const reparsed = structured ? null : parseReport(draft);
+    const canStructure =
+      requiresReport && (reparsed !== null || !draft.trim());
+
+    const modeSwitch = requiresReport ? (
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        disabled={pending || (!structured && !canStructure)}
+        onClick={() => {
+          if (structured) {
+            // Sérialiser d'abord : le Markdown affiché est exactement ce qui
+            // serait enregistré, rien n'est reconstruit au retour.
+            setDraft(serializeReport(report, locale, extra));
+            setStructured(false);
+            return;
+          }
+          const parsed = parseReport(draft);
+          setReport(parsed?.sections ?? emptyReport());
+          setExtra(parsed?.extra ?? "");
+          setStructured(true);
+        }}
+      >
+        {structured ? t.ticketTemplate.freeformTab : t.ticketTemplate.structuredTab}
+      </Button>
+    ) : null;
+
+    const expandButton = (
+      // Agrandissement explicite, EN PLUS de la poignée native du champ :
+      // la poignée demande de viser 6 pixels, ce bouton non.
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={() => setExpanded((v) => !v)}
+        aria-pressed={expanded}
+      >
+        {expanded ? <Minimize2 /> : <Maximize2 />}
+        {expanded ? t.common.collapse : t.common.expand}
+      </Button>
+    );
+
+    const footer = (
+      <div className="flex items-center justify-end gap-2">
+        <Button type="button" variant="outline" onClick={cancel} disabled={pending}>
+          {t.common.cancel}
+        </Button>
+        <Button type="button" onClick={() => void save()} disabled={pending}>
+          {pending && <Loader2 className="animate-spin" />}
+          {t.common.save}
+        </Button>
+      </div>
+    );
+
+    if (structured) {
+      return (
+        <div className="space-y-3">
+          <div className="flex items-center justify-end gap-1">
+            {modeSwitch}
+            {expandButton}
+          </div>
+          <ReportFields
+            idPrefix={`ticket-report-${ticketId}`}
+            value={report}
+            onChange={setReport}
+            disabled={pending}
+            rows={expanded ? REPORT_ROWS_EXPANDED : REPORT_ROWS_DEFAULT}
+          />
+          {extra.trim() && (
+            <p className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
+              {t.ticketTemplate.extraKept}
+            </p>
+          )}
+          {footer}
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-3">
+        {requiresReport && (
+          <p className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
+            {t.ticketTemplate.freeformNotice}
+          </p>
+        )}
         <MarkdownEditor
           id={`ticket-description-${ticketId}`}
           value={draft}
@@ -125,29 +272,13 @@ export function TicketDescription({
             }
           }}
           toolbarExtra={
-            // Agrandissement explicite, EN PLUS de la poignée native du champ :
-            // la poignée demande de viser 6 pixels, ce bouton non.
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setExpanded((v) => !v)}
-              aria-pressed={expanded}
-            >
-              {expanded ? <Minimize2 /> : <Maximize2 />}
-              {expanded ? t.common.collapse : t.common.expand}
-            </Button>
+            <>
+              {modeSwitch}
+              {expandButton}
+            </>
           }
         />
-        <div className="flex items-center justify-end gap-2">
-          <Button type="button" variant="outline" onClick={cancel} disabled={pending}>
-            {t.common.cancel}
-          </Button>
-          <Button type="button" onClick={() => void save()} disabled={pending}>
-            {pending && <Loader2 className="animate-spin" />}
-            {t.common.save}
-          </Button>
-        </div>
+        {footer}
       </div>
     );
   }
@@ -170,7 +301,7 @@ export function TicketDescription({
         type="button"
         variant="outline"
         size="sm"
-        onClick={() => setEditing(true)}
+        onClick={beginEdit}
         aria-label={editAria}
         className="sr-only focus:not-sr-only focus:absolute focus:right-0 focus:top-0 focus:z-10"
       >
@@ -185,7 +316,7 @@ export function TicketDescription({
           if ((event.target as HTMLElement).closest("a, button, input, textarea")) {
             return;
           }
-          setEditing(true);
+          beginEdit();
         }}
         className="-mx-2 cursor-text rounded-md px-2 py-1 transition-colors hover:bg-muted/50"
       >

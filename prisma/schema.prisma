@@ -37,6 +37,20 @@ enum ProposalStatus {
   APPROVED
 }
 
+// Modèle de ticket imposé par un type (cf. model TicketType) : quelles rubriques
+// la description doit obligatoirement comporter.
+//   NONE   - description libre, aucune contrainte (comportement historique) ;
+//   REPORT - rapport structuré : Observation, Attendu et Contexte sont exigés,
+//            « Alignement aux spécifications » reste facultatif.
+// Le modèle est porté par le TYPE, pas par le projet : « Bug » mérite un rapport
+// complet, « Tâche » non. Par défaut NONE, si bien qu'activer la fonctionnalité
+// est un geste d'administrateur et qu'aucun projet existant ne change de
+// comportement à la migration.
+enum TicketTemplate {
+  NONE
+  REPORT
+}
+
 // Nature d'un composant applicatif (cf. model Component).
 //   PAGE    - un écran / une route de l'application ;
 //   SHARED  - un composant réutilisable (design system, widget partagé) ;
@@ -143,12 +157,14 @@ model Column {
 
 // Type de ticket - configurable par projet.
 model TicketType {
-  id        String   @id @default(cuid())
+  id        String         @id @default(cuid())
   projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
   name      String
   color     String // hex, ex : "#6366F1"
   order     Int
+  // Rubriques imposées à la description des tickets de ce type (cf. enum).
+  template  TicketTemplate @default(NONE)
   tickets   Ticket[]
 
   @@unique([projectId, name])
