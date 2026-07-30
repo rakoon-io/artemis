@@ -52,6 +52,7 @@ export const wiki: WikiDict = {
     modeRich: "Formatted",
     modeMarkdown: "Markdown",
     modeAria: "Input mode",
+    richPlaceholder: "Write your text. The buttons above format it.",
     richHint:
       "Formatting shows as you type. The text is still stored as Markdown.",
     loadingEditor: "Loading the editor…",

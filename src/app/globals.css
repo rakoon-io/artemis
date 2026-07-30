@@ -340,3 +340,22 @@
 .wiki-prose li:has(> input[type="checkbox"]) {
   @apply -ml-5 list-none;
 }
+
+/* Éditeur riche (Milkdown). L'invite de saisie s'affiche tant que le document
+   est vide : un rectangle muet ne dit pas ce qu'on attend de l'utilisateur.
+   Rendue en CSS plutôt qu'en insérant un nœud, pour ne rien mettre dans le
+   document que la sérialisation Markdown devrait ensuite retirer. */
+[data-empty="true"] .ProseMirror::before {
+  content: attr(data-placeholder);
+  position: absolute;
+  top: 0.5rem;
+  left: 0.75rem;
+  pointer-events: none;
+  @apply text-sm text-muted-foreground;
+}
+
+/* Le premier bloc ne porte pas de marge haute : elle creuserait un vide entre
+   la barre d'outils et la première ligne saisie. */
+.ProseMirror.wiki-prose > :first-child {
+  margin-top: 0;
+}

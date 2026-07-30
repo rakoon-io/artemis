@@ -53,6 +53,8 @@ export const wiki = {
     modeRich: "Mise en forme",
     modeMarkdown: "Markdown",
     modeAria: "Mode de saisie",
+    richPlaceholder:
+      "Écrivez votre texte. Les boutons ci-dessus le mettent en forme.",
     richHint:
       "La mise en forme s'affiche pendant la saisie. Le texte reste enregistré en Markdown.",
     loadingEditor: "Chargement de l'éditeur…",

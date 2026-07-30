@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import {
   Bold,
   Code,
@@ -63,9 +63,13 @@ import "@milkdown/kit/prose/view/style/prosemirror.css";
  * éditeurs riches branchés comme un simple champ de formulaire.
  */
 
-/** Rend la classe de rendu du wiki à la zone d'édition : on écrit ce qu'on lira. */
+/**
+ * Rend la classe d'affichage du wiki à la zone d'édition : on écrit ce qu'on
+ * lira. Aucune bordure ici - c'est le conteneur qui en porte UNE SEULE, sans
+ * quoi la barre d'outils et la zone de saisie dessinent deux cadres distincts.
+ */
 const CONTENT_CLASS =
-  "wiki-prose min-h-40 rounded-b-md border border-t-0 border-input bg-transparent px-3 py-2 outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "wiki-prose relative min-h-40 bg-transparent px-3 py-2 outline-none";
 
 function Toolbar({ disabled }: { disabled?: boolean }) {
   const t = useDict();
@@ -100,7 +104,7 @@ function Toolbar({ disabled }: { disabled?: boolean }) {
   ] as const;
 
   return (
-    <div className="flex flex-wrap items-center gap-0.5 rounded-t-md border border-input bg-muted/40 p-1">
+    <div className="flex flex-wrap items-center gap-0.5 border-b border-input bg-muted/40 p-1">
       {actions.map(({ icon: Icon, label, cmd }) => (
         <Button
           key={label}
@@ -126,11 +130,13 @@ function Toolbar({ disabled }: { disabled?: boolean }) {
 function EditorSurface({
   value,
   onChange,
+  onEmptyChange,
   disabled,
   placeholder,
 }: {
   value: string;
   onChange: (markdown: string) => void;
+  onEmptyChange: (empty: boolean) => void;
   disabled?: boolean;
   placeholder?: string;
 }) {
@@ -146,12 +152,16 @@ function EditorSurface({
             attributes: {
               class: CONTENT_CLASS,
               "aria-label": placeholder ?? "",
+              // Lu par le CSS de l'invite : un éditeur vide doit dire ce qu'on
+              // attend, pas offrir un rectangle muet.
+              "data-placeholder": placeholder ?? "",
             },
           }));
           ctx.get(listenerCtx).markdownUpdated((_, markdown, previous) => {
             // Le premier événement rejoue la valeur initiale : le laisser passer
             // marquerait le formulaire comme modifié sans que rien ne le soit.
             if (previous !== undefined && markdown !== previous) onChange(markdown);
+            onEmptyChange(!markdown.trim());
           });
         })
         .use(commonmark)
@@ -166,16 +176,37 @@ function EditorSurface({
   return <Milkdown />;
 }
 
-export function WysiwygEditor(props: {
+export function WysiwygEditor({
+  value,
+  onChange,
+  disabled,
+  placeholder,
+}: {
   value: string;
   onChange: (markdown: string) => void;
   disabled?: boolean;
   placeholder?: string;
 }) {
+  const [empty, setEmpty] = useState(() => !value.trim());
+
   return (
     <MilkdownProvider>
-      <Toolbar disabled={props.disabled} />
-      <EditorSurface {...props} />
+      {/* UN SEUL cadre, qui englobe barre d'outils et saisie. Le composant rend
+          un unique élément : sans cela, un `space-y-*` du parent viendrait
+          glisser une gouttière entre les deux et les désolidariser. */}
+      <div
+        data-empty={empty ? "true" : undefined}
+        className="overflow-hidden rounded-md border border-input focus-within:ring-2 focus-within:ring-ring"
+      >
+        <Toolbar disabled={disabled} />
+        <EditorSurface
+          value={value}
+          onChange={onChange}
+          onEmptyChange={setEmpty}
+          disabled={disabled}
+          placeholder={placeholder}
+        />
+      </div>
     </MilkdownProvider>
   );
 }
