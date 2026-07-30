@@ -5,6 +5,7 @@ import type { z } from "zod";
 import { assert, isAdmin } from "@/lib/policies";
 import { createProjectSchema, updateProjectSchema } from "@/lib/validators";
 import { createProject, updateProject } from "@/server/services/project.service";
+import { ensureWikiSections } from "@/server/services/wiki.service";
 import { withUser } from "./helpers";
 import type { ActionResult } from "./types";
 
@@ -16,6 +17,11 @@ export async function createProjectAction(
     assert(isAdmin(user), "Création de projet réservée aux administrateurs.");
     const data = createProjectSchema.parse(input);
     const project = await createProject(data);
+    // Les trois sections du wiki naissent AVEC le projet : un wiki qui commence
+    // vide se remplit dans le desordre, et l'on ne range jamais apres coup.
+    // Orchestre ici plutot que dans `createProject` : c'est l'action qui connait
+    // l'auteur, et c'est elle qui compose les services.
+    await ensureWikiSections(project.id, user.id);
     revalidatePath("/projects");
     return { ok: true, data: { id: project.id, key: project.key } };
   });

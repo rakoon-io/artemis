@@ -1,11 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { FileText, Pencil, Plus } from "lucide-react";
+import {
+  BookMarked,
+  CalendarDays,
+  FileText,
+  Pencil,
+  Plus,
+  Wrench,
+} from "lucide-react";
 
 import { auth } from "@/auth";
 import { isAdmin } from "@/lib/policies";
 import { cn, formatDate } from "@/lib/utils";
-import { ancestorsOf, orderedTree } from "@/lib/wiki-tree";
+import { ancestorsOf, groupBySection, orderedTree } from "@/lib/wiki-tree";
 import { MAX_REVISIONS_LISTED } from "@/server/services/wiki.service";
 import { getAccessibleProjectByKey } from "@/server/access";
 import {
@@ -16,6 +23,7 @@ import {
   getSpecVersions,
   getTicketKeys,
   getWikiPages,
+  getWikiSections,
   resolveWikiPage,
   searchWikiPages,
 } from "@/server/queries";
@@ -27,6 +35,7 @@ import { DeleteWikiPageButton } from "@/components/wiki/delete-wiki-page-button"
 import { MarkSpecButton, SpecPanel } from "@/components/wiki/spec-panel";
 import { MeetingControls } from "@/components/wiki/meeting-controls";
 import { NewMeetingButton } from "@/components/wiki/new-meeting-button";
+import { StructureWikiButton } from "@/components/wiki/structure-wiki-button";
 import { MeetingView } from "@/components/wiki/meeting-view";
 import { PageOutline } from "@/components/wiki/page-outline";
 import { MeetingSection } from "@/components/wiki/meeting-editor";
@@ -37,6 +46,18 @@ import { parseMeeting } from "@/lib/meeting-minutes";
 import { isMistralConfigured } from "@/lib/mistral";
 import { getDictionary } from "@/i18n/server";
 import { fmt } from "@/i18n";
+
+/**
+ * Ordre de lecture des sections : ce que le produit DOIT faire, ce qui S'EST DIT,
+ * comment c'est FAIT. Les trois se suivent comme un projet se raconte.
+ */
+const SECTION_ORDER = ["SPEC", "MEETING", "IMPLEMENTATION"] as const;
+
+const SECTION_ICON = {
+  SPEC: BookMarked,
+  MEETING: CalendarDays,
+  IMPLEMENTATION: Wrench,
+} as const;
 
 interface WikiListItem {
   id: string;
@@ -96,9 +117,10 @@ export default async function WikiPage({
     );
   }
 
-  const [allPages, ticketKeys] = await Promise.all([
+  const [allPages, ticketKeys, wikiSections] = await Promise.all([
     getWikiPages(project.id),
     getTicketKeys(project.id),
+    getWikiSections(project.id),
   ]);
   const admin = isAdmin(session?.user);
   const t = await getDictionary();
@@ -113,15 +135,6 @@ export default async function WikiPage({
   const handle = requestedId ?? list[0]?.id;
   const resolved = handle ? await resolveWikiPage(project.id, handle) : null;
   const current = resolved?.page ?? null;
-
-  // Suivi des réunions : extrait des pages déjà chargées, sans requête de plus.
-  // Une page datée EST un compte rendu (cf. `WikiPage.meetingDate`).
-  const meetings = allPages
-    .filter((page) => page.meetingDate)
-    .sort(
-      (a, b) =>
-        new Date(b.meetingDate!).getTime() - new Date(a.meetingDate!).getTime(),
-    );
 
   // Infobulles des citations « RKN-123 », indexées par identifiant : titre et
   // assigné, pour savoir de quoi parle un ticket sans quitter la page.
@@ -162,9 +175,99 @@ export default async function WikiPage({
       ? readRevision
       : null;
 
-  // Arborescence (hors recherche) et fil d'Ariane de la page courante.
-  const tree = orderedTree(allPages);
+  // Fil d'Ariane de la page courante.
   const trail = current ? ancestorsOf(allPages, current.id) : [];
+
+  // PLAN RANGÉ PAR SECTION. L'appartenance n'est stockée nulle part : elle se
+  // lit en remontant les ancêtres jusqu'à une racine de section. Les pages
+  // libres sortent à part et restent VISIBLES - une taxonomie qui avale ce qui
+  // n'y entre pas est pire que pas de taxonomie.
+  const { sections: grouped, loose } = groupBySection(
+    allPages,
+    wikiSections,
+    SECTION_ORDER,
+  );
+  const pageById = new Map(allPages.map((page) => [page.id, page]));
+  const meetingRootId =
+    wikiSections.find((s) => s.kind === "MEETING")?.rootPageId ?? null;
+  const currentIsSectionRoot =
+    !!current && wikiSections.some((s) => s.rootPageId === current.id);
+
+  /**
+   * Une ligne du plan. Fonction et non composant : elle vit dans le corps de la
+   * page pour y lire `current` et `pageHref`, et n'a pas d'état à porter.
+   *
+   * L'APLAT S'ARRÊTE AVANT LES FILETS. Peint sur la ligne entière, il passait
+   * par-dessus la gouttière : le filet de rappel traversait un rectangle arrondi
+   * d'une autre couleur et venait mourir sur ses coins. Le filet dit la place de
+   * la page dans le plan, l'aplat dit qu'elle est ouverte - deux propos, deux
+   * surfaces, qui n'ont aucune raison de se superposer.
+   */
+  const pageLink = (page: (typeof allPages)[number], depth: number) => {
+    const active = page.id === current?.id;
+    return (
+      <Link
+        key={page.id}
+        href={pageHref(page.id)}
+        aria-current={active ? "page" : undefined}
+        title={page.title}
+        className={cn(
+          "group/page flex items-stretch text-sm transition-colors",
+          active ? "text-foreground" : "text-foreground/75 hover:text-foreground",
+        )}
+      >
+        {Array.from({ length: depth }, (_, level) => (
+          <span
+            key={level}
+            aria-hidden
+            className="ml-3 w-0 self-stretch border-l"
+          />
+        ))}
+        <span
+          className={cn(
+            "ml-1 min-w-0 flex-1 rounded-md px-3 py-2 transition-colors",
+            active ? "bg-accent font-semibold" : "group-hover/page:bg-accent/50",
+          )}
+        >
+          {/* Deux lignes plutôt qu'une troncature sèche : un « Réunion
+              hebdomadaire du 28 juill… » ne se distingue pas de la semaine
+              suivante. */}
+          <span className="line-clamp-2">{page.title}</span>
+          {/* La DATE sous le titre d'un compte rendu : c'est par elle qu'on le
+              cherche, et deux réunions successives ne se distinguent souvent
+              que par là. */}
+          {page.meetingDate && (
+            <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+              {formatDate(page.meetingDate)}
+            </span>
+          )}
+        </span>
+      </Link>
+    );
+  };
+
+  /**
+   * Un compte rendu se retrouve par sa DATE, jamais par son titre : « Réunion du
+   * 4 août » et « Réunion du 4 avril » se suivent dans l'alphabet et à quatre
+   * mois d'écart.
+   *
+   * Le tri chronologique ne s'applique qu'à une section PLATE : si quelqu'un
+   * range une page sous un compte rendu, l'ordre de l'arbre reprend ses droits -
+   * mieux vaut un classement moins commode qu'un enfant projeté loin de son
+   * parent.
+   */
+  const orderedSection = (
+    kind: string,
+    nodes: ReturnType<typeof orderedTree<(typeof allPages)[number]>>,
+  ) => {
+    if (kind !== "MEETING" || nodes.some((node) => node.depth > 0)) return nodes;
+    return [...nodes].sort((a, b) => {
+      const da = pageById.get(a.page.id)?.meetingDate;
+      const db = pageById.get(b.page.id)?.meetingDate;
+      if (!da || !db) return da ? -1 : db ? 1 : 0;
+      return new Date(db).getTime() - new Date(da).getTime();
+    });
+  };
 
   // Deux façons d'ouvrir une page, côte à côte : la page libre, et le compte
   // rendu de réunion - qui a sa date, son adresse datée et son en-tête posés
@@ -172,7 +275,11 @@ export default async function WikiPage({
   // page ordinaire pour ensuite la convertir.
   const createButton = (
     <div className="flex flex-wrap items-center gap-2">
-      <NewMeetingButton projectId={project.id} projectKey={project.key} />
+      <NewMeetingButton
+        projectId={project.id}
+        projectKey={project.key}
+        parentId={meetingRootId}
+      />
       <Button asChild>
         <Link href={`/projects/${project.key}/wiki/new`}>
           <Plus />
@@ -320,69 +427,71 @@ export default async function WikiPage({
                   ))
                 )
               ) : (
-                // ARBORESCENCE. Trois corrections d'un même défaut : on n'y
-                // lisait rien.
+                // PLAN RANGÉ PAR SECTION.
                 //
-                // 1. Les titres reprennent la couleur du texte. Ils étaient
-                //    tous en gris secondaire : le plan entier - c'est-à-dire le
-                //    contenu du wiki - s'affichait comme une légende.
-                // 2. La profondeur se voit, au lieu de se deviner. Un filet
-                //    vertical par niveau d'ancêtre, sur toute la hauteur de la
-                //    ligne : les filets de lignes voisines se rejoignent et
-                //    dessinent la hiérarchie. Une indentation seule, sur des
-                //    titres tronqués, ne dit pas qui descend de qui.
-                // 3. La page courante devient repérable. Elle se signalait par
-                //    `bg-accent`, mesuré à 1,1 contre le fond - autant dire
-                //    rien. Un rail plein à gauche, lui, se voit toujours ; la
-                //    teinte ne fait que l'accompagner.
-                tree.map(({ page: p, depth }) => {
-                  const active = p.id === current?.id;
-                  return (
-                    <Link
-                      key={p.id}
-                      href={pageHref(p.id)}
-                      aria-current={active ? "page" : undefined}
-                      title={p.title}
-                      className={cn(
-                        // Toute la ligne est cliquable, gouttière comprise, mais
-                        // elle ne porte AUCUN fond : la teinte est posée plus
-                        // bas, sur la seule étiquette.
-                        "group/page flex items-stretch text-sm transition-colors",
-                        active
-                          ? "text-foreground"
-                          : "text-foreground/75 hover:text-foreground",
-                      )}
-                    >
-                      {Array.from({ length: depth }, (_, level) => (
-                        <span
-                          key={level}
-                          aria-hidden
-                          className="ml-3 w-0 self-stretch border-l"
-                        />
-                      ))}
-                      {/* L'APLAT S'ARRÊTE AVANT LES FILETS.
-                          Peint sur la ligne entière, il passait par-dessus la
-                          gouttière : le filet de rappel traversait un rectangle
-                          arrondi d'une autre couleur, et venait mourir sur ses
-                          coins. Le filet dit la place de la page dans le plan,
-                          l'aplat dit qu'elle est ouverte - deux propos, deux
-                          surfaces, qui n'ont aucune raison de se superposer. */}
-                      <span
-                        className={cn(
-                          "ml-1 min-w-0 flex-1 rounded-md px-3 py-2 transition-colors",
-                          active
-                            ? "bg-accent font-semibold"
-                            : "group-hover/page:bg-accent/50",
+                // Chaque section est une PAGE : son intitulé dans le plan est
+                // son titre, pas une étiquette codée en dur. On la renomme, et
+                // le plan suit - l'application la reconnaît à son identité.
+                //
+                // Les pages libres ferment la marche, sous leur propre titre.
+                // Elles ne sont jamais masquées : ranger reste facultatif, et
+                // une page qui n'entre dans aucune des trois cases doit rester
+                // sous les yeux plutôt que de disparaître dans une catégorie
+                // qui ne la décrit pas.
+                <>
+                  {grouped.map(({ kind, rootPageId, nodes }) => {
+                    const root = pageById.get(rootPageId);
+                    const Icon = SECTION_ICON[kind];
+                    return (
+                      <div key={kind} className="mb-1">
+                        <Link
+                          href={pageHref(rootPageId)}
+                          aria-current={
+                            rootPageId === current?.id ? "page" : undefined
+                          }
+                          className={cn(
+                            "flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition-colors",
+                            rootPageId === current?.id
+                              ? "bg-accent text-foreground"
+                              : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                          )}
+                        >
+                          <Icon className="size-3.5 shrink-0" aria-hidden />
+                          <span className="truncate">
+                            {root?.title ?? kind}
+                          </span>
+                        </Link>
+                        {/* Une section vide dit qu'elle ATTEND du contenu.
+                            Sans cette ligne, un intitulé suivi de rien passe
+                            pour une liste cassée plutôt que pour une place
+                            réservée. */}
+                        {nodes.length === 0 ? (
+                          <p className="px-3 py-1.5 text-xs italic text-muted-foreground">
+                            {t.wiki.sections.empty}
+                          </p>
+                        ) : (
+                          orderedSection(kind, nodes).map((node) =>
+                            pageLink(node.page, node.depth),
+                          )
                         )}
-                      >
-                        {/* Deux lignes plutôt qu'une troncature sèche : un
-                            « Réunion hebdomadaire du 28 juill… » ne se
-                            distingue pas de la semaine suivante. */}
-                        <span className="line-clamp-2">{p.title}</span>
-                      </span>
-                    </Link>
-                  );
-                })
+                      </div>
+                    );
+                  })}
+
+                  {loose.length > 0 && (
+                    <div className={grouped.length > 0 ? "mt-1" : undefined}>
+                      {grouped.length > 0 && (
+                        <p
+                          className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                          title={t.wiki.sections.looseHint}
+                        >
+                          {t.wiki.sections.loose}
+                        </p>
+                      )}
+                      {loose.map((node) => pageLink(node.page, node.depth))}
+                    </div>
+                  )}
+                </>
               )}
             </nav>
 
@@ -419,40 +528,15 @@ export default async function WikiPage({
               </div>
             )}
 
-            {/* Section dédiée au SUIVI DES RÉUNIONS, distincte de l'arborescence :
-                un compte rendu se retrouve par sa date, pas par sa place dans le
-                plan de la documentation. */}
-            {!q && (
-              <div className="space-y-1 border-t pt-3">
-                <p className="px-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  {t.wiki.meeting.sectionTitle}
-                </p>
-                {meetings.length === 0 ? (
-                  <p className="px-3 py-1.5 text-xs text-muted-foreground">
-                    {t.wiki.meeting.sectionEmpty}
-                  </p>
-                ) : (
-                  meetings.map((page) => (
-                    <Link
-                      key={page.id}
-                      href={pageHref(page.id)}
-                      aria-current={page.id === current?.id ? "page" : undefined}
-                      className={cn(
-                        "block rounded-md px-3 py-1.5 text-sm transition-colors",
-                        page.id === current?.id
-                          ? "bg-accent font-semibold text-foreground"
-                          : "text-foreground/75 hover:bg-accent/50 hover:text-foreground",
-                      )}
-                    >
-                      <span className="line-clamp-2 block">{page.title}</span>
-                      <span className="block text-xs text-muted-foreground">
-                        {formatDate(page.meetingDate!)}
-                      </span>
-                    </Link>
-                  ))
-                )}
+            {/* STRUCTURER : pour les projets d'avant les sections. Rien ne
+                s'impose - un wiki sans sections continue de fonctionner, ses
+                pages s'affichant simplement toutes ensemble ci-dessus. */}
+            {!q && admin && grouped.length < SECTION_ORDER.length && (
+              <div className="border-t pt-3">
+                <StructureWikiButton projectId={project.id} />
               </div>
             )}
+
           </aside>
 
           <div className="min-w-0 flex-1">
@@ -504,6 +588,19 @@ export default async function WikiPage({
                     {/* Signalé sur TOUTE page du paquet, pas seulement la
                         racine : en arrivant sur un chapitre par la recherche,
                         on doit savoir qu'on lit une spécification et laquelle. */}
+                    {/* Une SECTION dit ce qu'elle est, et pourquoi elle n'a pas
+                        de bouton de suppression : sans cette phrase, l'absence
+                        passerait pour un oubli. */}
+                    {currentIsSectionRoot && (
+                      <p className="flex flex-wrap items-center gap-2 pt-1">
+                        <Badge variant="secondary">
+                          {t.wiki.sections.rootBadge}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {t.wiki.sections.rootUndeletable}
+                        </span>
+                      </p>
+                    )}
                     {current.meetingDate && (
                       <p className="flex flex-wrap items-center gap-2 pt-1">
                         <Badge variant="secondary">
@@ -568,7 +665,12 @@ export default async function WikiPage({
                         pageTitle={current.title}
                       />
                     )}
-                    {admin && (
+                    {/* Une RACINE DE SECTION ne se supprime pas : les clefs
+                        étrangères sont en cascade, et l'effacer emporterait tout
+                        son contenu et son historique. Le serveur le refuse déjà
+                        - l'UI cesse simplement de le proposer, et dit pourquoi.
+                        « L'UI masque, le serveur impose. » */}
+                    {admin && !currentIsSectionRoot && (
                       <DeleteWikiPageButton
                         pageId={current.id}
                         pageTitle={current.title}

@@ -49,9 +49,20 @@ function today(): string {
   return local.toISOString().slice(0, 10);
 }
 
-export function NewMeetingButton({ projectId, projectKey }: {
+export function NewMeetingButton({
+  projectId,
+  projectKey,
+  parentId = null,
+}: {
   projectId: string;
   projectKey: string;
+  /**
+   * Racine de la section « Réunions », quand elle existe. C'est ici que LA
+   * SECTION PROPOSE : le compte rendu naît rangé, sans qu'on ait à y penser.
+   * Absente, la page naît à la racine - un wiki sans sections continue de
+   * fonctionner, il est simplement moins rangé.
+   */
+  parentId?: string | null;
 }) {
   const t = useDict();
   const router = useRouter();
@@ -82,7 +93,7 @@ export function NewMeetingButton({ projectId, projectKey }: {
       // l'en-tête est celle de qui ouvre la réunion, pas celle du serveur.
       content: t.wiki.meeting.templatePreamble,
       meetingDate: date,
-      parentId: null,
+      parentId,
     });
     setPending(false);
     if (!res.ok) {

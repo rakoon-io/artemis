@@ -434,10 +434,56 @@ async function main() {
     ],
   });
 
-  // --- Wiki : une page racine + une sous-page (démontre l'arborescence) ---
+  // --- Wiki : trois sections prédéfinies, puis le contenu rangé dessous ---
+  //
+  // Une section EST une page racine ; `WikiSection` ne fait que désigner
+  // laquelle. L'appartenance des autres pages ne se stocke pas, elle se lit en
+  // remontant les ancêtres (cf. src/lib/wiki-tree.ts) - c'est pourquoi il suffit
+  // ici de poser le bon `parentId`.
+  const sectionPages: Record<"SPEC" | "MEETING" | "IMPLEMENTATION", string> = {
+    SPEC: "",
+    MEETING: "",
+    IMPLEMENTATION: "",
+  };
+  for (const section of [
+    {
+      kind: "SPEC" as const,
+      title: "Spécifications",
+      content:
+        "Ce que le produit doit faire, tel qu'on s'y engage. Chaque spécification se publie en versions figées, citables depuis un ticket : une version publiée ne change plus.",
+    },
+    {
+      kind: "MEETING" as const,
+      title: "Réunions",
+      content:
+        "Les comptes rendus, un par réunion, classés par date. Un compte rendu ne se réécrit pas : ce qui a été dit ce jour-là le reste.",
+    },
+    {
+      kind: "IMPLEMENTATION" as const,
+      title: "Implémentation",
+      content:
+        "Comment le produit est fait : architecture, décisions techniques, procédures. Contrairement aux deux autres, cette documentation n'a qu'un seul état valable - le plus récent.",
+    },
+  ]) {
+    const page = await prisma.wikiPage.create({
+      data: {
+        projectId: project.id,
+        title: section.title,
+        slug: slugify(section.title),
+        content: section.content,
+        authorId: admin.id,
+      },
+    });
+    await prisma.wikiSection.create({
+      data: { projectId: project.id, kind: section.kind, rootPageId: page.id },
+    });
+    sectionPages[section.kind] = page.id;
+  }
+
   const guide = await prisma.wikiPage.create({
     data: {
       projectId: project.id,
+      parentId: sectionPages.SPEC,
       title: "Guide du projet",
       slug: slugify("Guide du projet"),
       content:
@@ -466,6 +512,7 @@ async function main() {
   const reunion = await prisma.wikiPage.create({
     data: {
       projectId: project.id,
+      parentId: sectionPages.MEETING,
       title: "Réunion hebdomadaire du 28 juillet",
       // Un compte rendu porte sa date en tête d'adresse (cf. wiki.service.ts).
       slug: `2026-07-28-${slugify("Réunion hebdomadaire du 28 juillet")}`,
@@ -497,7 +544,24 @@ async function main() {
   // Révision initiale de chaque page : l'application en écrit une à chaque
   // enregistrement, le seed passant outre les services doit le faire lui-même -
   // sans quoi la démo montrerait un historique vide sur des pages existantes.
-  const wikiPages = [guide, conventions, reunion];
+  // Une page d'implémentation : sans elle, la troisième section resterait vide
+  // et l'on croirait à un oubli plutôt qu'à une place qui attend son contenu.
+  const implementation = await prisma.wikiPage.create({
+    data: {
+      projectId: project.id,
+      parentId: sectionPages.IMPLEMENTATION,
+      title: "Architecture du stockage des pièces jointes",
+      slug: slugify("Architecture du stockage des pièces jointes"),
+      content: [
+        "Les pièces jointes sont déposées sur un stockage compatible S3 (MinIO en local), jamais en base.",
+        "",
+        "L'application ne sert jamais un fichier elle-même : elle signe une URL temporaire et laisse le stockage répondre. Voir RKN-7.",
+      ].join("\n"),
+      authorId: admin.id,
+    },
+  });
+
+  const wikiPages = [guide, conventions, reunion, implementation];
 
   // Texte de recherche : le seed écrit en base sans passer par les services, il
   // doit donc le poser lui-même - sinon la démo livrerait un wiki introuvable.
@@ -553,7 +617,8 @@ async function main() {
 
   console.log(
     `Seed OK : projet RKN, ${samples.length} tickets, ${DEFAULT_MODULES.length} modules, ` +
-      `${DEFAULT_COMPONENTS.length} composants, 3 sprints, 3 pages wiki.\n` +
+      `${DEFAULT_COMPONENTS.length} composants, 3 sprints, ` +
+      `3 sections et ${wikiPages.length} pages wiki.\n` +
       `  Admin      : admin@rakoon.io / ***MOT-DE-PASSE-RETIRE*** (accès à tous les projets)\n` +
       `  Rapporteur : rapporteur@rakoon.io / ***MOT-DE-PASSE-RETIRE*** (membre de RKN)\n` +
       `  Assistant  : bot@rakoon.io (compte de service MCP, membre de RKN)`,

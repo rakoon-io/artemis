@@ -2,8 +2,10 @@ import { describe, it, expect } from "vitest";
 import {
   ancestorsOf,
   descendantIds,
+  groupBySection,
   orderedTree,
   parentOptions,
+  sectionOfPage,
   type FlatPage,
 } from "./wiki-tree";
 
@@ -73,5 +75,113 @@ describe("parentOptions", () => {
 
   it("sans exclusion, renvoie tout l'arbre", () => {
     expect(parentOptions(PAGES).length).toBe(PAGES.length);
+  });
+});
+
+describe("sections prédéfinies", () => {
+  // Plan : Réunions > CR du 3 mars ; Spécifications > Facturation > Remises ;
+  // et « Notes libres », qui n'appartient à rien.
+  const PAGES: FlatPage[] = [
+    { id: "reunions", title: "Réunions", parentId: null },
+    { id: "cr1", title: "CR du 3 mars", parentId: "reunions" },
+    { id: "specs", title: "Spécifications", parentId: null },
+    { id: "facturation", title: "Facturation", parentId: "specs" },
+    { id: "remises", title: "Remises", parentId: "facturation" },
+    { id: "libre", title: "Notes libres", parentId: null },
+  ];
+  const SECTIONS = [
+    { kind: "MEETING" as const, rootPageId: "reunions" },
+    { kind: "SPEC" as const, rootPageId: "specs" },
+  ];
+
+  it("la racine appartient à sa propre section", () => {
+    expect(sectionOfPage(PAGES, SECTIONS, "reunions")).toBe("MEETING");
+  });
+
+  it("un enfant direct hérite de la section", () => {
+    expect(sectionOfPage(PAGES, SECTIONS, "cr1")).toBe("MEETING");
+  });
+
+  it("un descendant lointain aussi", () => {
+    expect(sectionOfPage(PAGES, SECTIONS, "remises")).toBe("SPEC");
+  });
+
+  it("une page libre n'appartient à aucune section, et ce n'est pas un défaut", () => {
+    expect(sectionOfPage(PAGES, SECTIONS, "libre")).toBeNull();
+  });
+
+  it("sans section déclarée, tout est libre", () => {
+    expect(sectionOfPage(PAGES, [], "cr1")).toBeNull();
+  });
+
+  it("la section la plus proche l'emporte sur celle qui l'englobe", () => {
+    // « Réunions » rangée par mégarde sous « Implémentation » : son contenu
+    // reste des réunions.
+    const imbrique: FlatPage[] = [
+      { id: "impl", title: "Implémentation", parentId: null },
+      { id: "reunions", title: "Réunions", parentId: "impl" },
+      { id: "cr1", title: "CR", parentId: "reunions" },
+    ];
+    const sections = [
+      { kind: "IMPLEMENTATION" as const, rootPageId: "impl" },
+      { kind: "MEETING" as const, rootPageId: "reunions" },
+    ];
+    expect(sectionOfPage(imbrique, sections, "cr1")).toBe("MEETING");
+  });
+
+  it("un cycle ne fige pas la résolution", () => {
+    const cycle: FlatPage[] = [
+      { id: "a", title: "A", parentId: "b" },
+      { id: "b", title: "B", parentId: "a" },
+    ];
+    expect(sectionOfPage(cycle, SECTIONS, "a")).toBeNull();
+  });
+
+  it("une racine déclarée mais absente des pages ne fait rien planter", () => {
+    const fantome = [{ kind: "SPEC" as const, rootPageId: "disparue" }];
+    expect(sectionOfPage(PAGES, fantome, "libre")).toBeNull();
+  });
+
+  it("groupBySection range chaque page sous sa section, dans l'ordre demandé", () => {
+    const { sections, loose } = groupBySection(PAGES, SECTIONS, [
+      "SPEC",
+      "MEETING",
+    ]);
+    expect(sections.map((s) => s.kind)).toEqual(["SPEC", "MEETING"]);
+    expect(sections[0].nodes.map((n) => n.page.id)).toEqual([
+      "facturation",
+      "remises",
+    ]);
+    expect(sections[1].nodes.map((n) => n.page.id)).toEqual(["cr1"]);
+    // La page libre reste VISIBLE, à part.
+    expect(loose.map((n) => n.page.id)).toEqual(["libre"]);
+  });
+
+  it("la racine de section ne figure pas dans son propre contenu", () => {
+    const { sections } = groupBySection(PAGES, SECTIONS, ["MEETING"]);
+    expect(sections[0].nodes.map((n) => n.page.id)).not.toContain("reunions");
+  });
+
+  it("la profondeur est rebasée : le contenu d'une section part du premier cran", () => {
+    const { sections } = groupBySection(PAGES, SECTIONS, ["SPEC"]);
+    expect(sections[0].nodes.map((n) => n.depth)).toEqual([0, 1]);
+  });
+
+  it("une section déclarée sans racine connue est ignorée, pas rendue vide", () => {
+    const { sections } = groupBySection(PAGES, SECTIONS, [
+      "SPEC",
+      "IMPLEMENTATION" as "SPEC",
+    ]);
+    expect(sections.map((s) => s.kind)).toEqual(["SPEC"]);
+  });
+
+  it("aucune page n'est perdue entre les sections et les pages libres", () => {
+    const { sections, loose } = groupBySection(PAGES, SECTIONS, ["SPEC", "MEETING"]);
+    const vues = [
+      ...sections.flatMap((s) => s.nodes.map((n) => n.page.id)),
+      ...sections.map((s) => s.rootPageId),
+      ...loose.map((n) => n.page.id),
+    ];
+    expect(new Set(vues)).toEqual(new Set(PAGES.map((p) => p.id)));
   });
 });

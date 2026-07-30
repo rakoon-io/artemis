@@ -13,6 +13,7 @@ import {
 import {
   createWikiPage,
   deleteWikiPage,
+  ensureWikiSections,
   getWikiPage,
   listWikiPages,
   setMeetingDate,
@@ -151,5 +152,23 @@ export async function setMeetingAction(
     await assertProjectAccess(user, page.projectId);
     await setMeetingDate(data.pageId, data.meetingDate);
     return { ok: true };
+  });
+}
+
+/**
+ * Crée les sections manquantes d'un projet EXISTANT, et y range ce qui est
+ * identifiable sans deviner (cf. `ensureWikiSections`).
+ *
+ * Réservée aux administrateurs : créer une page est le travail de chacun, mais
+ * déplacer celles des autres est un acte de structure.
+ */
+export async function ensureWikiSectionsAction(
+  projectId: string,
+): Promise<ActionResult<{ filed: number }>> {
+  return withUser<{ filed: number }>(async (user) => {
+    assert(isAdmin(user), "Réservé aux administrateurs.");
+    await assertProjectAccess(user, projectId);
+    const { filed } = await ensureWikiSections(projectId, user.id);
+    return { ok: true, data: { filed } };
   });
 }

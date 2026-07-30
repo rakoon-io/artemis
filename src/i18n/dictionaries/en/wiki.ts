@@ -156,6 +156,33 @@ export const wiki: WikiDict = {
     description:
       "The page and any subpages will be permanently deleted. This action cannot be undone.",
   },
+  // Sections predefinies du wiki : trois rapports au temps, pas trois dossiers.
+  sections: {
+    empty: "No pages yet.",
+    loose: "Other pages",
+    looseHint:
+      "These pages belong to no section. Move them if you want them filed.",
+
+    structure: "Structure the wiki",
+    structureTitle: "Give this wiki its sections",
+    structureDescription:
+      "Three root pages will be created. You can rename them afterwards: the app recognises them by identity, never by title.",
+    structureSpec:
+      "Specifications — what the product must do, published as frozen versions.",
+    structureMeeting: "Meetings — one set of minutes per meeting, sorted by date.",
+    structureImplementation:
+      "Implementation — how the product is built, in its only valid state: the latest one.",
+    structureSafety:
+      "Nothing is deleted or rewritten. Only already identifiable pages are filed: dated pages become meetings, specification roots join the specifications. The rest stays put.",
+    structureSubmit: "Create the sections",
+    done: "Sections created. {count} page(s) filed.",
+
+    // Une section est une page : elle ne se supprime pas comme les autres.
+    rootBadge: "Wiki section",
+    rootUndeletable:
+      "A section cannot be deleted: doing so would take all its content and history with it.",
+  },
+
   // Comptes rendus de reunion. La structure (themes, items) vit dans le Markdown
   // de la page : ces libelles ne decrivent que l'affichage et les commandes.
   meeting: {

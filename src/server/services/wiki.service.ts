@@ -7,6 +7,9 @@ import {
   toPrefixQuery,
 } from "@/lib/search-text";
 import { Prisma } from "@prisma/client";
+// Import de TYPE : dereferencer l'objet enum au chargement du module le rendrait
+// tributaire de l'ordre d'initialisation du client genere (cf. project.service).
+import type { WikiSectionKind } from "@prisma/client";
 
 /** Service Wiki - pages de documentation par projet (autorisation dans les actions). */
 
@@ -400,7 +403,30 @@ export function getPageRevision(id: string) {
   });
 }
 
-export function deleteWikiPage(id: string) {
+/**
+ * Supprime une page - SAUF si elle est la racine d'une section prédéfinie.
+ *
+ * Les clefs étrangères sont en CASCADE, vérifié en base : `WikiPage.parentId`,
+ * `WikiRevision.pageId`, `SpecPackage.rootPageId`. Effacer « Réunions »
+ * effacerait donc tous les comptes rendus du projet, leur historique et les
+ * paquets qui y sont ancrés, en une requête et sans retour possible. Une page
+ * ordinaire supprimée par erreur, c'est un incident ; une section, c'est la
+ * mémoire du projet.
+ *
+ * Le garde-fou vit ICI et non dans l'action : c'est le seul chemin vers
+ * `delete`, donc le seul endroit où l'interdit vaille aussi pour l'appelant qui
+ * n'existe pas encore.
+ */
+export async function deleteWikiPage(id: string) {
+  const section = await prisma.wikiSection.findUnique({
+    where: { rootPageId: id },
+    select: { kind: true },
+  });
+  if (section) {
+    throw new Error(
+      "Cette page est une section du wiki : elle ne peut pas être supprimée. Videz-la ou déplacez son contenu.",
+    );
+  }
   return prisma.wikiPage.delete({ where: { id } });
 }
 
@@ -484,5 +510,136 @@ export function listTicketRefs(projectId: string) {
       title: true,
       assignee: { select: { name: true, email: true } },
     },
+  });
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * SECTIONS PRÉDÉFINIES
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Les trois sections d'un wiki, dans l'ordre où elles se lisent. Les intitulés
+ * sont en français comme le reste des valeurs par défaut d'un projet
+ * (`DEFAULT_COLUMNS`, `DEFAULT_TICKET_TYPES`) : ce sont des PAGES, que l'on
+ * renomme ensuite librement sans que l'application y perde son latin - elle les
+ * reconnaît par leur identifiant, jamais par leur titre.
+ */
+export const DEFAULT_WIKI_SECTIONS: ReadonlyArray<{
+  kind: WikiSectionKind;
+  title: string;
+  content: string;
+}> = [
+  {
+    kind: "SPEC",
+    title: "Spécifications",
+    content:
+      "Ce que le produit doit faire, tel qu'on s'y engage. Chaque spécification se publie en versions figées, citables depuis un ticket : une version publiée ne change plus.",
+  },
+  {
+    kind: "MEETING",
+    title: "Réunions",
+    content:
+      "Les comptes rendus, un par réunion, classés par date. Un compte rendu ne se réécrit pas : ce qui a été dit ce jour-là le reste.",
+  },
+  {
+    kind: "IMPLEMENTATION",
+    title: "Implémentation",
+    content:
+      "Comment le produit est fait : architecture, décisions techniques, procédures. Contrairement aux deux autres, cette documentation n'a qu'un seul état valable - le plus récent.",
+  },
+];
+
+export function listWikiSections(projectId: string) {
+  return prisma.wikiSection.findMany({
+    where: { projectId },
+    select: { kind: true, rootPageId: true },
+  });
+}
+
+/**
+ * Crée les sections MANQUANTES d'un projet, et range sous elles ce qui est
+ * identifiable SANS DEVINER.
+ *
+ * Deux règles, et seulement deux :
+ *  - une page qui porte une date EST un compte rendu ;
+ *  - une page qui est racine d'un paquet EST une spécification.
+ * Aucun classement n'est tenté pour le reste : « ça ressemble à de la doc
+ * technique » n'est pas un critère, et une page mal rangée d'office coûte plus
+ * cher à retrouver qu'une page restée à sa place.
+ *
+ * Et parmi celles-là, seules sont déplacées les pages POSÉES À LA RACINE.
+ * Une page déjà rangée sous une autre l'a été par quelqu'un ; la déplacer
+ * reviendrait à défaire une décision humaine au nom d'une règle automatique.
+ */
+export function ensureWikiSections(projectId: string, authorId?: string | null) {
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.wikiSection.findMany({
+      where: { projectId },
+      select: { kind: true, rootPageId: true },
+    });
+    const known = new Map(existing.map((s) => [s.kind, s.rootPageId]));
+
+    for (const section of DEFAULT_WIKI_SECTIONS) {
+      if (known.has(section.kind)) continue;
+      const page = await tx.wikiPage.create({
+        data: {
+          projectId,
+          title: section.title,
+          content: section.content,
+          authorId: authorId ?? null,
+          slug: await freshSlug(tx, projectId, section.title),
+          searchText: buildSearchText(section.title, section.content),
+        },
+      });
+      await tx.wikiRevision.create({
+        data: {
+          pageId: page.id,
+          title: page.title,
+          content: page.content,
+          authorId: authorId ?? null,
+        },
+      });
+      await tx.wikiSection.create({
+        data: { projectId, kind: section.kind, rootPageId: page.id },
+      });
+      known.set(section.kind, page.id);
+    }
+
+    const meetingRoot = known.get("MEETING");
+    const specRoot = known.get("SPEC");
+    let filed = 0;
+
+    if (meetingRoot) {
+      const { count } = await tx.wikiPage.updateMany({
+        where: {
+          projectId,
+          parentId: null,
+          meetingDate: { not: null },
+          id: { not: meetingRoot },
+        },
+        data: { parentId: meetingRoot },
+      });
+      filed += count;
+    }
+
+    if (specRoot) {
+      const packages = await tx.specPackage.findMany({
+        where: { projectId },
+        select: { rootPageId: true },
+      });
+      if (packages.length > 0) {
+        const { count } = await tx.wikiPage.updateMany({
+          where: {
+            projectId,
+            parentId: null,
+            id: { in: packages.map((p) => p.rootPageId), not: specRoot },
+          },
+          data: { parentId: specRoot },
+        });
+        filed += count;
+      }
+    }
+
+    return { sections: [...known.entries()].map(([kind, rootPageId]) => ({ kind, rootPageId })), filed };
   });
 }

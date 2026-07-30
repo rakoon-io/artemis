@@ -158,6 +158,34 @@ export const wiki = {
     description:
       "La page et ses éventuelles sous-pages seront définitivement supprimées. Cette action est irréversible.",
   },
+  // Sections predefinies du wiki : trois rapports au temps, pas trois dossiers.
+  sections: {
+    empty: "Aucune page pour l'instant.",
+    loose: "Autres pages",
+    looseHint:
+      "Ces pages n'appartiennent à aucune section. Déplacez-les si vous voulez les ranger.",
+
+    structure: "Structurer le wiki",
+    structureTitle: "Donner ses sections à ce wiki",
+    structureDescription:
+      "Trois pages racines vont être créées. Elles se renomment ensuite librement : l'application les reconnaît à leur identité, jamais à leur titre.",
+    structureSpec:
+      "Spécifications — ce que le produit doit faire, publié en versions figées.",
+    structureMeeting:
+      "Réunions — un compte rendu par réunion, classé par date.",
+    structureImplementation:
+      "Implémentation — comment le produit est fait, dans son seul état valable : le plus récent.",
+    structureSafety:
+      "Rien n'est supprimé ni réécrit. Seules sont rangées les pages déjà identifiables : celles qui portent une date deviennent des réunions, les racines de spécification rejoignent les spécifications. Le reste ne bouge pas.",
+    structureSubmit: "Créer les sections",
+    done: "Sections créées. {count} page(s) rangée(s).",
+
+    // Une section est une page : elle ne se supprime pas comme les autres.
+    rootBadge: "Section du wiki",
+    rootUndeletable:
+      "Une section ne se supprime pas : sa suppression emporterait tout son contenu et son historique.",
+  },
+
   // Comptes rendus de reunion. La structure (themes, items) vit dans le Markdown
   // de la page : ces libelles ne decrivent que l'affichage et les commandes.
   meeting: {

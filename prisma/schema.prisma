@@ -51,6 +51,17 @@ enum TicketTemplate {
   REPORT
 }
 
+// Section prédéfinie du wiki (cf. model WikiSection). Trois rapports au temps,
+// et non trois dossiers - c'est ce qui justifie de les prédéfinir :
+//   SPEC           - temps VERSIONNÉ : des états publiés, figés, citables à jamais ;
+//   MEETING        - temps PONCTUEL : une page clouée à une date, jamais réécrite ;
+//   IMPLEMENTATION - temps CONTINU : toujours l'état actuel du système.
+enum WikiSectionKind {
+  SPEC
+  MEETING
+  IMPLEMENTATION
+}
+
 // Nature d'un composant applicatif (cf. model Component).
 //   PAGE    - un écran / une route de l'application ;
 //   SHARED  - un composant réutilisable (design system, widget partagé) ;
@@ -128,6 +139,7 @@ model Project {
   wikiPages        WikiPage[]
   specPackages     SpecPackage[]
   wikiPageSlugs    WikiPageSlug[]
+  wikiSections     WikiSection[]
   members          ProjectMember[]
 }
 
@@ -410,6 +422,10 @@ model WikiPage {
   revisions   WikiRevision[]
   // Renseigne uniquement si CETTE page est la racine d'un paquet de spécifications.
   specPackage SpecPackage?
+  // Renseigne uniquement si CETTE page est la racine d'une section prédéfinie.
+  // L'appartenance des AUTRES pages ne se stocke pas : elle se calcule en
+  // remontant les ancêtres (cf. `@/lib/wiki-tree`).
+  wikiSection WikiSection?
   snapshots   SpecPageSnapshot[]
 
   @@unique([projectId, slug])
@@ -473,6 +489,42 @@ model WikiRevision {
 //
 // Le paquet n'a pas de nom propre : c'est le titre de sa page racine. Deux
 // sources pour un même intitulé finiraient par diverger.
+// SECTION PRÉDÉFINIE du wiki. Une section EST une page racine ; cette table ne
+// fait que désigner laquelle, pour les trois genres que l'application connaît.
+//
+// L'APPARTENANCE NE SE STOCKE PAS. La section d'une page se calcule en remontant
+// ses ancêtres jusqu'à rencontrer une racine de section. Une colonne `section`
+// portée par chaque page aurait dit la même chose que l'arbre, et les deux
+// auraient fini par se contredire : un enfant de « Réunions » marqué
+// « implémentation », et plus personne pour trancher. Déplacer une page d'une
+// section à l'autre, c'est donc la reparenter - ce que le wiki sait déjà faire,
+// cycles compris.
+//
+// LA SECTION PROPOSE, LE MARQUEUR DISPOSE. Sous Réunions, créer une page ouvre
+// un compte rendu daté ; mais une page sans date posée là reste une page
+// ordinaire. Le sens continue d'être porté par les marqueurs existants -
+// `WikiPage.meetingDate` pour la date, `SpecPackage` pour les versions -, que la
+// section ne remplace pas. Il n'existe ainsi aucun état contradictoire à
+// réparer, et aucune migration de rattrapage à écrire le jour où l'on range
+// autrement.
+model WikiSection {
+  id         String          @id @default(cuid())
+  projectId  String
+  project    Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  kind       WikiSectionKind
+  // `Cascade` et non `Restrict` : sans quoi la suppression d'un projet, qui
+  // efface ses pages et ses sections dans un ordre non garanti, buterait sur sa
+  // propre contrainte. La racine est protégée là où l'on peut la défendre
+  // vraiment - dans le service de suppression, seul chemin vers `delete`.
+  rootPageId String          @unique
+  rootPage   WikiPage        @relation(fields: [rootPageId], references: [id], onDelete: Cascade)
+  createdAt  DateTime        @default(now())
+
+  // Une seule racine par genre et par projet : « les » Réunions, pas « des ».
+  @@unique([projectId, kind])
+  @@index([projectId])
+}
+
 model SpecPackage {
   id         String        @id @default(cuid())
   projectId  String

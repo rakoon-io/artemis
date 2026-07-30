@@ -97,6 +97,15 @@ export function getWikiPages(projectId: string) {
   return wikiService.listWikiPages(projectId);
 }
 
+/**
+ * Racines des sections predefinies du projet. Trois lignes au plus : c'est tout
+ * ce qu'il faut pour ranger l'arbre, l'appartenance des pages se calculant
+ * ensuite sans requete (cf. `@/lib/wiki-tree`).
+ */
+export function getWikiSections(projectId: string) {
+  return wikiService.listWikiSections(projectId);
+}
+
 /** Une page de wiki avec son contenu. */
 export function getWikiPage(id: string) {
   return wikiService.getWikiPage(id);
