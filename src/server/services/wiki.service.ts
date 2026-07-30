@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/db";
+import { slugForTitle } from "@/lib/slug";
+import { Prisma } from "@prisma/client";
 
 /** Service Wiki - pages de documentation par projet (autorisation dans les actions). */
 
@@ -11,6 +13,7 @@ export function listWikiPages(projectId: string) {
       id: true,
       title: true,
       parentId: true,
+      slug: true,
       updatedAt: true,
       // Marqueur de compte rendu : la section « Réunions » se construit à partir
       // de cette même liste, sans requête supplémentaire.
@@ -61,6 +64,75 @@ export function getWikiPage(id: string) {
   });
 }
 
+/**
+ * Slug libre pour un titre dans un projet. Les slugs déjà pris comprennent ceux
+ * des pages ET les anciens archivés : réutiliser un ancien slug ferait aboutir un
+ * favori sur une page qui n'a rien à voir, ce qui est pire qu'un lien mort.
+ *
+ * `exceptPageId` écarte la page en cours de renommage, sans quoi elle entrerait
+ * en concurrence avec elle-même et gagnerait un « -2 » à chaque enregistrement.
+ */
+async function freshSlug(
+  tx: Prisma.TransactionClient,
+  projectId: string,
+  title: string,
+  exceptPageId?: string,
+): Promise<string> {
+  const [pages, aliases] = await Promise.all([
+    tx.wikiPage.findMany({
+      where: {
+        projectId,
+        slug: { not: null },
+        ...(exceptPageId ? { id: { not: exceptPageId } } : {}),
+      },
+      select: { slug: true },
+    }),
+    tx.wikiPageSlug.findMany({
+      where: {
+        projectId,
+        ...(exceptPageId ? { pageId: { not: exceptPageId } } : {}),
+      },
+      select: { slug: true },
+    }),
+  ]);
+  const taken = [
+    ...pages.map((page) => page.slug!),
+    ...aliases.map((alias) => alias.slug),
+  ];
+  return slugForTitle(title, taken);
+}
+
+/**
+ * Retrouve une page à partir de ce qui figure dans l'URL. Trois chemins, du plus
+ * courant au plus ancien :
+ *   1. le slug courant - le cas normal ;
+ *   2. un slug archivé - un favori pris avant un renommage ;
+ *   3. l'identifiant technique - les liens d'avant la fonctionnalité, et les
+ *      pages qui n'ont pas encore de slug.
+ *
+ * Renvoie aussi `canonicalSlug`, pour que l'appelant puisse rediriger vers
+ * l'adresse à jour plutôt que de laisser vivre indéfiniment une ancienne.
+ */
+export async function resolveWikiPage(projectId: string, handle: string) {
+  const bySlug = await prisma.wikiPage.findFirst({
+    where: { projectId, slug: handle },
+    include: { author: { select: { name: true, email: true } } },
+  });
+  if (bySlug) return { page: bySlug, canonicalSlug: bySlug.slug, moved: false };
+
+  const alias = await prisma.wikiPageSlug.findFirst({
+    where: { projectId, slug: handle },
+    select: { pageId: true },
+  });
+  const id = alias?.pageId ?? handle;
+  const page = await prisma.wikiPage.findFirst({
+    where: { id, projectId },
+    include: { author: { select: { name: true, email: true } } },
+  });
+  if (!page) return null;
+  return { page, canonicalSlug: page.slug, moved: true };
+}
+
 export interface CreateWikiPageServiceInput {
   projectId: string;
   title: string;
@@ -85,6 +157,7 @@ export function createWikiPage(input: CreateWikiPageServiceInput) {
         content: input.content,
         authorId: input.authorId,
         parentId: input.parentId ?? null,
+        slug: await freshSlug(tx, input.projectId, input.title),
       },
     });
     await tx.wikiRevision.create({
@@ -123,15 +196,40 @@ export function updateWikiPage(input: UpdateWikiPageServiceInput) {
   return prisma.$transaction(async (tx) => {
     const before = await tx.wikiPage.findUnique({
       where: { id: input.id },
-      select: { title: true, content: true },
+      select: { title: true, content: true, slug: true, projectId: true },
     });
     if (!before) throw new Error("Page introuvable.");
+
+    // L'adresse suit le titre : renommer la page renomme son slug. L'ancien est
+    // archivé juste avant, pour que les favoris et les liens déjà partagés
+    // continuent d'aboutir (cf. `model WikiPageSlug`).
+    const renamed = before.title !== input.title || !before.slug;
+    const nextSlug = renamed
+      ? await freshSlug(tx, before.projectId, input.title, input.id)
+      : before.slug;
+
+    if (renamed && before.slug && before.slug !== nextSlug) {
+      await tx.wikiPageSlug.upsert({
+        where: {
+          projectId_slug: { projectId: before.projectId, slug: before.slug },
+        },
+        create: {
+          projectId: before.projectId,
+          pageId: input.id,
+          slug: before.slug,
+        },
+        // Un slug repris par une AUTRE page revient à celle qui le porte
+        // désormais : c'est elle que l'ancien lien doit atteindre.
+        update: { pageId: input.id },
+      });
+    }
 
     const page = await tx.wikiPage.update({
       where: { id: input.id },
       data: {
         title: input.title,
         content: input.content,
+        slug: nextSlug,
         // `undefined` = ne pas toucher le parent ; `null` = remonter à la racine.
         ...(input.parentId !== undefined ? { parentId: input.parentId } : {}),
       },

@@ -89,8 +89,12 @@ export function WikiPageForm({
       return;
     }
     toast.success(isEdit ? t.wiki.form.updated : t.wiki.form.created);
-    const id = isEdit ? page!.id : res.data?.id;
-    router.push(`${wikiHref}?page=${id ?? ""}`);
+    // On rejoint l'adresse LISIBLE (« ?page=guide-du-projet »), pas
+    // l'identifiant : c'est celle que l'on voit juste après avoir écrit, donc
+    // celle que l'on met en favori. Repli sur l'identifiant pour une page qui
+    // n'aurait pas encore de slug.
+    const handle = res.data?.slug ?? res.data?.id ?? (isEdit ? page!.id : "");
+    router.push(`${wikiHref}?page=${handle}`);
   }
 
   return (

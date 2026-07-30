@@ -15,8 +15,8 @@ import {
   getSpecVersion,
   getSpecVersions,
   getTicketKeys,
-  getWikiPage,
   getWikiPages,
+  resolveWikiPage,
   searchWikiPages,
 } from "@/server/queries";
 import { Badge } from "@/components/ui/badge";
@@ -89,10 +89,12 @@ export default async function WikiPage({
   const list: WikiListItem[] =
     results ?? allPages.map((p) => ({ id: p.id, title: p.title }));
 
-  const selectedId = requestedId ?? list[0]?.id;
-  const selected = selectedId ? await getWikiPage(selectedId) : null;
-  const current =
-    selected && selected.projectId === project.id ? selected : null;
+  // Ce que porte l'URL est un SLUG (« guide-du-projet »), et non plus un
+  // identifiant : l'adresse se lit et se met en favori. Les anciens liens en
+  // identifiant continuent d'aboutir, la résolution les accepte encore.
+  const handle = requestedId ?? list[0]?.id;
+  const resolved = handle ? await resolveWikiPage(project.id, handle) : null;
+  const current = resolved?.page ?? null;
 
   // Suivi des réunions : extrait des pages déjà chargées, sans requête de plus.
   // Une page datée EST un compte rendu (cf. `WikiPage.meetingDate`).
@@ -142,10 +144,17 @@ export default async function WikiPage({
     </Button>
   );
 
-  const pageHref = (id: string) =>
-    q
-      ? `/projects/${project.key}/wiki?page=${id}&q=${encodeURIComponent(q)}`
-      : `/projects/${project.key}/wiki?page=${id}`;
+  // Les liens portent le SLUG quand la page en a un, l'identifiant sinon (page
+  // antérieure à la fonctionnalité, en attente du script de reprise). La table
+  // est construite sur les pages déjà chargées : les résultats de recherche, qui
+  // ne renvoient pas le slug, y trouvent le leur sans requête de plus.
+  const slugById = new Map(allPages.map((page) => [page.id, page.slug]));
+  const pageHref = (id: string) => {
+    const handle = slugById.get(id) ?? id;
+    return q
+      ? `/projects/${project.key}/wiki?page=${handle}&q=${encodeURIComponent(q)}`
+      : `/projects/${project.key}/wiki?page=${handle}`;
+  };
 
   return (
     <div className="space-y-6">

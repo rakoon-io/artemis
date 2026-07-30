@@ -38,8 +38,8 @@ async function parentInProject(
 /** Crée une page de wiki dans le projet. */
 export async function createWikiPageAction(
   input: z.input<typeof createWikiPageSchema>,
-): Promise<ActionResult<{ id: string }>> {
-  return withUser<{ id: string }>(async (user) => {
+): Promise<ActionResult<{ id: string; slug: string | null }>> {
+  return withUser<{ id: string; slug: string | null }>(async (user) => {
     const data = createWikiPageSchema.parse(input);
     await assertProjectAccess(user, data.projectId);
     if (data.parentId && !(await parentInProject(data.parentId, data.projectId))) {
@@ -52,15 +52,17 @@ export async function createWikiPageAction(
       authorId: user.id,
       parentId: data.parentId,
     });
-    return { ok: true, data: { id: page.id } };
+    // Le slug est renvoyé pour que le formulaire redirige vers l'adresse
+    // LISIBLE : c'est juste après un enregistrement que l'on met en favori.
+    return { ok: true, data: { id: page.id, slug: page.slug } };
   });
 }
 
 /** Met à jour le titre et le contenu d'une page. */
 export async function updateWikiPageAction(
   input: z.input<typeof updateWikiPageSchema>,
-): Promise<ActionResult<{ id: string }>> {
-  return withUser<{ id: string }>(async (user) => {
+): Promise<ActionResult<{ id: string; slug: string | null }>> {
+  return withUser<{ id: string; slug: string | null }>(async (user) => {
     const data = updateWikiPageSchema.parse(input);
     const existing = await getWikiPage(data.id);
     if (!existing) return { ok: false, error: "Page introuvable." };
@@ -85,8 +87,8 @@ export async function updateWikiPageAction(
 
     // `authorId` : l'auteur de CETTE modification, archivé dans la révision.
     // `WikiPage.authorId` ne désigne, lui, que le créateur de la page.
-    await updateWikiPage({ ...data, authorId: user.id });
-    return { ok: true, data: { id: data.id } };
+    const updated = await updateWikiPage({ ...data, authorId: user.id });
+    return { ok: true, data: { id: updated.id, slug: updated.slug } };
   });
 }
 

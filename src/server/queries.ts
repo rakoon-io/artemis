@@ -103,6 +103,14 @@ export function getWikiPage(id: string) {
 }
 
 /** Recherche dans les pages de wiki du projet (titre + contenu). */
+/**
+ * Retrouve une page à partir de ce que porte l'URL : slug courant, ancien slug
+ * (favori pris avant un renommage) ou identifiant technique.
+ */
+export function resolveWikiPage(projectId: string, handle: string) {
+  return wikiService.resolveWikiPage(projectId, handle);
+}
+
 /** Comptes rendus de réunion du projet, du plus récent au plus ancien. */
 export function getMeetingPages(projectId: string) {
   return wikiService.listMeetingPages(projectId);

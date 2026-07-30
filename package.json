@@ -18,7 +18,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:reset-demo": "tsx prisma/reset-demo.ts && tsx prisma/seed.ts",
     "db:rotate-passwords": "tsx prisma/rotate-passwords.ts",
-    "mcp": "tsx src/mcp/server.ts"
+    "mcp": "tsx src/mcp/server.ts",
+    "db:backfill-slugs": "tsx prisma/backfill-slugs.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

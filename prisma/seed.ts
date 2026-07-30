@@ -2,6 +2,9 @@ import { ComponentKind, PrismaClient, Role, SprintState } from "@prisma/client";
 // Type seul : voir project.service.ts (evaluation au chargement du module).
 import type { TicketTemplate } from "@prisma/client";
 import { emptyReport, serializeReport } from "../src/lib/ticket-template";
+// Le seed écrit en base sans passer par les services : il doit donc poser
+// lui-même les slugs, sinon les pages de démo n'auraient pas d'URL lisible.
+import { slugify } from "../src/lib/slug";
 import { specSubtree } from "../src/lib/spec-package";
 import bcrypt from "bcryptjs";
 import { generateNKeysBetween } from "fractional-indexing";
@@ -435,6 +438,7 @@ async function main() {
     data: {
       projectId: project.id,
       title: "Guide du projet",
+      slug: slugify("Guide du projet"),
       content:
         "Bienvenue sur le wiki du projet **RKN**. Cette page centralise la documentation " +
         "libre de l'équipe (conventions, procédures). Voir aussi RKN-9.",
@@ -446,6 +450,7 @@ async function main() {
       projectId: project.id,
       parentId: guide.id,
       title: "Conventions de nommage des tickets",
+      slug: slugify("Conventions de nommage des tickets"),
       content:
         "Titres à l'impératif, en français, < 80 caractères. Exemple : \"Ajouter un export CSV de la vue liste\".",
       authorId: admin.id,
@@ -461,6 +466,7 @@ async function main() {
     data: {
       projectId: project.id,
       title: "Réunion hebdomadaire du 28 juillet",
+      slug: slugify("Réunion hebdomadaire du 28 juillet"),
       meetingDate: new Date("2026-07-28"),
       authorId: admin.id,
       content: [

@@ -113,6 +113,15 @@ docker run --rm --network dokploy-network --env-file rtr.env \
   artemis:latest npx prisma migrate deploy
 ```
 
+Reprise ponctuelle apres la migration `20260730180000_add_wiki_slug` : elle donne
+une URL lisible (`?page=guide-du-projet`) aux pages de wiki creees auparavant.
+Le script est idempotent, on peut le rejouer sans risque.
+
+```bash
+docker run --rm --network dokploy-network --env-file rtr.env \
+  artemis:latest npm run db:backfill-slugs
+```
+
 ### 5.6 - Lancement du conteneur applicatif
 ```bash
 docker rm -f artemis 2>/dev/null

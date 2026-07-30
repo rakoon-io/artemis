@@ -127,6 +127,7 @@ model Project {
   components       Component[]
   wikiPages        WikiPage[]
   specPackages     SpecPackage[]
+  wikiPageSlugs    WikiPageSlug[]
   members          ProjectMember[]
 }
 
@@ -383,13 +384,48 @@ model WikiPage {
   // n'existe que le temps d'une réunion (cf. `@/lib/meeting-minutes`).
   meetingDate DateTime?
 
+  // Identifiant lisible pour l'URL (« guide-du-projet »). L'identité reste
+  // portée par `id` : le slug n'est qu'une clef d'accès commode, faite pour
+  // qu'une adresse se lise et se mette en favori.
+  //
+  // NULLABLE à dessein : les pages antérieures à la fonctionnalité n'en ont pas
+  // encore, et l'affectation se fait par le script de reprise (ou au premier
+  // enregistrement). Générer les slugs en SQL dans la migration aurait supposé
+  // réécrire l'algorithme une seconde fois, en PL/pgSQL, où il aurait
+  // immanquablement divergé de celui qui est testé.
+  slug        String?
+  slugAliases WikiPageSlug[]
+
   revisions   WikiRevision[]
   // Renseigne uniquement si CETTE page est la racine d'un paquet de spécifications.
   specPackage SpecPackage?
   snapshots   SpecPageSnapshot[]
 
+  @@unique([projectId, slug])
   @@index([projectId])
   @@index([parentId])
+}
+
+// ANCIEN slug d'une page, conservé après un renommage.
+//
+// Sans cette table, corriger une coquille dans un titre casserait tous les
+// favoris et tous les liens déjà partagés vers la page - exactement ce que la
+// fonctionnalité cherche à éviter. Avec elle, l'adresse suit toujours le titre
+// courant et les anciennes continuent d'y mener.
+//
+// `projectId` est dénormalisé pour porter l'unicité : deux projets peuvent avoir
+// eu chacun une page « guide-du-projet ».
+model WikiPageSlug {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  pageId    String
+  page      WikiPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  slug      String
+  createdAt DateTime @default(now())
+
+  @@unique([projectId, slug])
+  @@index([pageId])
 }
 
 // Révision d'une page de wiki : l'état du titre et du contenu APRÈS chaque
