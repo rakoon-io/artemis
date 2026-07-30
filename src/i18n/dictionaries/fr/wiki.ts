@@ -157,6 +157,26 @@ export const wiki = {
     marked: "Page suivie comme compte rendu.",
     unmarked: "La page n'est plus un compte rendu.",
 
+    // Edition graphique des points
+    editItems: "Modifier les points",
+    editing: "Édition des points",
+    preambleLabel: "En-tête (participants, ordre du jour…)",
+    preamblePlaceholder: "Contexte de la réunion…",
+    themeTitleLabel: "Intitulé du thème {letter}",
+    themeTitlePlaceholder: "Sujet abordé…",
+    itemPlaceholder: "Point abordé…",
+    addTheme: "Ajouter un thème",
+    addItem: "Ajouter un point",
+    removeTheme: "Supprimer le thème {letter}",
+    removeItem: "Supprimer le point {ref}",
+    moveThemeUp: "Monter le thème {letter}",
+    moveThemeDown: "Descendre le thème {letter}",
+    moveItemUp: "Monter le point {ref}",
+    moveItemDown: "Descendre le point {ref}",
+    notesKept: "Le texte libre de ce thème est conservé tel quel.",
+    noThemesYet: "Aucun thème. Ajoutez-en un pour commencer le compte rendu.",
+    newThemeTitle: "Nouveau thème",
+
     // Lecture du compte rendu
     gotoActions: "Aller au récapitulatif des actions",
     actionsTitle: "Récapitulatif des actions",

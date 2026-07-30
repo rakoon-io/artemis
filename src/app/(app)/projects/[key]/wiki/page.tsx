@@ -27,6 +27,7 @@ import { DeleteWikiPageButton } from "@/components/wiki/delete-wiki-page-button"
 import { MarkSpecButton, SpecPanel } from "@/components/wiki/spec-panel";
 import { MeetingControls } from "@/components/wiki/meeting-controls";
 import { MeetingView } from "@/components/wiki/meeting-view";
+import { MeetingSection } from "@/components/wiki/meeting-editor";
 import { SpecVersionView } from "@/components/wiki/spec-version-view";
 import { getDictionary } from "@/i18n/server";
 import { fmt } from "@/i18n";
@@ -444,15 +445,28 @@ export default async function WikiPage({
                       </p>
                     )}
                   </div>
-                ) : current.meetingDate && current.content.trim() ? (
+                ) : current.meetingDate ? (
                   // Compte rendu : thèmes en tableaux, récapitulatif des actions
-                  // en fin de page. Une révision figée, elle, se lit toujours
-                  // telle qu'elle a été enregistrée (branche ci-dessus).
-                  <MeetingView
+                  // en fin de page, et bascule vers l'édition graphique des
+                  // points. Une révision figée, elle, se lit toujours telle
+                  // qu'elle a été enregistrée (branche ci-dessus).
+                  //
+                  // Le rendu de lecture est passé en `children` : il reste ainsi
+                  // un composant SERVEUR - liens de tickets compris - derrière
+                  // une bascule qui, elle, doit être cliente.
+                  <MeetingSection
+                    pageId={current.id}
+                    pageTitle={current.title}
+                    parentId={current.parentId}
                     content={current.content}
-                    projectKey={project.key}
-                    ticketMap={ticketMap}
-                  />
+                    canEdit
+                  >
+                    <MeetingView
+                      content={current.content}
+                      projectKey={project.key}
+                      ticketMap={ticketMap}
+                    />
+                  </MeetingSection>
                 ) : current.content.trim() ? (
                   <WikiContent
                     content={current.content}

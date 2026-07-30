@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   countMeetingItems,
+  serializeMeeting,
   formatItemRef,
   meetingActions,
   parseMeeting,
@@ -128,7 +129,7 @@ describe("parseMeeting", () => {
     const meeting = parseMeeting(
       "## Budget\n\nUn paragraphe de contexte.\n\n- (info) Validé",
     )!;
-    expect(meeting.themes[0].notes).toContain("Un paragraphe de contexte.");
+    expect(meeting.themes[0].notesBefore).toContain("Un paragraphe de contexte.");
     expect(meeting.themes[0].items).toHaveLength(1);
   });
 
@@ -139,7 +140,7 @@ describe("parseMeeting", () => {
     expect(meeting.themes[0].items[0].text).toBe(
       "Relancer le prestataire sur le devis de janvier.",
     );
-    expect(meeting.themes[0].notes).not.toContain("janvier");
+    expect(meeting.themes[0].notesAfter).not.toContain("janvier");
   });
 
   it("traite les titres plus profonds comme du contenu, non comme des thèmes", () => {
@@ -147,7 +148,7 @@ describe("parseMeeting", () => {
       "## Budget\n\n### Détail\n\n- (info) Validé\n\n## Recrutement\n\n- (info) En cours",
     )!;
     expect(meeting.themes.map((t) => t.title)).toEqual(["Budget", "Recrutement"]);
-    expect(meeting.themes[0].notes).toContain("### Détail");
+    expect(meeting.themes[0].notesBefore).toContain("### Détail");
   });
 
   it("ignore une puce écrite dans un bloc de code", () => {
@@ -178,7 +179,7 @@ describe("parseMeeting", () => {
   it("accepte un thème sans aucun item", () => {
     const meeting = parseMeeting("## Divers\n\nRien à signaler.")!;
     expect(meeting.themes[0].items).toEqual([]);
-    expect(meeting.themes[0].notes).toBe("Rien à signaler.");
+    expect(meeting.themes[0].notesBefore).toBe("Rien à signaler.");
   });
 });
 
@@ -208,5 +209,67 @@ describe("meetingActions", () => {
 describe("countMeetingItems", () => {
   it("compte tous les items, toutes natures confondues", () => {
     expect(countMeetingItems(parseMeeting(CR)!)).toBe(4);
+  });
+});
+
+describe("serializeMeeting", () => {
+  it("réécrit un compte rendu à l'identique après relecture", () => {
+    // LA propriété qui autorise l'édition graphique : réécrire toute la page à
+    // chaque enregistrement ne doit rien déplacer ni rien perdre.
+    const once = parseMeeting(CR)!;
+    const twice = parseMeeting(serializeMeeting(once))!;
+    expect(twice).toEqual(once);
+  });
+
+  it("conserve le préambule et les notes, avant comme après la liste", () => {
+    const source = [
+      "Ordre du jour.",
+      "",
+      "## Budget",
+      "",
+      "Un paragraphe de contexte.",
+      "",
+      "- (info) Validé",
+      "",
+      "Une remarque de fin.",
+    ].join("\n");
+    const parsed = parseMeeting(source)!;
+    const rewritten = parseMeeting(serializeMeeting(parsed))!;
+    expect(rewritten.preamble).toBe("Ordre du jour.");
+    expect(rewritten.themes[0].notesBefore).toBe("Un paragraphe de contexte.");
+    expect(rewritten.themes[0].notesAfter).toBe("Une remarque de fin.");
+  });
+
+  it("écrit la nature de chaque point explicitement", () => {
+    // Y compris « (info) », que l'analyseur déduirait : le Markdown reste ainsi
+    // auto-descriptif pour qui le rouvre dans un éditeur de texte.
+    const out = serializeMeeting(parseMeeting(CR)!);
+    expect(out).toContain("- (info) Le budget 2026 est validé.");
+    expect(out).toContain("- (action) Relancer le prestataire sur le devis.");
+  });
+
+  it("n'écrit ni lettre ni référence : elles se déduisent de la position", () => {
+    const out = serializeMeeting(parseMeeting(CR)!);
+    expect(out).not.toContain("A-01");
+    expect(out).not.toContain("A.");
+  });
+
+  it("respecte le niveau de titre d'origine", () => {
+    const parsed = parseMeeting("### Budget\n\n- (info) Validé")!;
+    expect(serializeMeeting(parsed)).toContain("### Budget");
+  });
+
+  it("ignore un point vidé de son texte", () => {
+    const parsed = parseMeeting("## Budget\n\n- (info) Validé")!;
+    parsed.themes[0].items.push({ ref: "A-02", kind: "action", text: "   " });
+    expect(serializeMeeting(parsed)).toBe("## Budget\n\n- (info) Validé");
+  });
+
+  it("réordonner les thèmes renumérote les références", () => {
+    const parsed = parseMeeting(CR)!;
+    parsed.themes.reverse();
+    const again = parseMeeting(serializeMeeting(parsed))!;
+    expect(again.themes[0].title).toBe("Recrutement");
+    expect(again.themes[0].items[0].ref).toBe("A-01");
   });
 });

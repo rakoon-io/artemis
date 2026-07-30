@@ -156,6 +156,26 @@ export const wiki: WikiDict = {
     marked: "Page now tracked as minutes.",
     unmarked: "The page is no longer minutes.",
 
+    // Edition graphique des points
+    editItems: "Edit items",
+    editing: "Editing items",
+    preambleLabel: "Header (attendees, agenda…)",
+    preamblePlaceholder: "Meeting context…",
+    themeTitleLabel: "Title of theme {letter}",
+    themeTitlePlaceholder: "Topic discussed…",
+    itemPlaceholder: "Item discussed…",
+    addTheme: "Add a theme",
+    addItem: "Add an item",
+    removeTheme: "Delete theme {letter}",
+    removeItem: "Delete item {ref}",
+    moveThemeUp: "Move theme {letter} up",
+    moveThemeDown: "Move theme {letter} down",
+    moveItemUp: "Move item {ref} up",
+    moveItemDown: "Move item {ref} down",
+    notesKept: "The free text of this theme is kept as-is.",
+    noThemesYet: "No theme yet. Add one to start the minutes.",
+    newThemeTitle: "New theme",
+
     // Lecture du compte rendu
     gotoActions: "Jump to the action summary",
     actionsTitle: "Action summary",

@@ -92,6 +92,14 @@ export async function MeetingView({
             {theme.title}
           </h3>
 
+          {theme.notesBefore && (
+            <WikiContent
+              content={theme.notesBefore}
+              projectKey={projectKey}
+              ticketMap={ticketMap}
+            />
+          )}
+
           {theme.items.length > 0 && (
             <div className="overflow-x-auto rounded-lg border">
               <table className="w-full text-sm">
@@ -139,9 +147,9 @@ export async function MeetingView({
             </div>
           )}
 
-          {theme.notes && (
+          {theme.notesAfter && (
             <WikiContent
-              content={theme.notes}
+              content={theme.notesAfter}
               projectKey={projectKey}
               ticketMap={ticketMap}
             />

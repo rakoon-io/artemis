@@ -26,7 +26,9 @@
  * RIEN NE SE PERD
  *
  * Le texte placé avant le premier thème (`preamble`) et les lignes non listées à
- * l'intérieur d'un thème (`notes`) sont conservés tels quels et réaffichés. Un
+ * l'intérieur d'un thème (`notesBefore` / `notesAfter`) sont conservés tels quels
+ * et réaffichés - y compris à la RÉÉCRITURE, ce qui autorise l'édition
+ * graphique des points sans jamais escamoter le reste de la page. Un
  * compte rendu reste donc une page de wiki que l'on peut écrire librement ; la
  * mise en tableau ne s'applique qu'aux listes.
  */
@@ -46,14 +48,30 @@ export interface MeetingTheme {
   letter: string;
   title: string;
   items: MeetingItem[];
-  /** Lignes du thème qui ne sont pas des items, conservées telles quelles. */
-  notes: string;
+  /**
+   * Lignes non listées SITUÉES AVANT le premier point (un paragraphe de
+   * contexte, le cas courant). Conservées telles quelles.
+   *
+   * Le découpage avant / après n'est pas une coquetterie : c'est lui qui rend la
+   * réécriture FIDÈLE. Avec une seule zone de notes, l'éditeur graphique
+   * remonterait ou descendrait le paragraphe à chaque enregistrement - le texte
+   * serait préservé, mais il se déplacerait tout seul.
+   */
+  notesBefore: string;
+  /** Lignes non listées situées après le dernier point. */
+  notesAfter: string;
 }
 
 export interface ParsedMeeting {
   /** Texte précédant le premier thème (ordre du jour, participants…). */
   preamble: string;
   themes: MeetingTheme[];
+  /**
+   * Niveau de titre des thèmes tel qu'il a été écrit (2 pour `##`). Conservé
+   * pour que la réécriture n'impose pas sa propre convention à une page qui en
+   * suivait une autre.
+   */
+  headingLevel: number;
 }
 
 /** Ancre HTML du récapitulatif, partagée par le lien d'en-tête et la section. */
@@ -192,7 +210,9 @@ export function parseMeeting(
     const letter = themeLetter(index);
 
     const items: MeetingItem[] = [];
-    const notes: string[] = [];
+    const notesBefore: string[] = [];
+    const notesAfter: string[] = [];
+    const noteSink = () => (items.length === 0 ? notesBefore : notesAfter);
     let currentIndent: number | null = null;
     let insideFence: string | null = null;
 
@@ -203,11 +223,11 @@ export function parseMeeting(
         if (insideFence === null) insideFence = marker;
         else if (insideFence === marker) insideFence = null;
         currentIndent = null;
-        notes.push(line);
+        noteSink().push(line);
         continue;
       }
       if (insideFence !== null) {
-        notes.push(line);
+        noteSink().push(line);
         continue;
       }
 
@@ -239,22 +259,64 @@ export function parseMeeting(
       if (!line.trim()) {
         // Une ligne vide ne rompt pas l'item courant (listes aérées), mais elle
         // n'a rien à faire dans les notes tant qu'aucun texte ne l'y rejoint.
-        notes.push(line);
+        noteSink().push(line);
         continue;
       }
       currentIndent = null;
-      notes.push(line);
+      noteSink().push(line);
     }
 
     return {
       letter,
       title: head.title,
       items,
-      notes: notes.join("\n").trim(),
+      notesBefore: notesBefore.join("\n").trim(),
+      notesAfter: notesAfter.join("\n").trim(),
     };
   });
 
-  return { preamble, themes };
+  return { preamble, themes, headingLevel: themeLevel };
+}
+
+/**
+ * Réécrit un compte rendu en Markdown. Inverse exact de `parseMeeting` : c'est
+ * ce qui autorise l'édition graphique des points, laquelle réécrit toute la page
+ * à chaque enregistrement.
+ *
+ * La nature est écrite EXPLICITEMENT, y compris « (info) » que l'analyseur
+ * déduirait par défaut. Le Markdown reste ainsi auto-descriptif : qui rouvre la
+ * page dans l'éditeur de texte voit ce que l'interface affichait, et le
+ * classement d'un point ne dépend plus d'une convention implicite.
+ *
+ * Les lettres et les références ne sont PAS écrites : elles se déduisent de la
+ * position (cf. l'en-tête du module). Les figer dans le texte les rendrait
+ * fausses au premier déplacement.
+ */
+export function serializeMeeting(meeting: ParsedMeeting): string {
+  const hashes = "#".repeat(Math.min(Math.max(meeting.headingLevel, 1), 6));
+  const blocks: string[] = [];
+
+  const preamble = meeting.preamble.trim();
+  if (preamble) blocks.push(preamble);
+
+  for (const theme of meeting.themes) {
+    const parts: string[] = [`${hashes} ${theme.title.trim()}`];
+    const before = theme.notesBefore.trim();
+    if (before) parts.push(before);
+    const items = theme.items
+      .map((item) => item.text.trim())
+      .filter(Boolean)
+      .map((text, index) => {
+        const kind = theme.items[index].kind === "action" ? "action" : "info";
+        return `- (${kind}) ${text}`;
+      });
+    if (items.length > 0) parts.push(items.join("\n"));
+    const after = theme.notesAfter.trim();
+    if (after) parts.push(after);
+    blocks.push(parts.join("\n\n"));
+  }
+
+  return blocks.join("\n\n");
 }
 
 /** Une action, telle qu'elle apparaît dans le récapitulatif de fin. */
