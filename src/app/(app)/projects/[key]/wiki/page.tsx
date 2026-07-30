@@ -666,7 +666,14 @@ export default async function WikiPage({
               // élément sans contour de l'écran - ce qui le faisait passer pour
               // un fond, et non pour le document qu'on vient lire.
               <article className="wiki-reading space-y-4 rounded-xl border bg-card p-4 shadow-sm sm:p-8">
-                <div className="flex flex-wrap items-start justify-between gap-3 border-b pb-4">
+                {/* EN-TÊTE EMPILÉ, et non deux colonnes qui se disputent la
+                    ligne. Les commandes font 664 pixels sur les 1046 de la
+                    colonne : mises en regard du titre, elles ne lui en
+                    laissaient que 468 - et il se coupait en deux alors que la
+                    moitié de la largeur restait vide à sa droite. Rien ne
+                    gagnait à les aligner : elles finissaient de toute façon
+                    sur leur propre ligne. */}
+                <div className="space-y-3 border-b pb-4">
                   <div className="space-y-1">
                     {/* FIL D'ARIANE, dont le DERNIER maillon est le rangement
                         lui-même : le parent d'une page, c'est là qu'on le lit,
