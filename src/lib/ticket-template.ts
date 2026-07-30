@@ -233,8 +233,9 @@ export function parseReport(
 
   const lines = text.split("\n");
 
-  // 1. Relever les titres hors blocs de code.
-  const heads: Array<{ line: number; section: ReportSection | null }> = [];
+  // 1. Relever les titres hors blocs de code, avec leur niveau.
+  const all: Array<{ line: number; level: number; section: ReportSection | null }> =
+    [];
   let fence: string | null = null;
   for (let i = 0; i < lines.length; i += 1) {
     const fenceMatch = FENCE_RE.exec(lines[i]);
@@ -247,9 +248,38 @@ export function parseReport(
     if (fence !== null) continue;
     const heading = HEADING_RE.exec(lines[i]);
     if (heading) {
-      heads.push({ line: i, section: sectionForHeading(heading[2]) });
+      all.push({
+        line: i,
+        level: heading[1].length,
+        section: sectionForHeading(heading[2]),
+      });
     }
   }
+
+  // 2. Quels titres STRUCTURENT le document ?
+  //
+  // Un « ### Étapes de reproduction » écrit à l'intérieur d'une rubrique - ou un
+  // « # » en tête d'une trace collée - ne doit pas passer pour une nouvelle
+  // section : sans quoi la relecture échouerait et l'utilisateur se verrait
+  // réclamer des rubriques pourtant remplies. Un sous-titre appartient au CORPS
+  // de sa rubrique.
+  //
+  // D'où deux conditions, et non une seule sur le niveau :
+  //  - une rubrique RECONNUE structure toujours, quel que soit son niveau. Une
+  //    description écrite à la main peut mélanger « ### Observation » et
+  //    « ## Contexte » ; refuser ce mélange rendrait le formulaire indisponible
+  //    sur des rapports parfaitement lisibles.
+  //  - un titre INCONNU ne structure qu'AU NIVEAU EXACT des rubriques. Plus
+  //    profond (« ### Étapes »), il est subordonné à la rubrique en cours ; plus
+  //    haut (« # » d'une trace collée), il ne relève pas du même plan de
+  //    document et n'a pas à découper la description. Dans les deux cas, il
+  //    appartient au corps.
+  const recognised = all.filter((head) => head.section !== null);
+  if (recognised.length === 0) return null;
+  const rubricLevel = recognised[0].level;
+  const heads = all.filter(
+    (head) => head.section !== null || head.level === rubricLevel,
+  );
 
   if (heads.length === 0 || heads[0].section === null) return null;
   // Préambule : du texte avant la première rubrique n'aurait pas de place.

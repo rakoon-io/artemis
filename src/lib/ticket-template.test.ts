@@ -350,3 +350,76 @@ describe("reportRequirementMessage", () => {
     );
   });
 });
+
+describe("parseReport : les sous-titres appartiennent au corps de la rubrique", () => {
+  // Régression. Un « ### » écrit dans une rubrique passait pour une nouvelle
+  // section : toute la relecture échouait et le serveur réclamait des rubriques
+  // qui étaient sous les yeux de l'utilisateur.
+  it("garde un sous-titre plus PROFOND dans le corps", () => {
+    const source = [
+      "## Observation",
+      "",
+      "Le bouton plante.",
+      "",
+      "### Étapes de reproduction",
+      "",
+      "1. Ouvrir l'écran",
+      "",
+      "## Attendu",
+      "",
+      "b",
+      "",
+      "## Contexte",
+      "",
+      "c",
+    ].join("\n");
+    const parsed = parseReport(source);
+    expect(parsed).not.toBeNull();
+    expect(parsed!.sections.observation).toContain("### Étapes de reproduction");
+    expect(parsed!.sections.observation).toContain("1. Ouvrir l'écran");
+    expect(parsed!.sections.expected).toBe("b");
+    expect(parsed!.extra).toBe("");
+  });
+
+  it("garde aussi un titre plus HAUT dans le corps (trace collée, « # … »)", () => {
+    const parsed = parseReport(
+      "## Observation\n\no\n\n## Attendu\n\ne\n\n## Contexte\n\nFirefox 128\n\n# note interne\nsuite du contexte",
+    );
+    expect(parsed).not.toBeNull();
+    // Le point de la régression : ces deux lignes étaient déplacées en fin de
+    // description, hors de toute rubrique et donc inatteignables au formulaire.
+    expect(parsed!.sections.context).toContain("# note interne");
+    expect(parsed!.sections.context).toContain("suite du contexte");
+    expect(parsed!.extra).toBe("");
+  });
+
+  it("continue de reconnaître un modèle entièrement rédigé en « ### »", () => {
+    const parsed = parseReport(
+      "### Observation\n\no\n\n### Attendu\n\ne\n\n### Contexte\n\nc",
+    );
+    expect(parsed).not.toBeNull();
+    expect(parsed!.sections.observation).toBe("o");
+  });
+
+  it("traite toujours en zone libre un titre inconnu de MÊME niveau", () => {
+    const parsed = parseReport(
+      "## Observation\n\no\n\n## Attendu\n\ne\n\n## Contexte\n\nc\n\n## Notes\n\nx",
+    );
+    expect(parsed).not.toBeNull();
+    expect(parsed!.extra).toBe("## Notes\n\nx");
+  });
+
+  it("le formulaire de création et le serveur s'accordent enfin", () => {
+    // Ce que produisait le dialogue : une rubrique contenant un sous-titre.
+    const composed = serializeReport(
+      {
+        observation: "Le bouton plante.\n\n### Étapes\n\n1. ouvrir",
+        expected: "e",
+        context: "c",
+        specs: "",
+      },
+      "fr",
+    );
+    expect(checkReportDescription(composed)).toEqual({ ok: true });
+  });
+});
