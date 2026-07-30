@@ -236,6 +236,16 @@ export interface CreateWikiPageServiceInput {
   content: string;
   authorId: string;
   parentId?: string | null;
+  /**
+   * Date de réunion, au format `AAAA-MM-JJ`. La renseigner fait naître la page
+   * COMPTE RENDU : marqueur posé et adresse déjà datée.
+   *
+   * C'est la seule façon d'obtenir le bon slug du premier coup. Créer la page
+   * puis la dater dans un second temps donnerait une adresse sans date,
+   * aussitôt remplacée et archivée - un alias mort-né pour une page que
+   * personne n'a eu le temps de lire.
+   */
+  meetingDate?: string | null;
 }
 
 /**
@@ -247,6 +257,7 @@ export interface CreateWikiPageServiceInput {
  */
 export function createWikiPage(input: CreateWikiPageServiceInput) {
   return prisma.$transaction(async (tx) => {
+    const prefix = datePrefix(input.meetingDate);
     const page = await tx.wikiPage.create({
       data: {
         projectId: input.projectId,
@@ -254,7 +265,8 @@ export function createWikiPage(input: CreateWikiPageServiceInput) {
         content: input.content,
         authorId: input.authorId,
         parentId: input.parentId ?? null,
-        slug: await freshSlug(tx, input.projectId, input.title),
+        meetingDate: input.meetingDate ? new Date(input.meetingDate) : null,
+        slug: await freshSlug(tx, input.projectId, input.title, undefined, prefix),
         searchText: buildSearchText(input.title, input.content),
       },
     });

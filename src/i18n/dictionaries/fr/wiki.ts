@@ -166,6 +166,15 @@ export const wiki = {
     sectionEmpty: "Aucun compte rendu pour l'instant.",
     heldOn: "Réunion du {date}",
 
+    // Ouvrir une reunion depuis un modele, a cote de « Nouvelle page »
+    newMeeting: "Nouvelle réunion",
+    newMeetingDescription:
+      "La page s'ouvre déjà datée, avec son en-tête amorcé et son éditeur de points prêt.",
+    newMeetingSubmit: "Ouvrir le compte rendu",
+    defaultTitle: "Réunion du {date}",
+    templatePreamble: "**Présents :**\n\n**Ordre du jour :**",
+    created: "Compte rendu créé.",
+
     // Declarer / retirer le marqueur
     mark: "Compte rendu de réunion",
     markAria: "Déclarer cette page comme compte rendu de réunion",

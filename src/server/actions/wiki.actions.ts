@@ -5,6 +5,7 @@ import { assert, isAdmin } from "@/lib/policies";
 import { assertProjectAccess } from "@/server/access";
 import { descendantIds } from "@/lib/wiki-tree";
 import {
+  createMeetingPageSchema,
   createWikiPageSchema,
   setMeetingSchema,
   updateWikiPageSchema,
@@ -54,6 +55,35 @@ export async function createWikiPageAction(
     });
     // Le slug est renvoyé pour que le formulaire redirige vers l'adresse
     // LISIBLE : c'est juste après un enregistrement que l'on met en favori.
+    return { ok: true, data: { id: page.id, slug: page.slug } };
+  });
+}
+
+/**
+ * Crée une page DÉJÀ DATÉE comme compte rendu de réunion.
+ *
+ * Volontairement distincte de `createWikiPageAction` : le marqueur et l'adresse
+ * datée sont posés dans la même transaction que la page. Enchaîner « créer »
+ * puis « marquer » laisserait, entre les deux, une page de wiki ordinaire dont
+ * l'adresse serait aussitôt remplacée.
+ */
+export async function createMeetingPageAction(
+  input: z.input<typeof createMeetingPageSchema>,
+): Promise<ActionResult<{ id: string; slug: string | null }>> {
+  return withUser<{ id: string; slug: string | null }>(async (user) => {
+    const data = createMeetingPageSchema.parse(input);
+    await assertProjectAccess(user, data.projectId);
+    if (data.parentId && !(await parentInProject(data.parentId, data.projectId))) {
+      return { ok: false, error: "Page parente invalide." };
+    }
+    const page = await createWikiPage({
+      projectId: data.projectId,
+      title: data.title,
+      content: data.content,
+      authorId: user.id,
+      parentId: data.parentId,
+      meetingDate: data.meetingDate,
+    });
     return { ok: true, data: { id: page.id, slug: page.slug } };
   });
 }

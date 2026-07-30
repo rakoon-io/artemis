@@ -164,6 +164,15 @@ export const wiki: WikiDict = {
     sectionEmpty: "No minutes yet.",
     heldOn: "Meeting of {date}",
 
+    // Ouvrir une reunion depuis un modele, a cote de « Nouvelle page »
+    newMeeting: "New meeting",
+    newMeetingDescription:
+      "The page opens already dated, with its header started and its item editor ready.",
+    newMeetingSubmit: "Open the minutes",
+    defaultTitle: "Meeting of {date}",
+    templatePreamble: "**Attendees:**\n\n**Agenda:**",
+    created: "Minutes created.",
+
     // Declarer / retirer le marqueur
     mark: "Meeting minutes",
     markAria: "Mark this page as meeting minutes",

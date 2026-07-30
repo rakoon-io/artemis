@@ -375,6 +375,18 @@ export const createWikiPageSchema = z.object({
   content: z.string().max(50000, "Contenu trop long").default(""),
 });
 
+/**
+ * Création d'un COMPTE RENDU DE RÉUNION. Même formulaire qu'une page ordinaire,
+ * à une donnée près : la date, ici REQUISE là où elle est facultative ailleurs.
+ * C'est elle qui fait d'une page un compte rendu et qui ouvre son adresse ;
+ * une réunion sans date n'aurait pas sa place dans le suivi.
+ */
+export const createMeetingPageSchema = createWikiPageSchema.extend({
+  meetingDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Date attendue au format AAAA-MM-JJ"),
+});
+
 // --- Paquets de spécifications (sous-arbres de wiki versionnés) ---
 
 export const markSpecSchema = z.object({

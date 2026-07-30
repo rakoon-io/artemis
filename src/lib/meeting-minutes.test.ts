@@ -4,6 +4,7 @@ import {
   serializeMeeting,
   formatItemRef,
   meetingActions,
+  meetingDraft,
   parseMeeting,
   readItemKind,
   themeLetter,
@@ -271,5 +272,106 @@ describe("serializeMeeting", () => {
     const again = parseMeeting(serializeMeeting(parsed))!;
     expect(again.themes[0].title).toBe("Recrutement");
     expect(again.themes[0].items[0].ref).toBe("A-01");
+  });
+});
+
+describe("meetingDraft — l'éditeur ne perd jamais ce qu'il n'a pas su relire", () => {
+  it("garde en préambule une page sans aucun titre de thème", () => {
+    const page = "**Présents :** Alice, Bob\n\n**Ordre du jour :** budget";
+    const draft = meetingDraft(page);
+    expect(draft.themes).toEqual([]);
+    expect(draft.preamble).toBe(page);
+  });
+
+  it("réécrit cette page à l'identique : enregistrer n'efface rien", () => {
+    // La régression que ce test verrouille : `parseMeeting` rendant `null`,
+    // l'éditeur repartait d'un préambule vide et réécrivait la page en chaîne
+    // vide. Un seul clic sur « Enregistrer » suffisait à tout perdre.
+    const page = "**Présents :**\n\n**Ordre du jour :**";
+    expect(serializeMeeting(meetingDraft(page))).toBe(page);
+  });
+
+  it("laisse intacte une page qui a bien des thèmes", () => {
+    const draft = meetingDraft(CR);
+    expect(draft.themes.length).toBe(parseMeeting(CR)!.themes.length);
+    expect(draft.preamble).toBe(parseMeeting(CR)!.preamble);
+  });
+
+  it("rend un brouillon vide, jamais nul, sur une page vide", () => {
+    expect(meetingDraft("")).toEqual({ preamble: "", themes: [], headingLevel: 2 });
+    expect(meetingDraft(null)).toEqual({ preamble: "", themes: [], headingLevel: 2 });
+  });
+
+  it("propose le niveau 2 par défaut, comme le reste du wiki", () => {
+    expect(meetingDraft("du texte").headingLevel).toBe(2);
+  });
+});
+
+describe("point sur plusieurs lignes", () => {
+  // Depuis que la touche Entrée saute une ligne dans l'éditeur, un point
+  // multiligne est le cas ORDINAIRE. Il l'était si peu auparavant que la
+  // réécriture posait la deuxième ligne sans indentation : à la relecture,
+  // elle quittait le point et se retrouvait en texte libre du thème.
+  const md =
+    "## Budget\n\n- (info) Le budget est validé.\n- (action) Relancer le prestataire\\\n  avant vendredi.";
+
+  it("la suite reste dans le point, et n'échoue pas en note", () => {
+    const theme = parseMeeting(md)!.themes[0];
+    expect(theme.items).toHaveLength(2);
+    expect(theme.items[1].text).toBe("Relancer le prestataire\navant vendredi.");
+    expect(theme.notesAfter).toBe("");
+  });
+
+  it("l'aller-retour rend exactement le même Markdown", () => {
+    expect(serializeMeeting(parseMeeting(md)!)).toBe(md);
+  });
+
+  it("le saut de ligne saisi survit à l'enregistrement", () => {
+    const written = serializeMeeting({
+      preamble: "",
+      headingLevel: 2,
+      themes: [
+        {
+          letter: "A",
+          title: "Budget",
+          notesBefore: "",
+          notesAfter: "",
+          items: [
+            { ref: "A-01", kind: "action", text: "Relancer le prestataire\navant vendredi." },
+          ],
+        },
+      ],
+    });
+    expect(parseMeeting(written)!.themes[0].items[0].text).toBe(
+      "Relancer le prestataire\navant vendredi.",
+    );
+  });
+
+  it("un simple repli de ligne reste recollé par une espace", () => {
+    // Sans antislash, Markdown ne voit qu'un paragraphe replié : c'est une
+    // espace, et une page écrite à la main doit continuer de se lire ainsi.
+    const plie = "## Budget\n\n- (info) Une phrase\n  qui continue.";
+    expect(parseMeeting(plie)!.themes[0].items[0].text).toBe("Une phrase qui continue.");
+  });
+
+  it("un point vidé ne décale plus la nature des suivants", () => {
+    const written = serializeMeeting({
+      preamble: "",
+      headingLevel: 2,
+      themes: [
+        {
+          letter: "A",
+          title: "Budget",
+          notesBefore: "",
+          notesAfter: "",
+          items: [
+            { ref: "A-01", kind: "info", text: "   " },
+            { ref: "A-02", kind: "action", text: "Relancer." },
+          ],
+        },
+      ],
+    });
+    expect(written).toContain("- (action) Relancer.");
+    expect(written).not.toContain("- (info) Relancer.");
   });
 });

@@ -252,7 +252,13 @@ export function parseMeeting(
         items.length > 0
       ) {
         const last = items[items.length - 1];
-        last.text = `${last.text} ${line.trim()}`.trim();
+        // Un ANTISLASH terminal est le retour à la ligne dur de Markdown : la
+        // suite s'écrit sous la précédente, et le point garde la forme qu'on
+        // lui a donnée en le saisissant. Sans lui, la ligne n'est qu'un repli
+        // de paragraphe - Markdown la recolle par une espace, et nous aussi.
+        last.text = last.text.endsWith("\\")
+          ? `${last.text.slice(0, -1).trimEnd()}\n${line.trim()}`
+          : `${last.text} ${line.trim()}`.trim();
         continue;
       }
 
@@ -304,11 +310,27 @@ export function serializeMeeting(meeting: ParsedMeeting): string {
     const before = theme.notesBefore.trim();
     if (before) parts.push(before);
     const items = theme.items
-      .map((item) => item.text.trim())
-      .filter(Boolean)
-      .map((text, index) => {
-        const kind = theme.items[index].kind === "action" ? "action" : "info";
-        return `- (${kind}) ${text}`;
+      // Filtré sur les OBJETS, pas sur les textes déjà extraits : en filtrant
+      // après coup, l'index ne désignait plus le même point, et un point vidé
+      // de son texte décalait la nature de tous ceux qui le suivaient.
+      .filter((item) => item.text.trim())
+      .map((item) => {
+        const kind = item.kind === "action" ? "action" : "info";
+        // Un point tient sur PLUSIEURS LIGNES depuis que la touche Entrée y
+        // saute une ligne. Deux précautions pour qu'il les retrouve :
+        //  - les lignes suivantes sont INDENTÉES, sans quoi la relecture les
+        //    voit quitter le point et les range en texte libre du thème ;
+        //  - la ligne précédente se termine par un antislash, retour à la
+        //    ligne dur de Markdown, sans quoi elles s'y recolleraient en une
+        //    seule phrase - une espace, c'est tout ce que vaut un simple
+        //    passage à la ligne.
+        // Les lignes vides sont resserrées : indentées, elles ouvriraient un
+        // second paragraphe dans le point et le rendraient illisible en brut.
+        const lines = item.text
+          .trim()
+          .split(/\n+/)
+          .map((line) => line.trim());
+        return `- (${kind}) ${lines.join("\\\n  ")}`;
       });
     if (items.length > 0) parts.push(items.join("\n"));
     const after = theme.notesAfter.trim();
@@ -345,4 +367,31 @@ export function meetingActions(meeting: ParsedMeeting): MeetingAction[] {
 /** Nombre d'items, toutes natures confondues (en-tête de la page de suivi). */
 export function countMeetingItems(meeting: ParsedMeeting): number {
   return meeting.themes.reduce((total, theme) => total + theme.items.length, 0);
+}
+
+/**
+ * BROUILLON D'ÉDITION d'une page datée, garanti sans perte.
+ *
+ * `parseMeeting` renvoie `null` quand la page ne porte aucun titre de thème.
+ * C'est juste à la LECTURE : il n'y a alors pas de structure à afficher, et
+ * l'on rend une page de wiki ordinaire.
+ *
+ * À l'ÉDITION, ce `null` se traduisait en « préambule vide, aucun thème ».
+ * Ouvrir l'éditeur de points sur une telle page, puis enregistrer, réécrivait
+ * donc la page à partir de rien : TOUT SON CONTENU ÉTAIT EFFACÉ. Le cas n'est
+ * pas théorique - c'est celui de toute page que l'on vient de déclarer compte
+ * rendu, et de tout compte rendu naissant.
+ *
+ * Faute de structure, tout est préambule. La réécriture rend alors exactement
+ * le texte reçu, et l'éditeur ne peut plus rien perdre de ce qu'il n'a pas su
+ * relire.
+ */
+export function meetingDraft(markdown: string | null | undefined): ParsedMeeting {
+  return (
+    parseMeeting(markdown) ?? {
+      preamble: (markdown ?? "").trim(),
+      themes: [],
+      headingLevel: 2,
+    }
+  );
 }

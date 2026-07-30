@@ -39,7 +39,7 @@ import { cn } from "@/lib/utils";
 import { generateMeetingFromTextAction } from "@/server/actions/ai-meeting.actions";
 import {
   formatItemRef,
-  parseMeeting,
+  meetingDraft,
   serializeMeeting,
   themeLetter,
   type MeetingItemKind,
@@ -101,15 +101,13 @@ interface DraftTheme {
 }
 
 /** Compte rendu analysé -> brouillon éditable. */
-function toDraft(parsed: ReturnType<typeof parseMeeting>): DraftTheme[] {
-  return (
-    parsed?.themes.map((theme) => ({
-      title: theme.title,
-      items: theme.items.map((item) => ({ kind: item.kind, text: item.text })),
-      notesBefore: theme.notesBefore,
-      notesAfter: theme.notesAfter,
-    })) ?? []
-  );
+function toDraft(parsed: ReturnType<typeof meetingDraft>): DraftTheme[] {
+  return parsed.themes.map((theme) => ({
+    title: theme.title,
+    items: theme.items.map((item) => ({ kind: item.kind, text: item.text })),
+    notesBefore: theme.notesBefore,
+    notesAfter: theme.notesAfter,
+  }));
 }
 
 /**
@@ -176,9 +174,12 @@ export function MeetingEditor({
 }) {
   const t = useDict();
   const router = useRouter();
-  const parsed = parseMeeting(content);
+  // `meetingDraft` et NON `parseMeeting` : une page datée sans titre de thème
+  // n'a pas de structure à analyser, mais elle a du texte. L'analyse nue rendait
+  // `null`, l'éditeur repartait de zéro, et enregistrer effaçait la page.
+  const parsed = meetingDraft(content);
 
-  const [preamble, setPreamble] = useState(parsed?.preamble ?? "");
+  const [preamble, setPreamble] = useState(parsed.preamble);
   const [themes, setThemes] = useState<DraftTheme[]>(() => toDraft(parsed));
   const [pending, setPending] = useState(false);
   /**
@@ -191,7 +192,7 @@ export function MeetingEditor({
 
   // Une page sans thème s'édite aussi : c'est même le cas où l'éditeur sert le
   // plus, puisqu'il n'y a rien à recopier d'un exemple.
-  const headingLevel = parsed?.headingLevel ?? 2;
+  const headingLevel = parsed.headingLevel;
 
   /**
    * Empreinte du brouillon À L'OUVERTURE, et non le Markdown reçu : la
@@ -199,7 +200,7 @@ export function MeetingEditor({
    * l'éditeur se croirait sale dès la première seconde.
    */
   const [pristine] = useState(() =>
-    toMarkdown(parsed?.preamble ?? "", toDraft(parsed), headingLevel),
+    toMarkdown(parsed.preamble, toDraft(parsed), headingLevel),
   );
 
   const markdown = toMarkdown(preamble, themes, headingLevel);
@@ -844,6 +845,7 @@ export function MeetingSection({
   content,
   canEdit,
   aiEnabled,
+  defaultEditing = false,
   children,
 }: {
   pageId: string;
@@ -852,10 +854,16 @@ export function MeetingSection({
   content: string;
   canEdit: boolean;
   aiEnabled?: boolean;
+  /**
+   * Ouvrir directement sur l'éditeur. Posé par `?edit=1`, au retour de
+   * « Nouvelle réunion » : une page qui vient de naître n'a rien à faire lire,
+   * elle attend qu'on l'écrive.
+   */
+  defaultEditing?: boolean;
   children: ReactNode;
 }) {
   const t = useDict();
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(defaultEditing && canEdit);
 
   if (!canEdit) return <>{children}</>;
 

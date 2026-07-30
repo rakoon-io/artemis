@@ -26,6 +26,7 @@ import { WikiSearch } from "@/components/wiki/wiki-search";
 import { DeleteWikiPageButton } from "@/components/wiki/delete-wiki-page-button";
 import { MarkSpecButton, SpecPanel } from "@/components/wiki/spec-panel";
 import { MeetingControls } from "@/components/wiki/meeting-controls";
+import { NewMeetingButton } from "@/components/wiki/new-meeting-button";
 import { MeetingView } from "@/components/wiki/meeting-view";
 import { PageOutline } from "@/components/wiki/page-outline";
 import { MeetingSection } from "@/components/wiki/meeting-editor";
@@ -61,6 +62,7 @@ export default async function WikiPage({
     p?: string;
     spec?: string;
     rev?: string;
+    edit?: string;
   }>;
 }) {
   const { key } = await params;
@@ -164,13 +166,20 @@ export default async function WikiPage({
   const tree = orderedTree(allPages);
   const trail = current ? ancestorsOf(allPages, current.id) : [];
 
+  // Deux façons d'ouvrir une page, côte à côte : la page libre, et le compte
+  // rendu de réunion - qui a sa date, son adresse datée et son en-tête posés
+  // d'avance. Reléguer la seconde derrière la première obligeait à créer une
+  // page ordinaire pour ensuite la convertir.
   const createButton = (
-    <Button asChild>
-      <Link href={`/projects/${project.key}/wiki/new`}>
-        <Plus />
-        {t.wiki.newPage}
-      </Link>
-    </Button>
+    <div className="flex flex-wrap items-center gap-2">
+      <NewMeetingButton projectId={project.id} projectKey={project.key} />
+      <Button asChild>
+        <Link href={`/projects/${project.key}/wiki/new`}>
+          <Plus />
+          {t.wiki.newPage}
+        </Link>
+      </Button>
+    </div>
   );
 
   // Sommaire de la page consultée. Pour un compte rendu, on ne retient que les
@@ -269,13 +278,20 @@ export default async function WikiPage({
                       className={cn(
                         // Même signalement que dans l'arborescence : un résultat
                         // et une page du plan désignent la même chose.
-                        "block rounded-md border-l-2 px-3 py-2 text-sm transition-colors",
+                        "block rounded-md px-3 py-2 text-sm transition-colors",
                         p.id === current?.id
-                          ? "border-primary bg-primary/10 text-foreground"
-                          : "border-transparent text-foreground/80 hover:bg-accent hover:text-foreground",
+                          ? "bg-accent text-foreground"
+                          : "text-foreground/75 hover:bg-accent/50 hover:text-foreground",
                       )}
                     >
-                      <span className="block font-medium">{p.title}</span>
+                      <span
+                        className={cn(
+                          "block",
+                          p.id === current?.id ? "font-semibold" : "font-medium",
+                        )}
+                      >
+                        {p.title}
+                      </span>
                       {p.snippet && (
                         <span className="mt-0.5 block text-xs text-muted-foreground">
                           {p.truncatedStart && "…"}
@@ -328,14 +344,15 @@ export default async function WikiPage({
                       aria-current={active ? "page" : undefined}
                       title={p.title}
                       className={cn(
-                        // La bordure gauche est TOUJOURS réservée, transparente
-                        // au repos : sans cela, la ligne active se décalerait de
-                        // deux pixels et la colonne tressauterait à chaque
-                        // navigation.
-                        "flex items-stretch rounded-md border-l-2 text-sm transition-colors",
+                        // La page ouverte se signale par la GRAISSE d'abord, un
+                        // aplat discret ensuite. Un rail de couleur à gauche se
+                        // voyait trop - et, arrondi par le coin du bouton, se
+                        // voyait mal. Le poids du texte suffit à repérer sa
+                        // place, sans peindre la colonne.
+                        "flex items-stretch rounded-md text-sm transition-colors",
                         active
-                          ? "border-primary bg-primary/10 font-medium text-foreground"
-                          : "border-transparent text-foreground/80 hover:bg-accent hover:text-foreground",
+                          ? "bg-accent font-semibold text-foreground"
+                          : "text-foreground/75 hover:bg-accent/50 hover:text-foreground",
                       )}
                     >
                       {Array.from({ length: depth }, (_, level) => (
@@ -409,10 +426,10 @@ export default async function WikiPage({
                       href={pageHref(page.id)}
                       aria-current={page.id === current?.id ? "page" : undefined}
                       className={cn(
-                        "block rounded-md border-l-2 px-3 py-1.5 text-sm transition-colors",
+                        "block rounded-md px-3 py-1.5 text-sm transition-colors",
                         page.id === current?.id
-                          ? "border-primary bg-primary/10 text-foreground"
-                          : "border-transparent text-foreground/80 hover:bg-accent hover:text-foreground",
+                          ? "bg-accent font-semibold text-foreground"
+                          : "text-foreground/75 hover:bg-accent/50 hover:text-foreground",
                       )}
                     >
                       <span className="line-clamp-2 block">{page.title}</span>
@@ -436,7 +453,12 @@ export default async function WikiPage({
               </div>
             )}
             {current ? (
-              <article className="space-y-4">
+              // La page du wiki est une PAGE : elle a des bords, une marge
+              // intérieure, et se pose sur le fond au lieu de s'y fondre. Le
+              // texte flottait jusqu'ici entre deux colonnes encadrées, seul
+              // élément sans contour de l'écran - ce qui le faisait passer pour
+              // un fond, et non pour le document qu'on vient lire.
+              <article className="space-y-4 rounded-lg border bg-card p-4 sm:p-6">
                 <div className="flex flex-wrap items-start justify-between gap-3 border-b pb-4">
                   <div className="space-y-1">
                     {trail.length > 0 && (
@@ -616,6 +638,7 @@ export default async function WikiPage({
                     content={current.content}
                     canEdit
                     aiEnabled={isMistralConfigured()}
+                    defaultEditing={sp.edit === "1"}
                   >
                     <MeetingView
                       content={current.content}
