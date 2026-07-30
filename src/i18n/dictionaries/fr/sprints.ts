@@ -30,12 +30,19 @@ export const sprints = {
   createDescription:
     "Sans dates, c'est un simple lot ; ajoutez un objectif et des dates pour en faire une itération.",
   nameLabel: "Nom",
+  nameRequired: "Le nom du sprint est requis.",
   goalLabel: "Objectif (optionnel)",
   goalPlaceholder: "But de l'itération…",
   startDateLabel: "Début",
   endDateLabel: "Fin",
   datesHint: "Renseignez les deux dates, ou aucune.",
   createSubmit: "Créer le sprint",
+
+  // Boite de dialogue de modification (memes champs que la creation)
+  editSprint: "Modifier le sprint",
+  editSprintAria: "Modifier le sprint {name}",
+  editDescription:
+    "Renommez-le, ajustez son objectif ou ses dates. Retirer les deux dates le ramène à un simple lot.",
 
   // Carte de sprint : etats (badge)
   statePlanned: "Planifié",
@@ -70,6 +77,7 @@ export const sprints = {
   ticketAddedToSprint: "Ticket ajouté au sprint.",
   ticketMovedToBacklog: "Ticket renvoyé au backlog.",
   toastCreated: "Sprint « {name} » créé.",
+  toastUpdated: "Sprint « {name} » mis à jour.",
   toastStarted: "Sprint « {name} » démarré.",
   toastCompleted: "Sprint « {name} » clôturé.",
   toastReopened: "Sprint « {name} » rouvert.",

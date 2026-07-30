@@ -24,6 +24,7 @@ import {
   setSprintStateAction,
 } from "@/server/actions/sprint.actions";
 import { setTicketSprintAction } from "@/server/actions/ticket.actions";
+import { EditSprintDialog } from "./edit-sprint-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -270,6 +271,10 @@ export function SprintCard({
               {tickets.length > 1 ? t.sprints.ticketOther : t.sprints.ticketOne}
             </Badge>
             <Badge variant={meta.variant}>{t.sprints[meta.labelKey]}</Badge>
+            {/* Le crayon est ici, et non dans le pied de carte avec les actions
+                de planification : les champs qu'il ouvre - nom, objectif, dates -
+                sont précisément ceux affichés dans cet en-tête. */}
+            <EditSprintDialog sprint={sprint} />
           </div>
         </div>
         {sprint.goal ? (

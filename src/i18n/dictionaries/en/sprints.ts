@@ -30,12 +30,19 @@ export const sprints: SprintsDict = {
   createDescription:
     "Without dates, it's just a batch; add a goal and dates to turn it into an iteration.",
   nameLabel: "Name",
+  nameRequired: "The sprint name is required.",
   goalLabel: "Goal (optional)",
   goalPlaceholder: "Goal of the iteration…",
   startDateLabel: "Start",
   endDateLabel: "End",
   datesHint: "Fill in both dates, or none.",
   createSubmit: "Create sprint",
+
+  // Boite de dialogue de modification (memes champs que la creation)
+  editSprint: "Edit sprint",
+  editSprintAria: "Edit sprint {name}",
+  editDescription:
+    "Rename it, adjust its goal or its dates. Clearing both dates turns it back into a plain batch.",
 
   // Sprint card: states (badge)
   statePlanned: "Planned",
@@ -70,6 +77,7 @@ export const sprints: SprintsDict = {
   ticketAddedToSprint: "Ticket added to the sprint.",
   ticketMovedToBacklog: "Ticket moved back to the backlog.",
   toastCreated: "Sprint “{name}” created.",
+  toastUpdated: "Sprint “{name}” updated.",
   toastStarted: "Sprint “{name}” started.",
   toastCompleted: "Sprint “{name}” closed.",
   toastReopened: "Sprint “{name}” reopened.",
