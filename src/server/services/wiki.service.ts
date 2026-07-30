@@ -317,7 +317,15 @@ export function setMeetingDate(pageId: string, meetingDate: string | null) {
 export function listTicketKeys(projectId: string) {
   return prisma.ticket.findMany({
     where: { projectId },
-    select: { id: true, key: true },
+    // Titre et assigné en plus de la clef : c'est ce qui alimente l'infobulle
+    // d'une citation « RKN-123 ». Le surcoût est nul - même requête, deux
+    // colonnes de plus - et il évite une requête par lien affiché.
+    select: {
+      id: true,
+      key: true,
+      title: true,
+      assignee: { select: { name: true, email: true } },
+    },
   });
 }
 
@@ -326,6 +334,13 @@ export function listTicketRefs(projectId: string) {
   return prisma.ticket.findMany({
     where: { projectId },
     orderBy: { number: "desc" },
-    select: { id: true, key: true, title: true },
+    // Même enrichissement que `listTicketKeys` : la description d'un ticket cite
+    // d'autres tickets, et doit pouvoir les survoler comme le fait le wiki.
+    select: {
+      id: true,
+      key: true,
+      title: true,
+      assignee: { select: { name: true, email: true } },
+    },
   });
 }

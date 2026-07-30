@@ -99,6 +99,19 @@ export function TicketDescription({
     tickets.map((ticket) => [ticket.key.toUpperCase(), ticket.id]),
   );
 
+  // Un ticket cite volontiers d'autres tickets : la même infobulle que dans le
+  // wiki évite d'ouvrir un onglet pour savoir de quoi « RKN-12 » retourne.
+  const ticketHints = Object.fromEntries(
+    tickets.map((ticket) => [
+      ticket.id,
+      {
+        key: ticket.key,
+        title: ticket.title,
+        assignee: ticket.assignee?.name ?? ticket.assignee?.email ?? null,
+      },
+    ]),
+  );
+
   const editAria = fmt(t.common.inline.editAria, {
     field: t.ticketForm.descriptionLabel,
   });
@@ -284,7 +297,12 @@ export function TicketDescription({
   }
 
   const body = draft.trim() ? (
-    <WikiContent content={draft} projectKey={projectKey} ticketMap={ticketMap} />
+    <WikiContent
+      content={draft}
+      projectKey={projectKey}
+      ticketMap={ticketMap}
+      ticketHints={ticketHints}
+    />
   ) : (
     <p className="text-sm text-muted-foreground">{t.ticketDetail.noDescription}</p>
   );

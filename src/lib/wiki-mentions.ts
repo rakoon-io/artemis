@@ -8,6 +8,9 @@ export interface TicketRef {
   id: string;
   key: string;
   title: string;
+  /** Assigné, pour l'infobulle d'une citation. Facultatif : tous les
+   * appelants ne le chargent pas. */
+  assignee?: { name: string | null; email: string } | null;
 }
 
 export interface MentionState {

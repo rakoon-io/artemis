@@ -106,6 +106,19 @@ export default async function WikiPage({
         new Date(b.meetingDate!).getTime() - new Date(a.meetingDate!).getTime(),
     );
 
+  // Infobulles des citations « RKN-123 », indexées par identifiant : titre et
+  // assigné, pour savoir de quoi parle un ticket sans quitter la page.
+  const ticketHints = Object.fromEntries(
+    ticketKeys.map((ticket) => [
+      ticket.id,
+      {
+        key: ticket.key,
+        title: ticket.title,
+        assignee: ticket.assignee?.name ?? ticket.assignee?.email ?? null,
+      },
+    ]),
+  );
+
   const ticketMap: Record<string, string> = Object.fromEntries(
     ticketKeys.map((t) => [t.key.toUpperCase(), t.id]),
   );
@@ -438,6 +451,7 @@ export default async function WikiPage({
                         content={frozen.content}
                         projectKey={project.key}
                         ticketMap={ticketMap}
+                        ticketHints={ticketHints}
                       />
                     ) : (
                       <p className="text-sm italic text-muted-foreground">
@@ -465,6 +479,7 @@ export default async function WikiPage({
                       content={current.content}
                       projectKey={project.key}
                       ticketMap={ticketMap}
+                      ticketHints={ticketHints}
                     />
                   </MeetingSection>
                 ) : current.content.trim() ? (
@@ -472,6 +487,7 @@ export default async function WikiPage({
                     content={current.content}
                     projectKey={project.key}
                     ticketMap={ticketMap}
+                    ticketHints={ticketHints}
                   />
                 ) : (
                   <p className="text-sm italic text-muted-foreground">

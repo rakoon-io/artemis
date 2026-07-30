@@ -7,6 +7,7 @@ import {
   type MeetingItemKind,
 } from "@/lib/meeting-minutes";
 import { WikiContent } from "./wiki-content";
+import type { TicketHint } from "./ticket-hover-link";
 import { getDictionary } from "@/i18n/server";
 import { fmt } from "@/i18n";
 
@@ -27,10 +28,13 @@ export async function MeetingView({
   content,
   projectKey,
   ticketMap,
+  ticketHints,
 }: {
   content: string;
   projectKey: string;
   ticketMap: Record<string, string>;
+  /** Titre et assigné des tickets cités, pour l'infobulle au survol. */
+  ticketHints?: Record<string, TicketHint>;
 }) {
   const t = await getDictionary();
   const meeting = parseMeeting(content);
@@ -47,6 +51,7 @@ export async function MeetingView({
           content={content}
           projectKey={projectKey}
           ticketMap={ticketMap}
+          ticketHints={ticketHints}
         />
       </div>
     );
@@ -65,6 +70,7 @@ export async function MeetingView({
           content={meeting.preamble}
           projectKey={projectKey}
           ticketMap={ticketMap}
+          ticketHints={ticketHints}
         />
       )}
 
@@ -97,6 +103,7 @@ export async function MeetingView({
               content={theme.notesBefore}
               projectKey={projectKey}
               ticketMap={ticketMap}
+              ticketHints={ticketHints}
             />
           )}
 
@@ -138,6 +145,7 @@ export async function MeetingView({
                           content={item.text}
                           projectKey={projectKey}
                           ticketMap={ticketMap}
+                        ticketHints={ticketHints}
                         />
                       </td>
                     </tr>
@@ -152,6 +160,7 @@ export async function MeetingView({
               content={theme.notesAfter}
               projectKey={projectKey}
               ticketMap={ticketMap}
+              ticketHints={ticketHints}
             />
           )}
         </section>
@@ -201,6 +210,7 @@ export async function MeetingView({
                         content={action.text}
                         projectKey={projectKey}
                         ticketMap={ticketMap}
+                        ticketHints={ticketHints}
                       />
                     </td>
                   </tr>
