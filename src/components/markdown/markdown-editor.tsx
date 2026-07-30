@@ -1,13 +1,31 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { AtSign, Bold, Code, Heading2, Italic, Link2, List, ListChecks, Loader2, Quote } from "lucide-react";
+import {
+  AlertTriangle,
+  AtSign,
+  Bold,
+  Code,
+  Heading1,
+  Heading2,
+  Heading3,
+  Heading4,
+  Info,
+  Italic,
+  Link2,
+  List,
+  ListChecks,
+  Loader2,
+  OctagonAlert,
+  Quote,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import dynamic from "next/dynamic";
 import { WikiContent } from "@/components/wiki/wiki-content";
+import { calloutTemplate } from "@/lib/wiki-callouts";
 import {
   detectMention,
   rankTickets,
@@ -279,16 +297,51 @@ export function MarkdownEditor({
     onKeyDown?.(event);
   }
 
+  /** Insère un bloc entier en tête de la ligne courante (encarts). */
+  function insertBlock(markdown: string) {
+    const ta = editor();
+    const start = ta ? ta.selectionStart : value.length;
+    const lineStart = value.lastIndexOf("\n", start - 1) + 1;
+    // Une ligne vide avant, si l'on n'est pas déjà en début de bloc : sans elle
+    // l'encart se collerait au paragraphe précédent et n'en serait plus un.
+    const prefix = lineStart > 0 && value[lineStart - 2] !== "\n" ? "\n" : "";
+    const next = value.slice(0, lineStart) + prefix + markdown + value.slice(lineStart);
+    onChange(next);
+    const caret = lineStart + prefix.length + markdown.length;
+    requestAnimationFrame(() => {
+      ta?.focus();
+      ta?.setSelectionRange(caret, caret);
+    });
+  }
+
   const tools = [
     { icon: Bold, label: t.wiki.form.tools.bold, run: () => wrap("**") },
     { icon: Italic, label: t.wiki.form.tools.italic, run: () => wrap("_") },
-    { icon: Heading2, label: t.wiki.form.tools.heading, run: () => prefixLine("## ") },
+    { icon: Heading1, label: t.wiki.form.tools.h1, run: () => prefixLine("# ") },
+    { icon: Heading2, label: t.wiki.form.tools.h2, run: () => prefixLine("## ") },
+    { icon: Heading3, label: t.wiki.form.tools.h3, run: () => prefixLine("### ") },
+    { icon: Heading4, label: t.wiki.form.tools.h4, run: () => prefixLine("#### ") },
     { icon: List, label: t.wiki.form.tools.list, run: () => prefixLine("- ") },
     { icon: ListChecks, label: t.wiki.form.tools.checkbox, run: () => prefixLine("- [ ] ") },
     { icon: Quote, label: t.wiki.form.tools.quote, run: () => prefixLine("> ") },
     { icon: Code, label: t.wiki.form.tools.code, run: () => wrap("`") },
     { icon: Link2, label: t.wiki.form.tools.link, run: () => wrap("[", "](url)") },
     { icon: AtSign, label: t.wiki.form.tools.mention, run: triggerMention },
+    {
+      icon: Info,
+      label: t.wiki.callouts.note,
+      run: () => insertBlock(calloutTemplate("note")),
+    },
+    {
+      icon: AlertTriangle,
+      label: t.wiki.callouts.warning,
+      run: () => insertBlock(calloutTemplate("warning")),
+    },
+    {
+      icon: OctagonAlert,
+      label: t.wiki.callouts.important,
+      run: () => insertBlock(calloutTemplate("important")),
+    },
   ];
 
   // Saisie ASSISTÉE par défaut : c'est elle qui sert à qui n'écrit pas de

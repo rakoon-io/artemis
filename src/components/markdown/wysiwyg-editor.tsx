@@ -2,12 +2,19 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  AlertTriangle,
   AtSign,
   Bold,
   Code,
+  Heading1,
+  Heading2,
+  Heading3,
+  Heading4,
+  Info,
   Italic,
   List,
   ListOrdered,
+  OctagonAlert,
   Quote,
   Strikethrough,
 } from "lucide-react";
@@ -30,6 +37,7 @@ import {
   toggleEmphasisCommand,
   toggleInlineCodeCommand,
   toggleStrongCommand,
+  wrapInHeadingCommand,
   wrapInBlockquoteCommand,
   wrapInBulletListCommand,
   wrapInOrderedListCommand,
@@ -39,6 +47,7 @@ import { Milkdown, MilkdownProvider, useEditor, useInstance } from "@milkdown/re
 import type { CmdKey } from "@milkdown/kit/core";
 import { Button } from "@/components/ui/button";
 import { MENTION_LIST_WIDTH, MentionList } from "./mention-list";
+import { calloutTemplate, type CalloutKind } from "@/lib/wiki-callouts";
 import {
   detectMention,
   rankTickets,
@@ -94,14 +103,62 @@ function Toolbar({
   const [loading, getEditor] = useInstance();
 
   const run = useCallback(
-    // `CmdKey<unknown>` : la charge utile varie d'une commande à l'autre, et
-    // aucune de celles utilisées ici n'en attend.
-    (command: CmdKey<unknown>) => () => {
+    // `CmdKey<unknown>` : la charge utile varie d'une commande à l'autre. Les
+    // titres en attendent une - leur niveau -, les autres non.
+    (command: CmdKey<unknown>, payload?: unknown) => () => {
       if (loading) return;
-      getEditor()?.action(callCommand(command));
+      getEditor()?.action(callCommand(command, payload));
     },
     [loading, getEditor],
   );
+
+  /**
+   * ENCART : une citation dont la première ligne porte le marqueur.
+   *
+   * Le marqueur reste VISIBLE pendant la saisie, et c'est assumé : le représenter
+   * autrement demanderait un nœud sur mesure, alors qu'il s'agit d'une citation
+   * ordinaire que ProseMirror sait déjà relire et réécrire sans rien perdre. À la
+   * lecture, il disparaît au profit du bandeau coloré.
+   */
+  const callout = useCallback(
+    (kind: CalloutKind) => () => {
+      if (loading) return;
+      getEditor()?.action((ctx) => {
+        const view = ctx.get(editorViewCtx);
+        const marker = calloutTemplate(kind).split("\n")[0].replace(/^>\s*/, "");
+        const { tr, schema } = view.state;
+        const paragraph = schema.nodes.paragraph;
+        const quote = schema.nodes.blockquote;
+        if (!paragraph || !quote) return;
+        // UN SEUL paragraphe, celui du marqueur. Un second, vide, ressortait en
+        // « <br /> » à la sérialisation - du HTML en toutes lettres au milieu de
+        // l'encart. On écrit la suite en appuyant sur Entrée, comme dans toute
+        // citation.
+        view.dispatch(
+          tr
+            .replaceSelectionWith(
+              quote.create(null, [paragraph.create(null, schema.text(marker))]),
+            )
+            .scrollIntoView(),
+        );
+        view.focus();
+      });
+    },
+    [loading, getEditor],
+  );
+
+  const headings = [
+    { icon: Heading1, label: t.wiki.form.tools.h1, level: 1 },
+    { icon: Heading2, label: t.wiki.form.tools.h2, level: 2 },
+    { icon: Heading3, label: t.wiki.form.tools.h3, level: 3 },
+    { icon: Heading4, label: t.wiki.form.tools.h4, level: 4 },
+  ] as const;
+
+  const callouts = [
+    { icon: Info, label: t.wiki.callouts.note, kind: "note" },
+    { icon: AlertTriangle, label: t.wiki.callouts.warning, kind: "warning" },
+    { icon: OctagonAlert, label: t.wiki.callouts.important, kind: "important" },
+  ] as const;
 
   const actions = [
     { icon: Bold, label: t.wiki.form.tools.bold, cmd: toggleStrongCommand.key },
@@ -123,6 +180,22 @@ function Toolbar({
 
   return (
     <div className="flex flex-wrap items-center gap-0.5 border-b border-input bg-muted/40 p-1">
+      {headings.map(({ icon: Icon, label, level }) => (
+        <Button
+          key={label}
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-8"
+          title={label}
+          aria-label={label}
+          disabled={disabled || loading}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={run(wrapInHeadingCommand.key as CmdKey<unknown>, level)}
+        >
+          <Icon />
+        </Button>
+      ))}
       {actions.map(({ icon: Icon, label, cmd }) => (
         <Button
           key={label}
@@ -137,6 +210,22 @@ function Toolbar({
           // document et la commande s'appliquerait à une sélection vide.
           onMouseDown={(event) => event.preventDefault()}
           onClick={run(cmd as CmdKey<unknown>)}
+        >
+          <Icon />
+        </Button>
+      ))}
+      {callouts.map(({ icon: Icon, label, kind }) => (
+        <Button
+          key={label}
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-8"
+          title={label}
+          aria-label={label}
+          disabled={disabled || loading}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={callout(kind)}
         >
           <Icon />
         </Button>

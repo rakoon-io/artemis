@@ -294,7 +294,9 @@
   @apply mt-5 text-base font-semibold;
 }
 .wiki-prose h4 {
-  @apply mt-4 text-sm font-semibold text-muted-foreground;
+  /* En gris, il passait pour une légende plutôt que pour un titre. Il reste le
+     plus discret des quatre par sa taille, pas par sa couleur. */
+  @apply mt-4 text-sm font-semibold uppercase tracking-wide;
 }
 
 /* SURFACE DE LECTURE. Le `text-sm` de `.wiki-prose` convient à une description
@@ -338,6 +340,100 @@
      damier des images transparentes reste lisible grâce à la bordure. */
   @apply my-2 h-auto max-w-full rounded-md border;
 }
+/* ─── ENCARTS ────────────────────────────────────────────────────────────────
+   Une citation mise en avant : « Note » (bleu), « Attention » (jaune),
+   « Important » (rouge). Le filet à gauche fait le lien visuel avec la citation
+   ordinaire, dont l'encart n'est qu'une variante appuyée.
+
+   Les teintes sont posées en `/10` et `/40` sur les couleurs de base : elles
+   restent lisibles sur les huit palettes, claires comme sombres, sans qu'il
+   faille décliner chaque encart huit fois. */
+.wiki-callout {
+  @apply my-3 rounded-md border border-l-4 p-3 text-sm;
+}
+.wiki-callout > :first-child {
+  @apply mt-0;
+}
+.wiki-callout > * + * {
+  @apply mt-2;
+}
+.wiki-callout-title {
+  @apply flex items-center gap-1.5 font-semibold;
+}
+.wiki-callout-note {
+  @apply border-sky-500/40 border-l-sky-500 bg-sky-500/10;
+}
+.wiki-callout-note .wiki-callout-title {
+  @apply text-sky-700 dark:text-sky-300;
+}
+.wiki-callout-warning {
+  @apply border-amber-500/40 border-l-amber-500 bg-amber-500/10;
+}
+.wiki-callout-warning .wiki-callout-title {
+  @apply text-amber-700 dark:text-amber-300;
+}
+.wiki-callout-important {
+  @apply border-red-500/40 border-l-red-500 bg-red-500/10;
+}
+.wiki-callout-important .wiki-callout-title {
+  @apply text-red-700 dark:text-red-300;
+}
+
+/* ─── COLORATION DU CODE ─────────────────────────────────────────────────────
+   Thème écrit à la main plutôt qu'un fichier de highlight.js : ceux-ci sont
+   figés en clair OU en sombre, et l'application en compte huit variantes. Ces
+   quelques règles s'appuient sur les jetons du thème et suivent donc la palette
+   choisie, sans qu'aucune ne doive être maintenue en double. */
+.wiki-prose .hljs-comment,
+.wiki-prose .hljs-quote {
+  @apply italic text-muted-foreground;
+}
+.wiki-prose .hljs-keyword,
+.wiki-prose .hljs-selector-tag,
+.wiki-prose .hljs-literal,
+.wiki-prose .hljs-doctag {
+  @apply font-medium text-violet-600 dark:text-violet-300;
+}
+.wiki-prose .hljs-string,
+.wiki-prose .hljs-regexp,
+.wiki-prose .hljs-addition {
+  @apply text-emerald-700 dark:text-emerald-300;
+}
+.wiki-prose .hljs-number,
+.wiki-prose .hljs-symbol,
+.wiki-prose .hljs-bullet {
+  @apply text-amber-700 dark:text-amber-300;
+}
+.wiki-prose .hljs-title,
+.wiki-prose .hljs-section,
+.wiki-prose .hljs-name,
+.wiki-prose .hljs-title.function_ {
+  @apply text-sky-700 dark:text-sky-300;
+}
+.wiki-prose .hljs-attr,
+.wiki-prose .hljs-attribute,
+.wiki-prose .hljs-variable,
+.wiki-prose .hljs-template-variable {
+  @apply text-rose-700 dark:text-rose-300;
+}
+.wiki-prose .hljs-type,
+.wiki-prose .hljs-built_in,
+.wiki-prose .hljs-class .hljs-title {
+  @apply text-teal-700 dark:text-teal-300;
+}
+.wiki-prose .hljs-deletion {
+  @apply text-red-700 dark:text-red-300;
+}
+.wiki-prose .hljs-meta {
+  @apply text-muted-foreground;
+}
+.wiki-prose .hljs-emphasis {
+  @apply italic;
+}
+.wiki-prose .hljs-strong {
+  @apply font-semibold;
+}
+
 .wiki-prose blockquote {
   @apply border-l-2 border-border pl-4 italic text-muted-foreground;
 }

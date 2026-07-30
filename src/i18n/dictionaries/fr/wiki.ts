@@ -68,6 +68,10 @@ export const wiki = {
       bold: "Gras",
       italic: "Italique",
       heading: "Titre",
+      h1: "Titre 1",
+      h2: "Titre 2",
+      h3: "Titre 3",
+      h4: "Titre 4",
       list: "Liste",
       checkbox: "Case à cocher",
       quote: "Citation",
@@ -194,6 +198,13 @@ export const wiki = {
     documentedBy: "Documenté par",
     documentedByEmpty: "Aucune page du wiki ne documente ceci.",
     ticketDocs: "Documentation",
+  },
+
+  // Encarts : citations mises en avant (cf. @/lib/wiki-callouts).
+  callouts: {
+    note: "Note",
+    warning: "Attention",
+    important: "Important",
   },
 
   // Pieces jointes d'une page : documents deposes, images collees dans le texte.

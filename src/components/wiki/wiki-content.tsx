@@ -2,10 +2,13 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { rehypeWikiHighlight } from "@/lib/wiki-highlight";
 import { cn } from "@/lib/utils";
 import { extractOutline } from "@/lib/markdown-outline";
 import { TicketHoverLink, type TicketHint } from "./ticket-hover-link";
 import { linkifyTicketKeys } from "@/lib/wiki-markdown";
+import { scanCallouts } from "@/lib/wiki-callouts";
+import { CalloutTitle } from "./callout-title";
 
 /**
  * Rend le contenu d'une page de wiki en **Markdown étendu** (GFM : titres, gras,
@@ -32,7 +35,12 @@ export function WikiContent({
   ticketHints?: Record<string, TicketHint>;
   className?: string;
 }) {
-  const source = linkifyTicketKeys(content, ticketMap, projectKey);
+  // Les ENCARTS sont repérés AVANT la liaison des citations : celle-ci ne
+  // change aucune ligne, les positions restent donc valables. L'inverse aurait
+  // été vrai aussi, mais le faire d'abord garde la lecture des marqueurs sur le
+  // texte tel que l'auteur l'a écrit.
+  const callouts = scanCallouts(content);
+  const source = linkifyTicketKeys(callouts.content, ticketMap, projectKey);
 
   // Ancres de section, pour que le sommaire ait où pointer.
   //
@@ -42,7 +50,7 @@ export function WikiContent({
   // du sommaire. La liaison n'ajoutant ni ne retirant aucun titre, la
   // correspondance par POSITION reste exacte.
   const anchorByLine = new Map(
-    extractOutline(content).map((head) => [head.line, head.anchor]),
+    extractOutline(callouts.content).map((head) => [head.line, head.anchor]),
   );
   const heading = (level: 1 | 2 | 3 | 4 | 5 | 6) => {
     const Tag = `h${level}` as const;
@@ -63,6 +71,21 @@ export function WikiContent({
   };
 
   const components: Components = {
+    /**
+     * ENCART ou citation ordinaire, tranché par la LIGNE de départ - jamais par
+     * le contenu, qui ne porte plus le marqueur (cf. `@/lib/wiki-callouts`).
+     */
+    blockquote({ node, children }) {
+      const line = node?.position?.start?.line;
+      const kind = line ? callouts.byLine.get(line) : undefined;
+      if (!kind) return <blockquote>{children}</blockquote>;
+      return (
+        <div className={cn("wiki-callout", `wiki-callout-${kind}`)}>
+          <CalloutTitle kind={kind} />
+          {children}
+        </div>
+      );
+    },
     h1: heading(1),
     h2: heading(2),
     h3: heading(3),
@@ -95,7 +118,19 @@ export function WikiContent({
 
   return (
     <div className={cn("wiki-prose", className)}>
-      <Markdown remarkPlugins={[remarkGfm]} components={components}>
+      <Markdown
+        remarkPlugins={[remarkGfm]}
+        /**
+         * COLORATION DU CODE, calculée au rendu et non dans le navigateur : ce
+         * composant s'exécute côté serveur partout où la page se lit, et n'y
+         * envoie que des classes. `detect: false` : on ne colore que les blocs
+         * dont la langue est déclarée - deviner produit régulièrement des
+         * couleurs fausses sur un extrait de journal ou une sortie de terminal,
+         * et une coloration fausse est pire qu'aucune.
+         */
+        rehypePlugins={[rehypeWikiHighlight]}
+        components={components}
+      >
         {source}
       </Markdown>
     </div>

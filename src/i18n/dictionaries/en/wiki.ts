@@ -66,6 +66,10 @@ export const wiki: WikiDict = {
       bold: "Bold",
       italic: "Italic",
       heading: "Heading",
+      h1: "Heading 1",
+      h2: "Heading 2",
+      h3: "Heading 3",
+      h4: "Heading 4",
       list: "List",
       checkbox: "Checkbox",
       quote: "Quote",
@@ -192,6 +196,13 @@ export const wiki: WikiDict = {
     documentedBy: "Documented by",
     documentedByEmpty: "No wiki page documents this.",
     ticketDocs: "Documentation",
+  },
+
+  // Encarts : citations mises en avant (cf. @/lib/wiki-callouts).
+  callouts: {
+    note: "Note",
+    warning: "Warning",
+    important: "Important",
   },
 
   // Pieces jointes d'une page : documents deposes, images collees dans le texte.
