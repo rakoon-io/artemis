@@ -80,10 +80,11 @@ import { fmt } from "@/i18n";
  * ─────────────────────────────────────────────────────────────────────────────
  * LA SAISIE AU CLAVIER EST LE CHEMIN NORMAL
  *
- * Un compte rendu s'écrit d'une traite. Entrée ouvre le point suivant,
- * Maj+Entrée reste dans le point courant, Alt+flèches déplace, et Retour arrière
- * sur un point vide le referme. La souris n'est plus requise que pour ce qui est
- * rare : changer une nature, supprimer un thème.
+ * Un compte rendu s'écrit d'une traite. Entrée saute une ligne - un point est
+ * une phrase, pas un élément de liste -, ⌘/Ctrl+Entrée ouvre le point suivant,
+ * Alt+flèches déplace, et Retour arrière sur un point resté vide le referme. La
+ * souris n'est plus requise que pour ce qui est rare : changer une nature,
+ * supprimer un thème.
  */
 
 interface DraftItem {
@@ -309,10 +310,19 @@ export function MeetingEditor({
     themeIndex: number,
     itemIndex: number,
   ) {
-    // Entrée ouvre le point SUIVANT ; Maj+Entrée reste dans le point courant.
-    // C'est la convention des listes partout ailleurs, et le geste qu'on répète
-    // le plus en réunion.
-    if (event.key === "Enter" && !event.shiftKey && !event.altKey) {
+    // ENTRÉE SAUTE UNE LIGNE, comme dans toute zone de texte.
+    //
+    // Elle ouvrait d'abord le point suivant, par analogie avec les listes à
+    // puces. L'analogie était fausse : un point de compte rendu n'est pas un
+    // élément de liste d'une ligne, c'est une phrase, parfois trois - une
+    // décision et son motif, une action et son échéance. Détourner la touche du
+    // retour à la ligne dans le seul champ multiligne de l'écran obligeait à
+    // découvrir Maj+Entrée pour écrire normalement, et punissait le réflexe le
+    // plus ancré qui soit.
+    //
+    // Le point suivant s'ouvre donc par ⌘/Ctrl+Entrée : la convention du geste
+    // qui « valide et passe à la suite », partout ailleurs.
+    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
       event.preventDefault();
       insertItem(themeIndex, itemIndex + 1);
       return;

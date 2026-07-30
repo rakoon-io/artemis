@@ -211,7 +211,7 @@ export const wiki = {
     noThemesYet: "Aucun thème pour l'instant.",
     itemAria: "Point {ref}",
     keyboardHint:
-      "Entrée : point suivant · Maj+Entrée : saut de ligne · Alt+↑/↓ : déplacer",
+      "Entrée : saut de ligne · ⌘/Ctrl+Entrée : point suivant · Alt+↑/↓ : déplacer",
 
     // Abandon d'une saisie en cours
     discardTitle: "Abandonner les modifications ?",

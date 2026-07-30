@@ -209,7 +209,7 @@ export const wiki: WikiDict = {
     noThemesYet: "No theme yet.",
     itemAria: "Item {ref}",
     keyboardHint:
-      "Enter: next item · Shift+Enter: line break · Alt+↑/↓: move",
+      "Enter: line break · ⌘/Ctrl+Enter: next item · Alt+↑/↓: move",
 
     // Abandon d'une saisie en cours
     discardTitle: "Discard your changes?",

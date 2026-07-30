@@ -231,13 +231,23 @@ export default async function WikiPage({
         </div>
       ) : (
         <div className="flex flex-col gap-6 md:flex-row">
-          <aside className="shrink-0 space-y-3 md:w-64">
+          {/* Le PLAN est une zone, pas une marge. Sans surface propre, ses
+              titres flottaient sur le même fond que l'article et l'œil ne
+              savait plus où finissait la navigation ni où commençait le texte.
+              La colonne du sommaire, à droite, porte déjà un cadre : les deux
+              flancs se répondent enfin. */}
+          <aside className="shrink-0 space-y-3 rounded-lg border bg-card p-3 md:w-64">
             <WikiSearch projectKey={project.key} initialQuery={q} />
             {q && results && (
               <p className="px-1 text-xs text-muted-foreground">
                 {results.total} {t.wiki.index.result}
                 {results.total > 1 ? "s" : ""}{" "}
                 {fmt(t.wiki.index.forQuery, { q })}
+              </p>
+            )}
+            {!q && (
+              <p className="px-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {t.wiki.index.pagesNavLabel}
               </p>
             )}
             <nav
@@ -257,15 +267,15 @@ export default async function WikiPage({
                       href={pageHref(p.id)}
                       aria-current={p.id === current?.id ? "page" : undefined}
                       className={cn(
-                        "block rounded-md px-3 py-2 text-sm transition-colors",
+                        // Même signalement que dans l'arborescence : un résultat
+                        // et une page du plan désignent la même chose.
+                        "block rounded-md border-l-2 px-3 py-2 text-sm transition-colors",
                         p.id === current?.id
-                          ? "bg-accent text-accent-foreground"
-                          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                          ? "border-primary bg-primary/10 text-foreground"
+                          : "border-transparent text-foreground/80 hover:bg-accent hover:text-foreground",
                       )}
                     >
-                      <span className="block truncate font-medium">
-                        {p.title}
-                      </span>
+                      <span className="block font-medium">{p.title}</span>
                       {p.snippet && (
                         <span className="mt-0.5 block text-xs text-muted-foreground">
                           {p.truncatedStart && "…"}
@@ -294,23 +304,56 @@ export default async function WikiPage({
                   ))
                 )
               ) : (
-                // Arborescence : indentation par profondeur.
-                tree.map(({ page: p, depth }) => (
-                  <Link
-                    key={p.id}
-                    href={pageHref(p.id)}
-                    aria-current={p.id === current?.id ? "page" : undefined}
-                    style={{ paddingLeft: `${12 + depth * 16}px` }}
-                    className={cn(
-                      "block truncate rounded-md py-2 pr-3 text-sm transition-colors",
-                      p.id === current?.id
-                        ? "bg-accent font-medium text-accent-foreground"
-                        : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
-                    )}
-                  >
-                    {p.title}
-                  </Link>
-                ))
+                // ARBORESCENCE. Trois corrections d'un même défaut : on n'y
+                // lisait rien.
+                //
+                // 1. Les titres reprennent la couleur du texte. Ils étaient
+                //    tous en gris secondaire : le plan entier - c'est-à-dire le
+                //    contenu du wiki - s'affichait comme une légende.
+                // 2. La profondeur se voit, au lieu de se deviner. Un filet
+                //    vertical par niveau d'ancêtre, sur toute la hauteur de la
+                //    ligne : les filets de lignes voisines se rejoignent et
+                //    dessinent la hiérarchie. Une indentation seule, sur des
+                //    titres tronqués, ne dit pas qui descend de qui.
+                // 3. La page courante devient repérable. Elle se signalait par
+                //    `bg-accent`, mesuré à 1,1 contre le fond - autant dire
+                //    rien. Un rail plein à gauche, lui, se voit toujours ; la
+                //    teinte ne fait que l'accompagner.
+                tree.map(({ page: p, depth }) => {
+                  const active = p.id === current?.id;
+                  return (
+                    <Link
+                      key={p.id}
+                      href={pageHref(p.id)}
+                      aria-current={active ? "page" : undefined}
+                      title={p.title}
+                      className={cn(
+                        // La bordure gauche est TOUJOURS réservée, transparente
+                        // au repos : sans cela, la ligne active se décalerait de
+                        // deux pixels et la colonne tressauterait à chaque
+                        // navigation.
+                        "flex items-stretch rounded-md border-l-2 text-sm transition-colors",
+                        active
+                          ? "border-primary bg-primary/10 font-medium text-foreground"
+                          : "border-transparent text-foreground/80 hover:bg-accent hover:text-foreground",
+                      )}
+                    >
+                      {Array.from({ length: depth }, (_, level) => (
+                        <span
+                          key={level}
+                          aria-hidden
+                          className="ml-3 w-0 self-stretch border-l"
+                        />
+                      ))}
+                      <span className="min-w-0 flex-1 py-2 pl-3 pr-3">
+                        {/* Deux lignes plutôt qu'une troncature sèche : un
+                            « Réunion hebdomadaire du 28 juill… » ne se
+                            distingue pas de la semaine suivante. */}
+                        <span className="line-clamp-2">{p.title}</span>
+                      </span>
+                    </Link>
+                  );
+                })
               )}
             </nav>
 
@@ -366,13 +409,13 @@ export default async function WikiPage({
                       href={pageHref(page.id)}
                       aria-current={page.id === current?.id ? "page" : undefined}
                       className={cn(
-                        "block rounded-md px-3 py-1.5 text-sm transition-colors",
+                        "block rounded-md border-l-2 px-3 py-1.5 text-sm transition-colors",
                         page.id === current?.id
-                          ? "bg-accent text-accent-foreground"
-                          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                          ? "border-primary bg-primary/10 text-foreground"
+                          : "border-transparent text-foreground/80 hover:bg-accent hover:text-foreground",
                       )}
                     >
-                      <span className="block truncate">{page.title}</span>
+                      <span className="line-clamp-2 block">{page.title}</span>
                       <span className="block text-xs text-muted-foreground">
                         {formatDate(page.meetingDate!)}
                       </span>
