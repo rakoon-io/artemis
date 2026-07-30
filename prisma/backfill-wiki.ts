@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { slugForTitle } from "../src/lib/slug";
+import { datePrefix, slugForTitle } from "../src/lib/slug";
 import { buildSearchText } from "../src/lib/search-text";
 
 /**
@@ -28,7 +28,14 @@ async function main() {
     const pages = await prisma.wikiPage.findMany({
       where: { projectId: project.id },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
-      select: { id: true, title: true, content: true, slug: true, searchText: true },
+      select: {
+        id: true,
+        title: true,
+        content: true,
+        slug: true,
+        searchText: true,
+        meetingDate: true,
+      },
     });
 
     // Les slugs déjà posés sont réservés dès le départ : une page sans slug ne
@@ -38,18 +45,34 @@ async function main() {
     );
 
     for (const page of pages) {
-      const slug = page.slug ?? slugForTitle(page.title, taken);
+      // Un compte rendu doit porter sa date en tête d'adresse. Si ce n'est pas
+      // le cas - page datée avant que la règle n'existe - on la redate, et
+      // l'ancienne adresse est archivée pour que les liens partagés aboutissent
+      // encore.
+      const prefix = datePrefix(page.meetingDate);
+      const needsPrefix = !!prefix && !page.slug?.startsWith(`${prefix}-`);
+      const slug =
+        page.slug && !needsPrefix
+          ? page.slug
+          : slugForTitle(page.title, taken, prefix);
+      if (needsPrefix && page.slug && page.slug !== slug) {
+        await prisma.wikiPageSlug.upsert({
+          where: { projectId_slug: { projectId: project.id, slug: page.slug } },
+          create: { projectId: project.id, pageId: page.id, slug: page.slug },
+          update: { pageId: page.id },
+        });
+      }
       // Le texte de recherche est recalculé même s'il existe : il est dérivé, et
       // le recalculer est sans risque - contrairement au slug, dont dépendent
       // des favoris déjà posés.
       const searchText = buildSearchText(page.title, page.content);
-      if (page.slug && page.searchText === searchText) continue;
+      if (page.slug && !needsPrefix && page.searchText === searchText) continue;
 
       await prisma.wikiPage.update({
         where: { id: page.id },
         data: { slug, searchText },
       });
-      if (!page.slug) taken.add(slug);
+      taken.add(slug);
       updated += 1;
       console.log(`  ${project.key} · ${page.title} -> ${slug}`);
     }

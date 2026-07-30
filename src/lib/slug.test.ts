@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  datePrefix,
   FALLBACK_SLUG,
   MAX_SLUG_LENGTH,
   slugForTitle,
@@ -104,5 +105,60 @@ describe("slugForTitle", () => {
       expect(slug).toBe(expected);
       taken.push(slug);
     }
+  });
+});
+
+describe("slugForTitle, préfixé", () => {
+  it("place le préfixe en tête", () => {
+    expect(slugForTitle("Point hebdomadaire", [], "2026-07-28")).toBe(
+      "2026-07-28-point-hebdomadaire",
+    );
+  });
+
+  it("normalise le préfixe comme le reste", () => {
+    expect(slugForTitle("Réunion", [], "28 juillet 2026")).toBe(
+      "28-juillet-2026-reunion",
+    );
+  });
+
+  it("ignore un préfixe vide ou inexploitable", () => {
+    expect(slugForTitle("Réunion", [], "")).toBe("reunion");
+    expect(slugForTitle("Réunion", [], null)).toBe("reunion");
+    expect(slugForTitle("Réunion", [], "???")).toBe("reunion");
+  });
+
+  it("respecte la longueur maximale, préfixe compris", () => {
+    const slug = slugForTitle("mot ".repeat(60), [], "2026-07-28");
+    expect(slug.length).toBeLessThanOrEqual(MAX_SLUG_LENGTH);
+    expect(slug.startsWith("2026-07-28-")).toBe(true);
+    expect(slug.endsWith("-")).toBe(false);
+  });
+
+  it("départage deux réunions du même jour au même titre", () => {
+    const taken: string[] = [];
+    for (const attendu of ["2026-07-28-point", "2026-07-28-point-2"]) {
+      const slug = slugForTitle("Point", taken, "2026-07-28");
+      expect(slug).toBe(attendu);
+      taken.push(slug);
+    }
+  });
+});
+
+describe("datePrefix", () => {
+  it("rend la date au format AAAA-MM-JJ", () => {
+    expect(datePrefix(new Date("2026-07-28T00:00:00Z"))).toBe("2026-07-28");
+    expect(datePrefix("2026-01-05")).toBe("2026-01-05");
+  });
+
+  it("lit en UTC, comme les dates sont écrites", () => {
+    // Minuit UTC : le jour rendu doit être celui qui a été saisi, quel que soit
+    // le fuseau de la machine qui exécute.
+    expect(datePrefix(new Date("2026-12-31T00:00:00Z"))).toBe("2026-12-31");
+  });
+
+  it("rend null sur une valeur absente ou invalide", () => {
+    expect(datePrefix(null)).toBeNull();
+    expect(datePrefix(undefined)).toBeNull();
+    expect(datePrefix("pas une date")).toBeNull();
   });
 });

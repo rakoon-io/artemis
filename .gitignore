@@ -52,3 +52,6 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 *.pem
+
+# Captures de travail (rapports de bug), hors dépôt.
+assets/

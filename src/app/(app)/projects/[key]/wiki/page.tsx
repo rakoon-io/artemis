@@ -573,15 +573,12 @@ export default async function WikiPage({
                     />
                   </MeetingSection>
                 ) : current.content.trim() ? (
-                  <div className="space-y-4">
-                    <PageOutline content={current.content} />
-                    <WikiContent
-                      content={current.content}
-                      projectKey={project.key}
-                      ticketMap={ticketMap}
-                      ticketHints={ticketHints}
-                    />
-                  </div>
+                  <WikiContent
+                    content={current.content}
+                    projectKey={project.key}
+                    ticketMap={ticketMap}
+                    ticketHints={ticketHints}
+                  />
                 ) : (
                   <p className="text-sm italic text-muted-foreground">
                     {fmt(t.wiki.index.emptyContentHint, {
@@ -648,7 +645,7 @@ export default async function WikiPage({
           {/* Colonne du sommaire : collante, elle suit le défilement du texte.
               Masquée sous `lg`, où elle est rendue au-dessus de l'article. */}
           {outlineHeadings.length > 1 && (
-            <aside className="hidden shrink-0 lg:block lg:w-60">
+            <aside className="hidden shrink-0 lg:block lg:w-64 xl:w-72">
               <div className="sticky top-6">
                 <PageOutline headings={outlineHeadings} title={outlineTitle} />
               </div>

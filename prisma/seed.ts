@@ -467,7 +467,8 @@ async function main() {
     data: {
       projectId: project.id,
       title: "Réunion hebdomadaire du 28 juillet",
-      slug: slugify("Réunion hebdomadaire du 28 juillet"),
+      // Un compte rendu porte sa date en tête d'adresse (cf. wiki.service.ts).
+      slug: `2026-07-28-${slugify("Réunion hebdomadaire du 28 juillet")}`,
       meetingDate: new Date("2026-07-28"),
       authorId: admin.id,
       content: [

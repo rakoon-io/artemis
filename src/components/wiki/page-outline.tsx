@@ -45,7 +45,10 @@ export async function PageOutline({
       </summary>
       <nav
         aria-label={t.wiki.outline.ariaLabel}
-        className="flex flex-col gap-0.5 px-3 pb-3"
+        // Borné en hauteur et défilant : un sommaire de trente sections, dans
+        // une colonne collante, dépasserait sinon l'écran et deviendrait
+        // inatteignable par le bas.
+        className="flex max-h-[70vh] flex-col gap-0.5 overflow-y-auto px-3 pb-3"
       >
         {outline.map((head) => (
           <a
@@ -53,8 +56,11 @@ export async function PageOutline({
             href={`#${head.anchor}`}
             // L'indentation dit la hiérarchie ; bornée à trois crans, au-delà
             // desquels une page se lit de toute façon mal.
-            style={{ paddingLeft: `${Math.min(head.depth, 3) * 16}px` }}
-            className="truncate rounded-md px-2 py-1 text-sm text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
+            style={{ paddingLeft: `${Math.min(head.depth, 3) * 16 + 8}px` }}
+            // Le texte PASSE À LA LIGNE au lieu d'être coupé : un sommaire dont
+            // les intitulés se terminent par « … » ne renseigne plus sur rien, et
+            // c'est justement sur les titres longs qu'on en a besoin.
+            className="break-words rounded-md py-1 pr-2 text-sm leading-snug text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
           >
             {head.title}
           </a>

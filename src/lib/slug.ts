@@ -70,9 +70,37 @@ export function uniqueSlug(base: string, taken: Iterable<string>): string {
 }
 
 /**
- * Slug d'un titre, unique dans son projet. Point d'entrée unique : les services
- * n'ont pas à connaître l'enchaînement `slugify` puis `uniqueSlug`.
+ * Slug d'un titre, unique dans son projet, éventuellement PRÉFIXÉ. Point d'entrée
+ * unique : les services n'ont pas à connaître l'enchaînement `slugify` puis
+ * `uniqueSlug`.
+ *
+ * Le préfixe sert aux comptes rendus de réunion, datés : la date en tête rend
+ * l'adresse parlante (`2026-07-28-point-hebdomadaire`) et range les comptes
+ * rendus par ordre chronologique partout où l'on trie sur le slug. Il est
+ * normalisé comme le reste - un appelant ne peut pas y glisser de caractère
+ * inapte à une URL.
  */
-export function slugForTitle(title: string, taken: Iterable<string>): string {
-  return uniqueSlug(slugify(title), taken);
+export function slugForTitle(
+  title: string,
+  taken: Iterable<string>,
+  prefix?: string | null,
+): string {
+  const cleanPrefix = prefix ? slugify(prefix) : "";
+  const body = slugify(title);
+  // La borne s'applique à l'ENSEMBLE : préfixer ne doit pas faire déborder.
+  const base =
+    cleanPrefix && cleanPrefix !== FALLBACK_SLUG
+      ? `${cleanPrefix}-${body}`.slice(0, MAX_SLUG_LENGTH).replace(/-+$/g, "")
+      : body;
+  return uniqueSlug(base, taken);
+}
+
+/**
+ * Préfixe de date d'un compte rendu, au format `AAAA-MM-JJ`. Lu en UTC, comme
+ * les dates sont écrites (minuit UTC) : le jour affiché est celui qui a été saisi.
+ */
+export function datePrefix(date: Date | string | null | undefined): string | null {
+  if (!date) return null;
+  const value = date instanceof Date ? date : new Date(date);
+  return Number.isNaN(value.getTime()) ? null : value.toISOString().slice(0, 10);
 }

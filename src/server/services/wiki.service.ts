@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { slugForTitle } from "@/lib/slug";
+import { datePrefix, slugForTitle } from "@/lib/slug";
 import {
   buildSearchText,
   buildSnippet,
@@ -154,6 +154,7 @@ async function freshSlug(
   projectId: string,
   title: string,
   exceptPageId?: string,
+  prefix?: string | null,
 ): Promise<string> {
   const [pages, aliases] = await Promise.all([
     tx.wikiPage.findMany({
@@ -176,7 +177,26 @@ async function freshSlug(
     ...pages.map((page) => page.slug!),
     ...aliases.map((alias) => alias.slug),
   ];
-  return slugForTitle(title, taken);
+  return slugForTitle(title, taken, prefix);
+}
+
+/**
+ * Range l'ancien slug d'une page parmi les archives, pour que les favoris et les
+ * liens déjà partagés continuent d'aboutir après un renommage.
+ */
+async function archiveSlug(
+  tx: Prisma.TransactionClient,
+  projectId: string,
+  pageId: string,
+  slug: string,
+): Promise<void> {
+  await tx.wikiPageSlug.upsert({
+    where: { projectId_slug: { projectId, slug } },
+    create: { projectId, pageId, slug },
+    // Un slug repris par une AUTRE page revient à celle qui le porte désormais :
+    // c'est elle que l'ancien lien doit atteindre.
+    update: { pageId },
+  });
 }
 
 /**
@@ -274,32 +294,36 @@ export function updateWikiPage(input: UpdateWikiPageServiceInput) {
   return prisma.$transaction(async (tx) => {
     const before = await tx.wikiPage.findUnique({
       where: { id: input.id },
-      select: { title: true, content: true, slug: true, projectId: true },
+      select: {
+        title: true,
+        content: true,
+        slug: true,
+        projectId: true,
+        meetingDate: true,
+      },
     });
     if (!before) throw new Error("Page introuvable.");
 
     // L'adresse suit le titre : renommer la page renomme son slug. L'ancien est
     // archivé juste avant, pour que les favoris et les liens déjà partagés
     // continuent d'aboutir (cf. `model WikiPageSlug`).
+    //
+    // Un compte rendu est en outre PRÉFIXÉ PAR SA DATE : l'adresse dit alors de
+    // quelle réunion il s'agit, et les comptes rendus se rangent d'eux-mêmes
+    // dans l'ordre chronologique.
     const renamed = before.title !== input.title || !before.slug;
     const nextSlug = renamed
-      ? await freshSlug(tx, before.projectId, input.title, input.id)
+      ? await freshSlug(
+          tx,
+          before.projectId,
+          input.title,
+          input.id,
+          datePrefix(before.meetingDate),
+        )
       : before.slug;
 
     if (renamed && before.slug && before.slug !== nextSlug) {
-      await tx.wikiPageSlug.upsert({
-        where: {
-          projectId_slug: { projectId: before.projectId, slug: before.slug },
-        },
-        create: {
-          projectId: before.projectId,
-          pageId: input.id,
-          slug: before.slug,
-        },
-        // Un slug repris par une AUTRE page revient à celle qui le porte
-        // désormais : c'est elle que l'ancien lien doit atteindre.
-        update: { pageId: input.id },
-      });
+      await archiveSlug(tx, before.projectId, input.id, before.slug);
     }
 
     const page = await tx.wikiPage.update({
@@ -387,10 +411,35 @@ export function listMeetingPages(projectId: string) {
  * n'est perdu, et la remarquer plus tard la réaffiche telle quelle.
  */
 export function setMeetingDate(pageId: string, meetingDate: string | null) {
-  return prisma.wikiPage.update({
-    where: { id: pageId },
-    data: { meetingDate: meetingDate ? new Date(meetingDate) : null },
-    select: { id: true, meetingDate: true },
+  return prisma.$transaction(async (tx) => {
+    const before = await tx.wikiPage.findUnique({
+      where: { id: pageId },
+      select: { projectId: true, title: true, slug: true },
+    });
+    if (!before) throw new Error("Page introuvable.");
+
+    // Dater une page - ou lui retirer sa date - change son adresse, puisque le
+    // slug d'un compte rendu porte la date en tête. L'ancienne est archivée :
+    // un lien partagé avant le marquage continue d'aboutir.
+    const nextSlug = await freshSlug(
+      tx,
+      before.projectId,
+      before.title,
+      pageId,
+      meetingDate,
+    );
+    if (before.slug && before.slug !== nextSlug) {
+      await archiveSlug(tx, before.projectId, pageId, before.slug);
+    }
+
+    return tx.wikiPage.update({
+      where: { id: pageId },
+      data: {
+        meetingDate: meetingDate ? new Date(meetingDate) : null,
+        slug: nextSlug,
+      },
+      select: { id: true, meetingDate: true, slug: true },
+    });
   });
 }
 
