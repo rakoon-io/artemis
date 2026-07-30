@@ -78,6 +78,8 @@ model User {
   setupToken         PasswordSetupToken?
   proposedModules    Module[]            @relation("moduleProposals")
   proposedComponents Component[]         @relation("componentProposals")
+  wikiRevisions      WikiRevision[]
+  specVersions       SpecVersion[]
 }
 
 // Jeton de premiere connexion / reinitialisation : lien a usage unique et date
@@ -124,6 +126,7 @@ model Project {
   modules          Module[]
   components       Component[]
   wikiPages        WikiPage[]
+  specPackages     SpecPackage[]
   members          ProjectMember[]
 }
 
@@ -373,8 +376,102 @@ model WikiPage {
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
+  revisions   WikiRevision[]
+  // Renseigne uniquement si CETTE page est la racine d'un paquet de spécifications.
+  specPackage SpecPackage?
+  snapshots   SpecPageSnapshot[]
+
   @@index([projectId])
   @@index([parentId])
+}
+
+// Révision d'une page de wiki : l'état du titre et du contenu APRÈS chaque
+// enregistrement. Une révision est écrite à la création de la page puis à chaque
+// modification, si bien que la plus récente reflète toujours la page courante.
+//
+// Le choix d'archiver l'état APRÈS (et non avant) coûte une ligne dupliquée mais
+// rend l'historique uniforme : « voir la révision du 12 mars » se lit toujours de
+// la même façon, et l'on sait enfin QUI a modifié en dernier - `WikiPage.authorId`
+// ne désigne que le créateur, jamais l'éditeur suivant.
+model WikiRevision {
+  id        String   @id @default(cuid())
+  pageId    String
+  page      WikiPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  title     String
+  content   String
+  // Auteur de la modification. `SetNull` : la révision survit à la suppression
+  // du compte, un historique amputé ne serait plus un historique.
+  authorId  String?
+  author    User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+
+  @@index([pageId, createdAt])
+}
+
+// PAQUET DE SPÉCIFICATIONS : un sous-arbre du wiki traité comme un document
+// unique et versionnable. Le paquet est ancré sur UNE page racine ; celle-ci et
+// toutes ses descendantes en font partie.
+//
+// L'ancrage sur un sous-arbre plutôt qu'une appartenance page par page est
+// délibéré : une spécification est un document, et un chapitre ne peut pas en
+// sortir sans sortir aussi ses sous-chapitres. L'arborescence du wiki porte donc
+// déjà exactement la bonne information, sans mécanisme de regroupement parallèle.
+//
+// Le paquet n'a pas de nom propre : c'est le titre de sa page racine. Deux
+// sources pour un même intitulé finiraient par diverger.
+model SpecPackage {
+  id         String        @id @default(cuid())
+  projectId  String
+  project    Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  rootPageId String        @unique
+  rootPage   WikiPage      @relation(fields: [rootPageId], references: [id], onDelete: Cascade)
+  createdAt  DateTime      @default(now())
+  versions   SpecVersion[]
+
+  @@index([projectId])
+}
+
+// Version PUBLIÉE d'un paquet : un instantané figé, numéroté et citable de toutes
+// ses pages. Immuable par construction - on ne modifie jamais une version, on en
+// publie une nouvelle. C'est ce qui permet à un ticket de se référer à « la
+// spécification v2 » sans que le sens de la phrase change le lendemain.
+model SpecVersion {
+  id            String             @id @default(cuid())
+  packageId     String
+  package       SpecPackage        @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  // Numéro incrémental par paquet (1, 2, 3…), affiché « v3 ».
+  number        Int
+  // Intitulé libre facultatif (« MVP », « Recette client »), en plus du numéro.
+  label         String?
+  // Ce qui a changé depuis la version précédente, saisi à la publication.
+  note          String?
+  publishedById String?
+  publishedBy   User?              @relation(fields: [publishedById], references: [id], onDelete: SetNull)
+  createdAt     DateTime           @default(now())
+  pages         SpecPageSnapshot[]
+
+  @@unique([packageId, number])
+  @@index([packageId])
+}
+
+// Contenu figé d'une page au sein d'une version publiée.
+model SpecPageSnapshot {
+  id        String      @id @default(cuid())
+  versionId String
+  version   SpecVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  // Page d'origine, ou `null` si elle a été supprimée depuis : l'instantané doit
+  // survivre à la disparition de sa source, sinon il n'archive rien.
+  pageId    String?
+  page      WikiPage?   @relation(fields: [pageId], references: [id], onDelete: SetNull)
+  title     String
+  content   String
+  // Chemin lisible dans l'arborescence au moment du figement (« Guide / Champs »).
+  // Conservé tel quel : réorganiser le wiki ensuite ne doit pas réécrire le passé.
+  path      String
+  // Position dans l'ordre de lecture du document au moment du figement.
+  order     Int
+
+  @@index([versionId, order])
 }
 
 // Cumul de dépense IA (Mistral) par jour UTC - plafond configurable (ex. mode

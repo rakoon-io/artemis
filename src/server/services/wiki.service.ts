@@ -61,15 +61,33 @@ export interface CreateWikiPageServiceInput {
   parentId?: string | null;
 }
 
+/**
+ * Cree une page ET sa premiere revision, en une transaction.
+ *
+ * L'historique commence donc a la naissance de la page : sans cette revision
+ * initiale, la premiere modification ferait apparaitre un « avant » qui n'existe
+ * nulle part, et l'on ne saurait jamais a quoi ressemblait la page d'origine.
+ */
 export function createWikiPage(input: CreateWikiPageServiceInput) {
-  return prisma.wikiPage.create({
-    data: {
-      projectId: input.projectId,
-      title: input.title,
-      content: input.content,
-      authorId: input.authorId,
-      parentId: input.parentId ?? null,
-    },
+  return prisma.$transaction(async (tx) => {
+    const page = await tx.wikiPage.create({
+      data: {
+        projectId: input.projectId,
+        title: input.title,
+        content: input.content,
+        authorId: input.authorId,
+        parentId: input.parentId ?? null,
+      },
+    });
+    await tx.wikiRevision.create({
+      data: {
+        pageId: page.id,
+        title: page.title,
+        content: page.content,
+        authorId: input.authorId,
+      },
+    });
+    return page;
   });
 }
 
@@ -78,16 +96,83 @@ export interface UpdateWikiPageServiceInput {
   title: string;
   content: string;
   parentId?: string | null;
+  /** Auteur de la modification, archivé dans la révision. */
+  authorId?: string | null;
 }
 
+/**
+ * Met a jour une page ET archive son nouvel etat en revision, en une transaction.
+ *
+ * Une revision est ecrite a CHAQUE enregistrement qui change le titre ou le
+ * contenu. Un simple deplacement dans l'arborescence n'en cree pas : la page dit
+ * toujours la meme chose, et un historique encombre de revisions identiques ne
+ * serait plus consultable.
+ *
+ * C'est aussi la seule trace du DERNIER editeur : `WikiPage.authorId` ne designe
+ * que le createur de la page.
+ */
 export function updateWikiPage(input: UpdateWikiPageServiceInput) {
-  return prisma.wikiPage.update({
-    where: { id: input.id },
-    data: {
-      title: input.title,
-      content: input.content,
-      // `undefined` = ne pas toucher le parent ; `null` = remonter à la racine.
-      ...(input.parentId !== undefined ? { parentId: input.parentId } : {}),
+  return prisma.$transaction(async (tx) => {
+    const before = await tx.wikiPage.findUnique({
+      where: { id: input.id },
+      select: { title: true, content: true },
+    });
+    if (!before) throw new Error("Page introuvable.");
+
+    const page = await tx.wikiPage.update({
+      where: { id: input.id },
+      data: {
+        title: input.title,
+        content: input.content,
+        // `undefined` = ne pas toucher le parent ; `null` = remonter à la racine.
+        ...(input.parentId !== undefined ? { parentId: input.parentId } : {}),
+      },
+    });
+
+    const textChanged =
+      before.title !== page.title || before.content !== page.content;
+    if (textChanged) {
+      await tx.wikiRevision.create({
+        data: {
+          pageId: page.id,
+          title: page.title,
+          content: page.content,
+          authorId: input.authorId ?? null,
+        },
+      });
+    }
+    return page;
+  });
+}
+
+/**
+ * Revisions d'une page, de la plus recente a la plus ancienne. Bornee : un
+ * historique se consulte par sa tete, et rien ici ne doit pouvoir ramener des
+ * milliers de versions d'un coup.
+ */
+export const MAX_REVISIONS_LISTED = 50;
+
+export function listPageRevisions(pageId: string) {
+  return prisma.wikiRevision.findMany({
+    where: { pageId },
+    orderBy: { createdAt: "desc" },
+    take: MAX_REVISIONS_LISTED,
+    select: {
+      id: true,
+      title: true,
+      createdAt: true,
+      author: { select: { name: true, email: true } },
+    },
+  });
+}
+
+/** Une revision avec son contenu (lecture d'un etat passe). */
+export function getPageRevision(id: string) {
+  return prisma.wikiRevision.findUnique({
+    where: { id },
+    include: {
+      author: { select: { name: true, email: true } },
+      page: { select: { id: true, projectId: true, title: true } },
     },
   });
 }

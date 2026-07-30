@@ -78,7 +78,9 @@ export async function updateWikiPageAction(
       }
     }
 
-    await updateWikiPage(data);
+    // `authorId` : l'auteur de CETTE modification, archivé dans la révision.
+    // `WikiPage.authorId` ne désigne, lui, que le créateur de la page.
+    await updateWikiPage({ ...data, authorId: user.id });
     return { ok: true, data: { id: data.id } };
   });
 }

@@ -64,6 +64,63 @@ export const wiki = {
     },
   },
 
+  // Paquets de specifications : sous-arbres du wiki traites comme un document
+  // versionnable. Le nom du paquet est le titre de sa page racine.
+  specs: {
+    badge: "Spécification",
+    rootBadge: "Racine de spécification",
+    partOf: "Fait partie de la spécification « {title} ».",
+    mark: "Déclarer comme spécification",
+    markTitle: "Déclarer « {title} » comme spécification ?",
+    markDescription:
+      "Cette page et toutes ses sous-pages formeront un document unique, dont vous pourrez publier des versions figées et citables. Aucun contenu n'est modifié.",
+    marked: "« {title} » est désormais une spécification.",
+    unmark: "Retirer la spécification",
+    unmarkTitle: "Retirer la spécification « {title} » ?",
+    unmarkDescription:
+      "Les pages du wiki ne sont pas supprimées : seule la qualité de spécification est retirée.",
+    unmarked: "Spécification retirée.",
+
+    versionsTitle: "Versions publiées",
+    versionsEmpty:
+      "Aucune version publiée. Publiez-en une pour figer l'état actuel du document.",
+    publish: "Publier une version",
+    publishDescription:
+      "L'état actuel du document est figé et devient consultable tel quel. Une version publiée n'est plus modifiable ; pour corriger, on en publie une nouvelle.",
+    labelLabel: "Libellé (optionnel)",
+    labelPlaceholder: "MVP, Recette client…",
+    noteLabel: "Ce qui change (optionnel)",
+    notePlaceholder: "Résumé des évolutions depuis la version précédente…",
+    publishSubmit: "Publier la version",
+    published: "Version {label} publiée.",
+    publishedBy: "publiée par {name}",
+    pageOne: "page",
+    pageOther: "pages",
+    read: "Consulter",
+    frozenNotice:
+      "Version figée du {date} — lecture seule. Le wiki, lui, continue d'évoluer.",
+    backToWorking: "Revenir à la version de travail",
+    deleteVersion: "Supprimer la version {label}",
+    deleteVersionTitle: "Supprimer la version {label} ?",
+    deleteVersionDescription:
+      "L'archive de cette version sera définitivement perdue, y compris pour les tickets qui la citent. Cette action est irréversible.",
+    versionDeleted: "Version supprimée.",
+  },
+
+  // Historique par page : une revision est ecrite a chaque enregistrement qui
+  // change le titre ou le contenu.
+  history: {
+    title: "Historique",
+    show: "Historique",
+    empty: "Aucune révision enregistrée pour cette page.",
+    current: "actuelle",
+    by: "par {name}",
+    unknownAuthor: "Inconnu",
+    frozenNotice: "Révision du {date} — lecture seule.",
+    backToPage: "Revenir à la page",
+    truncated: "Seules les {count} révisions les plus récentes sont affichées.",
+  },
+
   // Recherche
   search: {
     placeholder: "Rechercher...",

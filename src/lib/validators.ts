@@ -324,6 +324,34 @@ export const createWikiPageSchema = z.object({
   content: z.string().max(50000, "Contenu trop long").default(""),
 });
 
+// --- Paquets de spécifications (sous-arbres de wiki versionnés) ---
+
+export const markSpecSchema = z.object({
+  projectId: z.string().min(1),
+  rootPageId: z.string().min(1),
+});
+
+/**
+ * Publication d'une version. Le libellé et la note sont facultatifs et
+ * normalisés : une chaîne vide devient `null`, sinon la version afficherait
+ * « v3 — » et la base porterait des blancs se faisant passer pour du contenu.
+ */
+export const publishSpecVersionSchema = z.object({
+  packageId: z.string().min(1),
+  label: z
+    .string()
+    .trim()
+    .max(60)
+    .nullish()
+    .transform((v) => v || null),
+  note: z
+    .string()
+    .trim()
+    .max(2000)
+    .nullish()
+    .transform((v) => v || null),
+});
+
 export const updateWikiPageSchema = z.object({
   id: z.string().min(1),
   parentId: wikiParentId,

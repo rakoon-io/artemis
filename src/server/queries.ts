@@ -12,6 +12,7 @@ import * as ticketPriorityService from "./services/ticketpriority.service";
 import * as ticketTypeService from "./services/tickettype.service";
 import * as userService from "./services/user.service";
 import * as wikiService from "./services/wiki.service";
+import * as specService from "./services/spec.service";
 import type { TicketFilters } from "./services/ticket.service";
 
 /**
@@ -169,4 +170,36 @@ export function getMembers() {
 /** Utilisateurs assignables dans un projet (administrateurs + membres). */
 export function getAssignableUsers(projectId: string) {
   return membershipService.listAssignableUsers(projectId);
+}
+
+// --- Spécifications : paquets de pages de wiki versionnés ---
+
+export function getSpecPackages(projectId: string) {
+  return specService.listSpecPackages(projectId);
+}
+
+export function getSpecPackageByRootPage(rootPageId: string) {
+  return specService.getSpecPackageByRootPage(rootPageId);
+}
+
+/** Le paquet auquel appartient une page, qu'elle en soit la racine ou non. */
+export function getSpecPackageForPage(projectId: string, pageId: string) {
+  return specService.findSpecPackageForPage(projectId, pageId);
+}
+
+export function getSpecVersions(packageId: string) {
+  return specService.listSpecVersions(packageId);
+}
+
+export function getSpecVersion(id: string) {
+  return specService.getSpecVersion(id);
+}
+
+/** Révisions d'une page de wiki (les plus récentes d'abord, bornées). */
+export function getPageRevisions(pageId: string) {
+  return wikiService.listPageRevisions(pageId);
+}
+
+export function getPageRevision(id: string) {
+  return wikiService.getPageRevision(id);
 }

@@ -28,6 +28,7 @@ export type AdminAction =
   | "manage_modules"
   | "manage_components"
   | "review_proposals"
+  | "manage_specs"
   | "manage_users"
   | "manage_members"
   | "delete_ticket";

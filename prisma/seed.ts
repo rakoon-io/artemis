@@ -2,6 +2,7 @@ import { ComponentKind, PrismaClient, Role, SprintState } from "@prisma/client";
 // Type seul : voir project.service.ts (evaluation au chargement du module).
 import type { TicketTemplate } from "@prisma/client";
 import { emptyReport, serializeReport } from "../src/lib/ticket-template";
+import { specSubtree } from "../src/lib/spec-package";
 import bcrypt from "bcryptjs";
 import { generateNKeysBetween } from "fractional-indexing";
 
@@ -440,7 +441,7 @@ async function main() {
       authorId: admin.id,
     },
   });
-  await prisma.wikiPage.create({
+  const conventions = await prisma.wikiPage.create({
     data: {
       projectId: project.id,
       parentId: guide.id,
@@ -448,6 +449,54 @@ async function main() {
       content:
         "Titres à l'impératif, en français, < 80 caractères. Exemple : \"Ajouter un export CSV de la vue liste\".",
       authorId: admin.id,
+    },
+  });
+
+  // Révision initiale de chaque page : l'application en écrit une à chaque
+  // enregistrement, le seed passant outre les services doit le faire lui-même -
+  // sans quoi la démo montrerait un historique vide sur des pages existantes.
+  const wikiPages = [guide, conventions];
+  await prisma.wikiRevision.createMany({
+    data: wikiPages.map((page) => ({
+      pageId: page.id,
+      title: page.title,
+      content: page.content,
+      authorId: admin.id,
+    })),
+  });
+
+  // --- Spécification : le sous-arbre « Guide du projet » traité comme un
+  // document unique et versionnable, avec une première version publiée. ---
+  const specPackage = await prisma.specPackage.create({
+    data: { projectId: project.id, rootPageId: guide.id },
+  });
+  // L'ordre et les chemins sont calculés par le MÊME module que l'application :
+  // la démo produit donc exactement la forme qu'une publication réelle produit.
+  const specEntries = specSubtree(
+    wikiPages.map((page) => ({
+      id: page.id,
+      title: page.title,
+      parentId: page.parentId,
+      content: page.content,
+    })),
+    guide.id,
+  );
+  await prisma.specVersion.create({
+    data: {
+      packageId: specPackage.id,
+      number: 1,
+      label: "Socle initial",
+      note: "Première mise sous version du guide projet et de ses conventions.",
+      publishedById: admin.id,
+      pages: {
+        create: specEntries.map((entry) => ({
+          pageId: entry.page.id,
+          title: entry.page.title,
+          content: entry.page.content,
+          path: entry.path,
+          order: entry.order,
+        })),
+      },
     },
   });
 
