@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/card";
 import { UserManager } from "@/components/settings/user-manager";
 
-export const metadata: Metadata = { title: "Utilisateurs · Artemis" };
+export const metadata: Metadata = { title: "Utilisateurs" };
 
 /**
  * Gestion **globale** des utilisateurs (RSC), réservée aux administrateurs. Un

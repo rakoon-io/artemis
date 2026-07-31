@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/card";
 import { CreateProjectDialog } from "@/components/project/create-project-dialog";
 
-export const metadata: Metadata = { title: "Projets · Artemis" };
+export const metadata: Metadata = { title: "Projets" };
 
 export default async function ProjectsPage() {
   const session = await auth();

@@ -50,12 +50,28 @@ interface Variante {
    * système garantit.
    */
   rognee: boolean;
+  /**
+   * Peut-on y LIRE l'étiquette ?
+   *
+   * Faux sur la favicon : à seize pixels dans une barre d'onglets, « RECETTE »
+   * n'est plus qu'une salissure grise qui mange l'emblème. À cette taille,
+   * c'est la COULEUR qui distingue - elle se reconnaît là où aucun texte ne se
+   * lit. Conséquence assumée : deux instances de même couleur ont la même
+   * favicon, et il faut leur en donner de différentes.
+   */
+  etiquetee: boolean;
 }
 
 const VARIANTES: Record<string, Variante> = {
-  "192": { taille: 192, motif: 0.62, rayon: 0.24, rognee: false },
-  "512": { taille: 512, motif: 0.62, rayon: 0.24, rognee: false },
-  maskable: { taille: 512, motif: 0.42, rayon: 0, rognee: true },
+  // Onglet du navigateur. Motif plus grand : à cette taille, les marges
+  // coûtent plus qu'elles n'aèrent.
+  "32": { taille: 32, motif: 0.72, rayon: 0.22, rognee: false, etiquetee: false },
+  // Écran d'accueil iOS. Sans arrondi : le système applique le sien, et deux
+  // arrondis superposés donnent un liseré.
+  "180": { taille: 180, motif: 0.62, rayon: 0, rognee: false, etiquetee: true },
+  "192": { taille: 192, motif: 0.62, rayon: 0.24, rognee: false, etiquetee: true },
+  "512": { taille: 512, motif: 0.62, rayon: 0.24, rognee: false, etiquetee: true },
+  maskable: { taille: 512, motif: 0.42, rayon: 0, rognee: true, etiquetee: true },
 };
 
 /** Assombrit une couleur pour en tirer un dégradé, sans dépendance. */
@@ -79,14 +95,15 @@ export function GET(
     const forme = VARIANTES[variante];
     if (!forme) return new Response("Icône inconnue.", { status: 404 });
 
-    const { taille, motif, rayon, rognee } = forme;
+    const { taille, motif, rayon, rognee, etiquetee } = forme;
     const cote = Math.round(taille * motif);
     const bande = Math.round(taille * (rognee ? 0.19 : 0.26));
+    const porteEtiquette = etiquetee && !!instance.label;
 
     // Un voile sombre plutôt qu'une couleur choisie : il fonce le fond quel
     // qu'il soit, et garde donc le texte lisible sur une teinte claire comme
     // sur une teinte sombre.
-    const etiquette = instance.label && (
+    const etiquette = porteEtiquette && (
       <div
         style={{
           display: "flex",
@@ -110,7 +127,7 @@ export function GET(
               { position: "absolute", bottom: 0, width: "100%" }),
         }}
       >
-        {instance.label.toUpperCase()}
+        {instance.label?.toUpperCase()}
       </div>
     );
 
@@ -137,7 +154,7 @@ export function GET(
             // Icône entière : le motif remonte de la moitié de la bande, sinon
             // l'étiquette lui volerait son centre optique. Icône rognée : les
             // deux sont empilés et centrés ensemble, donc rien à corriger.
-            style={rognee ? {} : { marginTop: -bande / 2 }}
+            style={rognee || !porteEtiquette ? {} : { marginTop: -bande / 2 }}
           />
           {etiquette}
         </div>

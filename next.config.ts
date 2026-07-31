@@ -89,6 +89,20 @@ const nextConfig: NextConfig = {
     ARTEMIS_INSTANCE_LABEL: process.env.ARTEMIS_INSTANCE_LABEL?.trim() ?? "",
     ARTEMIS_INSTANCE_COLOR: process.env.ARTEMIS_INSTANCE_COLOR?.trim() ?? "",
   },
+  /**
+   * `/favicon.ico` n'existe plus comme fichier : l'icône dépend de l'instance et
+   * ne peut donc pas être livrée dans le dépôt. Deux icônes déclarées auraient
+   * laissé le navigateur choisir - et il choisit selon des règles qui lui
+   * appartiennent. Une seule est annoncée (cf. `generateMetadata`), et cette
+   * réécriture répond quand même aux clients qui demandent `/favicon.ico` sans
+   * lire le HTML : lecteurs de flux, aperçus de lien, vieux navigateurs.
+   *
+   * Le type MIME annoncé sera `image/png` malgré l'extension : les navigateurs
+   * se fient à l'en-tête, jamais au nom du fichier.
+   */
+  async rewrites() {
+    return [{ source: "/favicon.ico", destination: "/icons/32" }];
+  },
   async headers() {
     return [
       {

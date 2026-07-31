@@ -15,7 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-export const metadata: Metadata = { title: "E-mails · Artemis" };
+export const metadata: Metadata = { title: "E-mails" };
 
 /**
  * Journal des e-mails (RSC), réservé aux administrateurs : suivi de tous les
