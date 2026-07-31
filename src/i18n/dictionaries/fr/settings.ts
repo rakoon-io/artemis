@@ -10,6 +10,7 @@ export const settings = {
     board: "Tableau",
     tickets: "Tickets",
     sprints: "Sprints",
+    versions: "Versions",
     wiki: "Wiki",
     structure: "Structure",
     settings: "Paramètres",

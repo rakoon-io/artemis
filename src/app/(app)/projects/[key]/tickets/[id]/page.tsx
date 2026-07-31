@@ -21,6 +21,7 @@ import {
   getComponents,
   getLabels,
   getModules,
+  getReleases,
   getSprints,
   getTicketDetail,
   getTicketPriorities,
@@ -47,6 +48,7 @@ import {
   TicketLabelsInline,
   TicketModuleInline,
   TicketPriorityInline,
+  TicketReleaseInline,
   TicketSprintInline,
   TicketTitleInline,
   TicketTypeInline,
@@ -110,11 +112,20 @@ export default async function TicketDetailPage({
         priorities: Awaited<ReturnType<typeof getTicketPriorities>>;
         components: Awaited<ReturnType<typeof getComponents>>;
         modules: Awaited<ReturnType<typeof getModules>>;
+        releases: Awaited<ReturnType<typeof getReleases>>;
       }
     | null = null;
   if (canEdit) {
-    const [members, sprints, labels, types, priorities, components, modules] =
-      await Promise.all([
+    const [
+      members,
+      sprints,
+      labels,
+      types,
+      priorities,
+      components,
+      modules,
+      releases,
+    ] = await Promise.all([
         getAssignableUsers(ticket.projectId),
         getSprints(ticket.projectId),
         getLabels(ticket.projectId),
@@ -122,6 +133,7 @@ export default async function TicketDetailPage({
         getTicketPriorities(ticket.projectId),
         getComponents(ticket.projectId),
         getModules(ticket.projectId),
+        getReleases(ticket.projectId),
       ]);
     editData = {
       members,
@@ -131,6 +143,7 @@ export default async function TicketDetailPage({
       priorities,
       components,
       modules,
+      releases,
     };
   }
 
@@ -379,6 +392,20 @@ export default async function TicketDetailPage({
                   ticketId={ticket.id}
                   value={ticket.sprintId}
                   sprints={editData?.sprints ?? []}
+                  canEdit={canEdit}
+                />
+              </div>
+              {/* VERSION : à côté du sprint, parce que c'est là qu'on se
+                  demande « ça part quand ? » - et parce que les deux répondent
+                  à des questions différentes. */}
+              <div>
+                <p className="text-xs text-muted-foreground">
+                  {t.releases.ticketField}
+                </p>
+                <TicketReleaseInline
+                  ticketId={ticket.id}
+                  value={ticket.releaseId}
+                  releases={editData?.releases ?? []}
                   canEdit={canEdit}
                 />
               </div>

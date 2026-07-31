@@ -73,6 +73,7 @@ export const createTicketSchema = z.object({
   assigneeId: z.string().optional().nullable(),
   sprintId: z.string().optional().nullable(),
   labelIds: z.array(z.string()).optional().default([]),
+  releaseId: z.string().optional().nullable(),
 });
 
 export const updateTicketSchema = z.object({
@@ -88,6 +89,7 @@ export const updateTicketSchema = z.object({
   assigneeId: z.string().optional().nullable(),
   sprintId: z.string().optional().nullable(),
   labelIds: z.array(z.string()).optional(),
+  releaseId: z.string().optional().nullable(),
 });
 
 /** Génération de tickets à partir d'un texte libre collé (intégration Mistral). */
@@ -147,6 +149,23 @@ export const updateColumnSchema = z.object({
 export const reorderColumnsSchema = z.object({
   projectId: z.string().min(1),
   orderedIds: z.array(z.string().min(1)).min(1),
+});
+
+/* ── VERSIONS du produit (« Release » en base) ──────────────────────────────
+   Le nom est le seul champ obligatoire : on crée une version dès qu'on sait
+   qu'elle existera, souvent avant d'en connaître la date. */
+export const createReleaseSchema = z.object({
+  projectId: z.string().min(1),
+  name: z.string().trim().min(1).max(60),
+  description: z.string().max(2000).optional().nullable(),
+  dueDate: z.string().optional().nullable(),
+});
+
+export const updateReleaseSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().trim().min(1).max(60).optional(),
+  description: z.string().max(2000).optional().nullable(),
+  dueDate: z.string().optional().nullable(),
 });
 
 export const createSprintSchema = z

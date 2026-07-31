@@ -67,6 +67,7 @@ export async function updateTicketAction(
       moduleId: data.moduleId,
       assigneeId: data.assigneeId,
       sprintId: data.sprintId,
+      releaseId: data.releaseId,
       labelIds: data.labelIds,
     });
     if (assigneeChanged) {

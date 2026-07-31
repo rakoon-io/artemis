@@ -1,4 +1,10 @@
-import { ComponentKind, PrismaClient, Role, SprintState } from "@prisma/client";
+import {
+  ComponentKind,
+  PrismaClient,
+  ReleaseState,
+  Role,
+  SprintState,
+} from "@prisma/client";
 // Type seul : voir project.service.ts (evaluation au chargement du module).
 import type { TicketTemplate } from "@prisma/client";
 import { emptyReport, serializeReport } from "../src/lib/ticket-template";
@@ -271,11 +277,33 @@ async function main() {
           },
         ],
       },
+      // Deux VERSIONS : une livrée - l'historique du produit - et une en
+      // préparation. Le sprint dit quand on travaille, la version ce qui sort ;
+      // sans un exemple de chaque, la distinction resterait théorique.
+      releases: {
+        create: [
+          {
+            name: "1.0",
+            description:
+              "Première mise en service : tableau Kanban, tickets, wiki.",
+            state: ReleaseState.RELEASED,
+            dueDate: new Date("2026-07-10"),
+            releasedAt: new Date("2026-07-12"),
+          },
+          {
+            name: "1.1",
+            description: "Pièces jointes, encarts et coloration du code.",
+            state: ReleaseState.PLANNED,
+            dueDate: new Date("2026-08-14"),
+          },
+        ],
+      },
     },
     include: {
       columns: true,
       labels: true,
       sprints: true,
+      releases: true,
       ticketTypes: true,
       ticketPriorities: true,
       modules: true,
@@ -296,6 +324,7 @@ async function main() {
   const priority = (name: string) =>
     project.ticketPriorities.find((p) => p.name === name)!;
   const sprint = (name: string) => project.sprints.find((s) => s.name === name)!;
+  const release = (name: string) => project.releases.find((r) => r.name === name)!;
   const mod = (name: string) => project.modules.find((m) => m.name === name)!;
 
   // Les composants sont créés APRÈS le projet : chacun résout par son nom le
@@ -333,6 +362,8 @@ async function main() {
     labels?: string[];
     assignee?: string;
     sprint?: string;
+    /** Version de livraison (facultative, indépendante du sprint). */
+    release?: string;
     component?: string;
     module?: string;
     /** Description libre (types sans modèle imposé). */
@@ -344,10 +375,10 @@ async function main() {
      */
     report?: { observation: string; expected: string; context: string; specs?: string };
   }> = [
-    { title: "Coller une image du presse-papier à la création", type: "Fonctionnalité", priority: "Haute", column: "En cours", labels: ["feature"], assignee: admin.id, sprint: "Sprint 1", component: "Champ pièces jointes" },
-    { title: "Le drag & drop clavier ne fonctionne pas sur Firefox", type: "Bug", priority: "Urgente", column: "À faire", labels: ["bug", "urgent"], sprint: "Sprint 1", component: "Tableau Kanban", report: { observation: "Sur le tableau Kanban, prendre une carte avec Espace puis la déplacer avec les flèches n'a aucun effet : la carte reste dans sa colonne et aucune annonce vocale n'est émise.", expected: "La carte suit les flèches de colonne en colonne, et un message vocal annonce la colonne visée puis la validation du dépôt, comme sur Chrome.", context: "Firefox 128 (macOS 15) et Firefox 128 (Windows 11). Chrome 127 et Safari 18 se comportent correctement. Reproduit sur le projet RKN avec le compte rapporteur.", specs: "L'exigence d'accessibilité impose que le Kanban soit entièrement jouable au clavier." } },
+    { title: "Coller une image du presse-papier à la création", type: "Fonctionnalité", priority: "Haute", column: "En cours", labels: ["feature"], assignee: admin.id, sprint: "Sprint 1", release: "1.1", component: "Champ pièces jointes" },
+    { title: "Le drag & drop clavier ne fonctionne pas sur Firefox", type: "Bug", priority: "Urgente", column: "À faire", labels: ["bug", "urgent"], sprint: "Sprint 1", release: "1.1", component: "Tableau Kanban", report: { observation: "Sur le tableau Kanban, prendre une carte avec Espace puis la déplacer avec les flèches n'a aucun effet : la carte reste dans sa colonne et aucune annonce vocale n'est émise.", expected: "La carte suit les flèches de colonne en colonne, et un message vocal annonce la colonne visée puis la validation du dépôt, comme sur Chrome.", context: "Firefox 128 (macOS 15) et Firefox 128 (Windows 11). Chrome 127 et Safari 18 se comportent correctement. Reproduit sur le projet RKN avec le compte rapporteur.", specs: "L'exigence d'accessibilité impose que le Kanban soit entièrement jouable au clavier." } },
     { title: "Ajouter la limite de WIP par colonne", type: "Fonctionnalité", priority: "Moyenne", column: "Terminé", labels: ["feature"], assignee: admin.id, sprint: "Sprint 0", component: "Tableau Kanban" },
-    { title: "Migrer le schéma Prisma en production", type: "Maintenance", priority: "Moyenne", column: "En revue", assignee: admin.id, sprint: "Sprint 1" },
+    { title: "Migrer le schéma Prisma en production", type: "Maintenance", priority: "Moyenne", column: "En revue", assignee: admin.id, sprint: "Sprint 1", release: "1.1" },
     { title: "Filtrer la vue liste par sprint", type: "Tâche", priority: "Basse", column: "Terminé", assignee: reporter.id, sprint: "Sprint 0", component: "Vue liste" },
     { title: "Erreur 500 à la suppression d'une colonne pleine", type: "Bug", priority: "Haute", column: "À faire", labels: ["bug"], component: "Paramètres du projet", report: { observation: "Supprimer depuis les Paramètres une colonne contenant encore des tickets renvoie une erreur 500 ; la colonne subsiste et aucun message n'explique le refus.", expected: "Soit la suppression est refusée avec un message indiquant combien de tickets bloquent, soit les tickets sont réaffectés à la première colonne, mais jamais une erreur brute.", context: "Paramètres → Colonnes, colonne « En revue » contenant 3 tickets. Reproduit en local et sur la recette." } },
     { title: "Configurer MinIO pour les pièces jointes", type: "Maintenance", priority: "Moyenne", column: "Terminé", assignee: admin.id, sprint: "Sprint 0", component: "Champ pièces jointes" },
@@ -394,6 +425,7 @@ async function main() {
         reporterId: reporter.id,
         assigneeId: s.assignee ?? null,
         sprintId: s.sprint ? sprint(s.sprint).id : null,
+        releaseId: s.release ? release(s.release).id : null,
         componentId: s.component ? component(s.component).id : null,
         // Module propre : jamais renseigné en présence d'un composant (le module
         // effectif est alors celui du composant) - invariant garanti ici aussi.

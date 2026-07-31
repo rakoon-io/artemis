@@ -67,6 +67,8 @@ export interface CreateTicketServiceInput {
   moduleId?: string | null;
   assigneeId?: string | null;
   sprintId?: string | null;
+  /** Version de livraison. `undefined` = ne pas toucher ; `null` = détacher. */
+  releaseId?: string | null;
   labelIds?: string[];
 }
 
@@ -140,6 +142,18 @@ export function createTicket(input: CreateTicketServiceInput, reporterId: string
       if (!sprint) sprintId = null;
     }
 
+    // La VERSION suit la même règle que le sprint : une version d'un autre
+    // projet est ignorée plutôt que d'attacher un ticket à un objet qui ne le
+    // concerne pas.
+    let releaseId = input.releaseId ?? null;
+    if (releaseId) {
+      const release = await tx.release.findFirst({
+        where: { id: releaseId, projectId: input.projectId },
+        select: { id: true },
+      });
+      if (!release) releaseId = null;
+    }
+
     let componentId = input.componentId ?? null;
     if (componentId) {
       const component = await tx.component.findFirst({
@@ -197,6 +211,7 @@ export function createTicket(input: CreateTicketServiceInput, reporterId: string
         reporterId,
         assigneeId,
         sprintId,
+        releaseId,
         labels:
           labelIds.length > 0
             ? { create: labelIds.map((labelId) => ({ labelId })) }
@@ -387,6 +402,8 @@ export interface UpdateTicketServiceInput {
   moduleId?: string | null;
   assigneeId?: string | null;
   sprintId?: string | null;
+  /** Version de livraison. `undefined` = ne pas toucher ; `null` = détacher. */
+  releaseId?: string | null;
   labelIds?: string[];
 }
 
@@ -427,6 +444,15 @@ export function updateTicket(input: UpdateTicketServiceInput) {
         select: { id: true },
       });
       if (!sprint) sprintId = undefined;
+    }
+
+    let releaseId = rest.releaseId;
+    if (releaseId) {
+      const release = await tx.release.findFirst({
+        where: { id: releaseId, projectId },
+        select: { id: true },
+      });
+      if (!release) releaseId = undefined;
     }
 
     let componentId = rest.componentId;
@@ -492,6 +518,7 @@ export function updateTicket(input: UpdateTicketServiceInput) {
         ...(moduleId !== undefined ? { moduleId } : {}),
         ...(assigneeId !== undefined ? { assigneeId } : {}),
         ...(sprintId !== undefined ? { sprintId } : {}),
+        ...(releaseId !== undefined ? { releaseId } : {}),
       },
       include: {
         column: true,

@@ -6,6 +6,7 @@ import { ticketForm } from "./en/ticketForm";
 import { ticketDetail } from "./en/ticketDetail";
 import { ticketTemplate } from "./en/ticketTemplate";
 import { aiTickets } from "./en/aiTickets";
+import { releases } from "./en/releases";
 import { sprints } from "./en/sprints";
 import { wiki } from "./en/wiki";
 import { settings } from "./en/settings";
@@ -84,6 +85,7 @@ export const en: Messages = {
   ticketDetail,
   ticketTemplate,
   aiTickets,
+  releases,
   sprints,
   wiki,
   settings,

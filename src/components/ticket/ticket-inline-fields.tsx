@@ -12,6 +12,7 @@ import { InlineSelect } from "@/components/ui/inline-select";
 import { LabelMultiSelect } from "@/components/ticket/label-multi-select";
 import {
   NO_ASSIGNEE,
+  NO_RELEASE,
   NO_COMPONENT,
   NO_MODULE,
   NO_SPRINT,
@@ -190,6 +191,44 @@ export function TicketAssigneeInline({
       onSave={(next) =>
         save({ assigneeId: next === NO_ASSIGNEE ? null : next })
       }
+    >
+      {children}
+    </InlineSelect>
+  );
+}
+
+/**
+ * VERSION de livraison du ticket. Indépendante du sprint : le sprint dit quand
+ * on travaille, la version ce qui sort.
+ */
+export function TicketReleaseInline({
+  ticketId,
+  value,
+  releases,
+  canEdit,
+  children,
+  compact,
+}: {
+  ticketId: string;
+  value: string | null;
+  releases: { id: string; name: string }[];
+  canEdit: boolean;
+  children?: ReactNode;
+  /** Rendu dense, sans crayon (cf. `InlineSelect`). */
+  compact?: boolean;
+}) {
+  const t = useDict();
+  const save = useFieldSaver(ticketId);
+  return (
+    <InlineSelect
+      value={value ?? NO_RELEASE}
+      field={t.releases.ticketField}
+      emptyValue={NO_RELEASE}
+      emptyLabel={t.releases.noRelease}
+      disabled={!canEdit || releases.length === 0}
+      compact={compact}
+      options={releases.map((r) => ({ value: r.id, label: r.name }))}
+      onSave={(next) => save({ releaseId: next === NO_RELEASE ? null : next })}
     >
       {children}
     </InlineSelect>

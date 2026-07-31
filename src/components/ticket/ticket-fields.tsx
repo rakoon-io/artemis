@@ -84,6 +84,8 @@ export type ModuleOption = {
 // Valeurs sentinelles pour les <Select> (Radix interdit la valeur "").
 export const NO_ASSIGNEE = "__none__";
 export const NO_SPRINT = "__backlog__";
+/** Sentinelle « aucune version » (Radix interdit la chaîne vide). */
+export const NO_RELEASE = "__no_release__";
 export const NO_COMPONENT = "__no_component__";
 export const NO_MODULE = "__no_module__";
 export const ALL = "__all__";

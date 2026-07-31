@@ -13,6 +13,13 @@ enum Role {
   REPORTER
 }
 
+// État d'une VERSION du produit. Deux états suffisent : ce qui n'est pas encore
+// livré, et ce qui l'est. Un troisième - « archivée » - se déduirait de la date.
+enum ReleaseState {
+  PLANNED
+  RELEASED
+}
+
 enum SprintState {
   PLANNED
   ACTIVE
@@ -132,6 +139,7 @@ model Project {
   columns          Column[]
   tickets          Ticket[]
   sprints          Sprint[]
+  releases         Release[]
   labels           Label[]
   ticketTypes      TicketType[]
   ticketPriorities TicketPriority[]
@@ -301,6 +309,10 @@ model Ticket {
   assignee    User?           @relation("assignee", fields: [assigneeId], references: [id])
   sprintId    String?
   sprint      Sprint?         @relation(fields: [sprintId], references: [id])
+  // Version dans laquelle le ticket est livré. `SetNull` : supprimer une version
+  // ne doit jamais emporter les tickets qu'elle contenait.
+  releaseId   String?
+  release     Release?        @relation(fields: [releaseId], references: [id], onDelete: SetNull)
   labels      LabelOnTicket[]
   attachments Attachment[]
   comments    Comment[]
@@ -310,6 +322,7 @@ model Ticket {
   @@unique([projectId, number])
   @@index([projectId, columnId])
   @@index([sprintId])
+  @@index([releaseId])
   @@index([typeId])
   @@index([priorityId])
   @@index([componentId])
@@ -328,6 +341,34 @@ model Sprint {
   createdAt DateTime    @default(now())
   tickets   Ticket[]
 
+  @@index([projectId])
+}
+
+// VERSION du produit - « 1.2.0 ». Ce qu'on LIVRE, là où le sprint dit quand on
+// TRAVAILLE : les deux ne se recouvrent pas, un correctif urgent sort entre deux
+// itérations et une refonte s'étale sur trois.
+//
+// À ne pas confondre avec `SpecVersion`, qui fige une spécification du wiki.
+// D'où le nom `Release` ici : l'interface dit « version », le code distingue.
+model Release {
+  id          String       @id @default(cuid())
+  projectId   String
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String // « 1.2.0 », « Rentrée 2026 »…
+  description String? // notes de version
+  state       ReleaseState @default(PLANNED)
+  // Date VISÉE, posée à la planification.
+  dueDate     DateTime?
+  // Date de livraison EFFECTIVE, posée au passage à « livrée ». Les deux
+  // coexistent : comparer ce qu'on visait à ce qu'on a fait est le seul moyen
+  // d'apprendre quelque chose d'un historique de versions.
+  releasedAt  DateTime?
+  createdAt   DateTime     @default(now())
+  tickets     Ticket[]
+
+  // Deux versions d'un même nom dans un projet n'auraient aucun sens, et
+  // rendraient toute référence ambiguë.
+  @@unique([projectId, name])
   @@index([projectId])
 }
 

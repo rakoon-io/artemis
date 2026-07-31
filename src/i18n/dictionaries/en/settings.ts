@@ -7,6 +7,7 @@ export const settings: SettingsDict = {
     board: "Board",
     tickets: "Tickets",
     sprints: "Sprints",
+    versions: "Versions",
     wiki: "Wiki",
     structure: "Structure",
     settings: "Settings",

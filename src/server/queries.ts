@@ -1,5 +1,6 @@
 import { isAdmin, type PolicyUser } from "@/lib/policies";
 import * as columnService from "./services/column.service";
+import * as releaseService from "./services/release.service";
 import * as wikiAttachmentService from "./services/wiki-attachment.service";
 import * as componentService from "./services/component.service";
 import * as emailLogService from "./services/email-log.service";
@@ -75,6 +76,16 @@ export async function getBoardData(projectId: string) {
  *  de statut là où l'on ne dessine pas le tableau. */
 export function getColumns(projectId: string) {
   return columnService.listColumns(projectId);
+}
+
+/** Versions du projet - « à livrer » d'abord, puis les livrées. */
+export function getReleases(projectId: string) {
+  return releaseService.listReleases(projectId);
+}
+
+/** Idem, avec leur contenu et de quoi mesurer l'avancement. */
+export function getReleasesWithTickets(projectId: string) {
+  return releaseService.listReleasesWithTickets(projectId);
 }
 
 export function getTicketsList(projectId: string, filters: TicketFilters = {}) {
