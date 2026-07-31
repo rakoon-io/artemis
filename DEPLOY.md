@@ -90,8 +90,22 @@ docker run -d --name artemis-minio --restart unless-stopped \
 
 ### 5.3 - Build de l'image (contexte = source du repo + Dockerfile)
 ```bash
-docker build -t artemis:latest /chemin/vers/le/contexte
+docker build \
+  --build-arg ARTEMIS_COMMIT="$(git rev-parse HEAD)" \
+  --build-arg ARTEMIS_COMMIT_DATE="$(git log -1 --format=%cI)" \
+  -t artemis:latest /chemin/vers/le/contexte
 ```
+
+> **Les deux `--build-arg` ne sont pas décoratifs.** Le pied de page affiche
+> `v<version>+<empreinte> · <date du commit>` — la première question de tout
+> signalement. Ces valeurs sont lues dans le dépôt **au moment du build**, or
+> `.dockerignore` exclut `.git` : sans elles, l'image ne saura dire que son
+> numéro de version, jamais de quel commit elle sort. Le build ne échoue pas
+> pour autant (cf. `src/lib/build-info.ts`).
+>
+> À exécuter **depuis le dépôt** : les deux commandes `git` s'évaluent sur votre
+> machine, pas dans le conteneur. En CI, les variables de la forge conviennent
+> telles quelles (`GITHUB_SHA`, `CI_COMMIT_SHA`, `CI_COMMIT_TIMESTAMP`…).
 
 ### 5.4 - Fichier d'environnement `rtr.env`
 ```ini
@@ -166,7 +180,10 @@ docker run --rm --network dokploy-network --env-file rtr.env \
 
 ## 6. Mise à jour / redéploiement
 ```bash
-docker build -t artemis:latest <contexte>
+docker build \
+  --build-arg ARTEMIS_COMMIT="$(git rev-parse HEAD)" \
+  --build-arg ARTEMIS_COMMIT_DATE="$(git log -1 --format=%cI)" \
+  -t artemis:latest <contexte>
 # si le schéma Prisma a changé : rejouer 5.5 (migrate deploy)
 docker rm -f artemis
 docker run -d --name artemis --restart unless-stopped \

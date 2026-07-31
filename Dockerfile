@@ -14,6 +14,13 @@ ENV DATABASE_URL="postgresql://placeholder:placeholder@db:5432/placeholder?schem
 ENV AUTH_SECRET="build-placeholder-secret-override-at-runtime"
 ENV AUTH_TRUST_HOST=true
 ENV NODE_ENV=production
+# Identité du code compilé, affichée en pied de page. `.dockerignore` exclut
+# `.git` : impossible de la lire ici, il faut la PASSER. Sans ces deux valeurs
+# l'image se construit quand même, mais n'affichera que son numéro de version -
+# sans dire de quel commit elle sort. Voir DEPLOY.md § 5.3.
+ARG ARTEMIS_COMMIT=""
+ARG ARTEMIS_COMMIT_DATE=""
+ENV ARTEMIS_COMMIT=$ARTEMIS_COMMIT ARTEMIS_COMMIT_DATE=$ARTEMIS_COMMIT_DATE
 RUN npm run build
 
 # ---- Runner ----
