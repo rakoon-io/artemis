@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { GripVertical } from "lucide-react";
+import { GripVertical, UserPlus } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Role } from "@prisma/client";
@@ -23,7 +23,34 @@ import {
   ModuleBadge,
 } from "@/components/ticket/ticket-fields";
 import { effectiveModule } from "@/lib/effective-module";
+import {
+  TicketAssigneeInline,
+  TicketPriorityInline,
+  TicketTypeInline,
+  type AssignableMember,
+} from "@/components/ticket/ticket-inline-fields";
+import type {
+  PriorityOption,
+  TicketTypeOption,
+} from "@/components/ticket/ticket-fields";
 import type { BoardTicket, CurrentUser } from "./kanban-board";
+
+/**
+ * CE QU'ON PEUT CHANGER SANS OUVRIR LA CARTE : le type, la priorité, l'assigné.
+ *
+ * C'est le geste de tri, celui qu'on répète en passant en revue une colonne. Le
+ * composant, le module et les labels restent à la liste ou à la fiche : ce sont
+ * des rangements, ils demandent de la place, et l'éditeur de labels se déplie -
+ * il ferait éclater une carte large de deux cents pixels.
+ *
+ * Le statut ne figure pas non plus : sur un tableau, c'est la COLONNE, et on la
+ * change en faisant glisser.
+ */
+export interface CardOptions {
+  types: TicketTypeOption[];
+  priorities: PriorityOption[];
+  members: AssignableMember[];
+}
 
 /** Un utilisateur peut déplacer un ticket s'il est Admin, rapporteur ou assigné. */
 export function canDragTicket(user: CurrentUser, ticket: BoardTicket): boolean {
@@ -43,11 +70,16 @@ export function TicketCardView({
   projectKey,
   handle,
   overlay = false,
+  options,
+  canEdit = false,
 }: {
   ticket: BoardTicket;
   projectKey: string;
   handle?: ReactNode;
   overlay?: boolean;
+  /** Absentes pendant le glissement : la carte fantôme ne se modifie pas. */
+  options?: CardOptions;
+  canEdit?: boolean;
 }) {
   const t = useDict();
   const ticketModule = effectiveModule(ticket);
@@ -57,7 +89,7 @@ export function TicketCardView({
   return (
     <Card
       className={cn(
-        "gap-0 p-2.5",
+        "group/card gap-0 p-2.5",
         overlay && "rotate-1 shadow-lg ring-2 ring-ring",
       )}
     >
@@ -68,10 +100,25 @@ export function TicketCardView({
             <span className="font-mono text-xs text-muted-foreground">
               {ticket.key}
             </span>
-            <ColorBadge
-              name={ticket.priority.name}
-              color={ticket.priority.color}
-            />
+            {options ? (
+              <TicketPriorityInline
+                ticketId={ticket.id}
+                value={ticket.priorityId}
+                priorities={options.priorities}
+                canEdit={canEdit}
+                compact
+              >
+                <ColorBadge
+                  name={ticket.priority.name}
+                  color={ticket.priority.color}
+                />
+              </TicketPriorityInline>
+            ) : (
+              <ColorBadge
+                name={ticket.priority.name}
+                color={ticket.priority.color}
+              />
+            )}
           </div>
 
           <Link
@@ -82,7 +129,19 @@ export function TicketCardView({
           </Link>
 
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <ColorBadge name={ticket.type.name} color={ticket.type.color} />
+            {options ? (
+              <TicketTypeInline
+                ticketId={ticket.id}
+                value={ticket.typeId}
+                types={options.types}
+                canEdit={canEdit}
+                compact
+              >
+                <ColorBadge name={ticket.type.name} color={ticket.type.color} />
+              </TicketTypeInline>
+            ) : (
+              <ColorBadge name={ticket.type.name} color={ticket.type.color} />
+            )}
             {/* Composant concerné : situe la demande dans le produit. */}
             {ticket.component && (
               <ComponentBadge
@@ -101,7 +160,7 @@ export function TicketCardView({
             )}
           </div>
 
-          {(ticket.labels.length > 0 || assigneeName) && (
+          {(ticket.labels.length > 0 || assigneeName || (options && canEdit)) && (
             <div className="mt-2 flex items-end justify-between gap-2">
               <div className="flex min-w-0 flex-wrap gap-1">
                 {ticket.labels.slice(0, 4).map(({ label }) => (
@@ -123,17 +182,53 @@ export function TicketCardView({
                 )}
               </div>
 
-              {assigneeName && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Avatar className="size-6 shrink-0">
-                      <AvatarFallback className="text-[10px]">
-                        {initials(assigneeName)}
-                      </AvatarFallback>
-                    </Avatar>
-                  </TooltipTrigger>
-                  <TooltipContent>{assigneeName}</TooltipContent>
-                </Tooltip>
+              {options ? (
+                <span className="shrink-0">
+                  <TicketAssigneeInline
+                    ticketId={ticket.id}
+                    value={ticket.assigneeId}
+                    members={options.members}
+                    canEdit={canEdit}
+                    compact
+                  >
+                    {assigneeName ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Avatar className="size-6 shrink-0">
+                            <AvatarFallback className="text-[10px]">
+                              {initials(assigneeName)}
+                            </AvatarFallback>
+                          </Avatar>
+                        </TooltipTrigger>
+                        <TooltipContent>{assigneeName}</TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      /* PLACE VIDE : sans elle, une carte non assignée n'offrait
+                         rien à cliquer. Elle ne paraît qu'au survol de la carte -
+                         et toujours au doigt, où il n'y a pas de survol - pour ne
+                         pas constellez le tableau de pastilles grises. */
+                      <span
+                        className="flex size-6 shrink-0 items-center justify-center rounded-full border border-dashed text-muted-foreground opacity-0 transition-opacity group-hover/card:opacity-100 pointer-coarse:opacity-100"
+                        aria-hidden
+                      >
+                        <UserPlus className="size-3" />
+                      </span>
+                    )}
+                  </TicketAssigneeInline>
+                </span>
+              ) : (
+                assigneeName && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Avatar className="size-6 shrink-0">
+                        <AvatarFallback className="text-[10px]">
+                          {initials(assigneeName)}
+                        </AvatarFallback>
+                      </Avatar>
+                    </TooltipTrigger>
+                    <TooltipContent>{assigneeName}</TooltipContent>
+                  </Tooltip>
+                )
               )}
             </div>
           )}
@@ -152,10 +247,12 @@ export function TicketCard({
   ticket,
   projectKey,
   currentUser,
+  options,
 }: {
   ticket: BoardTicket;
   projectKey: string;
   currentUser: CurrentUser;
+  options: CardOptions;
 }) {
   const t = useDict();
   const draggable = canDragTicket(currentUser, ticket);
@@ -182,6 +279,10 @@ export function TicketCard({
       <TicketCardView
         ticket={ticket}
         projectKey={projectKey}
+        options={options}
+        /* Mêmes droits que le déplacement : administrateur, rapporteur ou
+           assigné (`canEditTicket`). */
+        canEdit={draggable}
         handle={
           draggable ? (
             <button

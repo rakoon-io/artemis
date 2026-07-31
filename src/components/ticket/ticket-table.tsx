@@ -1,53 +1,50 @@
 import Link from "next/link";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { cn, formatDate, formatTime, initials } from "@/lib/utils";
+import { cn, formatDate, formatTime } from "@/lib/utils";
 import { getDictionary } from "@/i18n/server";
-import { effectiveModule } from "@/lib/effective-module";
+import type { TicketRow } from "./ticket-fields";
 import {
-  ColorBadge,
-  ComponentBadge,
-  LabelChip,
-  ModuleBadge,
-  type SprintOption,
-  type TicketRow,
-} from "./ticket-fields";
+  RowAssignee,
+  RowComponent,
+  RowLabels,
+  RowModule,
+  RowPriority,
+  RowSprint,
+  RowStatus,
+  RowType,
+  type RowOptions,
+} from "./ticket-row-fields";
+import { canEditTicket, type PolicyUser } from "@/lib/policies";
 
 /**
- * Cellule « Module » : affiche le module EFFECTIF du ticket, c'est-à-dire celui
- * de son composant s'il en a un, sinon le sien. Extraite pour ne résoudre ce
- * module qu'une fois par ligne.
- */
-function ModuleCell({ ticket }: { ticket: TicketRow }) {
-  const ticketModule = effectiveModule(ticket);
-  return (
-    <td className="px-3 py-2">
-      {ticketModule ? (
-        <ModuleBadge name={ticketModule.name} color={ticketModule.color} />
-      ) : (
-        <span className="text-muted-foreground">-</span>
-      )}
-    </td>
-  );
-}
-
-/**
- * Vue liste des tickets (tableau). Rendu serveur : purement présentationnel.
- * `sprints` sert à résoudre le nom du sprint (la query liste ne l'inclut pas).
+ * Vue liste des tickets (tableau). Rendu serveur, mais ses cellules sont
+ * MODIFIABLES EN PLACE : chacune délègue à l'enveloppe cliente déjà employée par
+ * la fiche du ticket (cf. `./ticket-row-fields`). Une liste sert autant à ranger
+ * qu'à lire - assigner, changer un statut ou une priorité ne devrait pas
+ * demander d'ouvrir chaque ticket puis de revenir.
+ *
  * La colonne « Composant » n'apparaît que si le projet en déclare au moins un
  * (`hasComponents`) : sinon elle n'afficherait qu'une colonne de tirets.
  */
 export async function TicketTable({
   items,
   projectKey,
-  sprints,
+  options,
+  user,
   hasComponents,
   hasModules,
   hasFilters,
 }: {
   items: TicketRow[];
   projectKey: string;
-  sprints: SprintOption[];
+  /**
+   * Listes de choix des cellules modifiables (déjà chargées par la page). Les
+   * sprints y figurent : le tableau n'a plus besoin de les recevoir à part, il
+   * lisait leur nom dans la même liste.
+   */
+  options: RowOptions;
+  /** Qui regarde : le droit de modifier se décide ticket par ticket. */
+  user: PolicyUser;
   hasComponents: boolean;
   hasModules: boolean;
   hasFilters: boolean;
@@ -71,17 +68,23 @@ export async function TicketTable({
     );
   }
 
-  const sprintName = new Map(sprints.map((s) => [s.id, s.name] as const));
-
   return (
     <div className="overflow-x-auto rounded-lg border">
       <table className="w-full text-sm">
         <thead className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
           <tr>
-            <th scope="col" className="px-3 py-2 font-medium">{t.tickets.colKey}</th>
-            <th scope="col" className="px-3 py-2 font-medium">{t.tickets.colTitle}</th>
-            <th scope="col" className="px-3 py-2 font-medium">{t.tickets.colType}</th>
-            <th scope="col" className="px-3 py-2 font-medium">{t.tickets.colPriority}</th>
+            <th scope="col" className="px-3 py-2 font-medium">
+              {t.tickets.colKey}
+            </th>
+            <th scope="col" className="px-3 py-2 font-medium">
+              {t.tickets.colTitle}
+            </th>
+            <th scope="col" className="px-3 py-2 font-medium">
+              {t.tickets.colType}
+            </th>
+            <th scope="col" className="px-3 py-2 font-medium">
+              {t.tickets.colPriority}
+            </th>
             {hasModules && (
               <th scope="col" className="px-3 py-2 font-medium">
                 {t.tickets.colModule}
@@ -92,102 +95,114 @@ export async function TicketTable({
                 {t.tickets.colComponent}
               </th>
             )}
-            <th scope="col" className="px-3 py-2 font-medium">{t.tickets.colStatus}</th>
-            <th scope="col" className="px-3 py-2 font-medium">{t.tickets.colAssignee}</th>
-            <th scope="col" className="px-3 py-2 font-medium">{t.tickets.colSprint}</th>
-            <th scope="col" className="px-3 py-2 font-medium">{t.tickets.colLabels}</th>
-            <th scope="col" className="px-3 py-2 font-medium">{t.tickets.colUpdated}</th>
+            <th scope="col" className="px-3 py-2 font-medium">
+              {t.tickets.colStatus}
+            </th>
+            <th scope="col" className="px-3 py-2 font-medium">
+              {t.tickets.colAssignee}
+            </th>
+            <th scope="col" className="px-3 py-2 font-medium">
+              {t.tickets.colSprint}
+            </th>
+            <th scope="col" className="px-3 py-2 font-medium">
+              {t.tickets.colLabels}
+            </th>
+            <th scope="col" className="px-3 py-2 font-medium">
+              {t.tickets.colUpdated}
+            </th>
           </tr>
         </thead>
         <tbody>
-          {items.map((ticket) => (
-            <tr
-              key={ticket.id}
-              className={cn("border-b transition-colors last:border-0 hover:bg-muted/40")}
-            >
-              <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-muted-foreground">
-                {ticket.key}
-              </td>
-              <td className="px-3 py-2">
-                <Link
-                  href={`/projects/${projectKey}/tickets/${ticket.id}`}
-                  className="font-medium hover:underline"
-                >
-                  {ticket.title}
-                </Link>
-              </td>
-              <td className="px-3 py-2">
-                <ColorBadge name={ticket.type.name} color={ticket.type.color} />
-              </td>
-              <td className="px-3 py-2">
-                <ColorBadge
-                  name={ticket.priority.name}
-                  color={ticket.priority.color}
-                />
-              </td>
-              {hasModules && <ModuleCell ticket={ticket} />}
-              {hasComponents && (
-                <td className="px-3 py-2">
-                  {ticket.component ? (
-                    <ComponentBadge
-                      name={ticket.component.name}
-                      kind={ticket.component.kind}
-                      color={ticket.component.color}
-                      kindLabel={t.taxonomy.componentKinds[ticket.component.kind]}
-                    />
-                  ) : (
-                    <span className="text-muted-foreground">-</span>
-                  )}
+          {items.map((ticket) => {
+            const canEdit = canEditTicket(user, ticket);
+            return (
+              <tr
+                key={ticket.id}
+                className={cn(
+                  "border-b transition-colors last:border-0 hover:bg-muted/40",
+                )}
+              >
+                <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-muted-foreground">
+                  {ticket.key}
                 </td>
-              )}
-              <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">
-                {ticket.column.name}
-              </td>
-              <td className="whitespace-nowrap px-3 py-2">
-                {ticket.assignee ? (
-                  <span className="flex items-center gap-2">
-                    <Avatar className="size-6">
-                      <AvatarFallback className="text-[10px]">
-                        {initials(ticket.assignee.name ?? ticket.assignee.email)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="truncate">
-                      {ticket.assignee.name ?? ticket.assignee.email}
-                    </span>
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground">-</span>
+                <td className="px-3 py-2">
+                  <Link
+                    href={`/projects/${projectKey}/tickets/${ticket.id}`}
+                    className="font-medium hover:underline"
+                  >
+                    {ticket.title}
+                  </Link>
+                </td>
+                <td className="px-3 py-2">
+                  <RowType
+                    ticket={ticket}
+                    options={options}
+                    canEdit={canEdit}
+                  />
+                </td>
+                <td className="px-3 py-2">
+                  <RowPriority
+                    ticket={ticket}
+                    options={options}
+                    canEdit={canEdit}
+                  />
+                </td>
+                {hasModules && (
+                  <td className="px-3 py-2">
+                    <RowModule
+                      ticket={ticket}
+                      options={options}
+                      canEdit={canEdit}
+                    />
+                  </td>
                 )}
-              </td>
-              <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">
-                {ticket.sprintId
-                  ? (sprintName.get(ticket.sprintId) ?? "-")
-                  : "-"}
-              </td>
-              <td className="px-3 py-2">
-                {ticket.labels.length > 0 ? (
-                  <span className="flex flex-wrap gap-1">
-                    {ticket.labels.map((l) => (
-                      <LabelChip
-                        key={l.labelId}
-                        name={l.label.name}
-                        color={l.label.color}
-                      />
-                    ))}
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground">-</span>
+                {hasComponents && (
+                  <td className="px-3 py-2">
+                    <RowComponent
+                      ticket={ticket}
+                      options={options}
+                      canEdit={canEdit}
+                    />
+                  </td>
                 )}
-              </td>
-              {/* Le jour et l'heure EMPILÉS : mis bout à bout, ils élargissaient
+                <td className="px-3 py-2 text-muted-foreground">
+                  <RowStatus
+                    ticket={ticket}
+                    options={options}
+                    canEdit={canEdit}
+                  />
+                </td>
+                <td className="max-w-[10rem] px-3 py-2">
+                  <RowAssignee
+                    ticket={ticket}
+                    options={options}
+                    canEdit={canEdit}
+                  />
+                </td>
+                <td className="px-3 py-2 text-muted-foreground">
+                  <RowSprint
+                    ticket={ticket}
+                    options={options}
+                    canEdit={canEdit}
+                  />
+                </td>
+                <td className="px-3 py-2">
+                  <RowLabels
+                    ticket={ticket}
+                    options={options}
+                    canEdit={canEdit}
+                  />
+                </td>
+                {/* Le jour et l'heure EMPILÉS : mis bout à bout, ils élargissaient
                   d'un tiers une colonne que le tableau ne pouvait déjà pas
                   montrer entièrement. */}
-              <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">
-                <div>{formatDate(ticket.updatedAt)}</div>
-                <div className="text-xs">{formatTime(ticket.updatedAt)}</div>
-              </td>
-            </tr>
-          ))}
+                <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">
+                  <div>{formatDate(ticket.updatedAt)}</div>
+                  <div className="text-xs">{formatTime(ticket.updatedAt)}</div>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

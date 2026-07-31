@@ -410,6 +410,8 @@ export function KanbanBoard({
                 key={column.id}
                 column={column}
                 tickets={column.tickets.filter(match)}
+                /* Les mêmes listes que les filtres : elles sont déjà là. */
+                cardOptions={{ types, priorities, members }}
                 totalCount={column.tickets.length}
                 projectKey={projectKey}
                 currentUser={currentUser}

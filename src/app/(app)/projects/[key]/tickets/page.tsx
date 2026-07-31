@@ -3,8 +3,10 @@ import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { Button } from "@/components/ui/button";
 import { getAccessibleProjectByKey } from "@/server/access";
+import { Role } from "@prisma/client";
 import {
   getAssignableUsers,
+  getColumns,
   getComponents,
   getLabels,
   getModules,
@@ -54,8 +56,17 @@ export default async function TicketsListPage({
   const moduleId = one(sp.moduleId);
   const page = Math.max(1, Number(one(sp.page)) || 1);
 
-  const [list, sprints, labels, members, types, priorities, components, modules] =
-    await Promise.all([
+  const [
+    list,
+    sprints,
+    labels,
+    members,
+    types,
+    priorities,
+    components,
+    modules,
+    columns,
+  ] = await Promise.all([
       getTicketsList(project.id, {
         q,
         assigneeId,
@@ -74,6 +85,7 @@ export default async function TicketsListPage({
       getTicketPriorities(project.id),
       getComponents(project.id),
       getModules(project.id),
+      getColumns(project.id),
     ]);
 
   const totalPages = Math.max(1, Math.ceil(list.total / list.pageSize));
@@ -156,7 +168,22 @@ export default async function TicketsListPage({
       <TicketTable
         items={list.items}
         projectKey={project.key}
-        sprints={sprints}
+        /* Les cellules se modifient en place : elles reçoivent les mêmes listes
+           que les filtres ci-dessus, déjà chargées. */
+        options={{
+          types,
+          priorities,
+          columns,
+          members,
+          sprints,
+          modules,
+          components,
+          labels,
+        }}
+        user={{
+          id: session?.user?.id ?? "",
+          role: session?.user?.role ?? Role.REPORTER,
+        }}
         hasComponents={components.length > 0}
         hasModules={modules.length > 0}
         hasFilters={hasFilters}

@@ -522,6 +522,23 @@ export function setTicketLabels(ticketId: string, labelIds: string[]) {
   });
 }
 
+/**
+ * Rang du DERNIER ticket d'une colonne, ou `null` si elle est vide.
+ *
+ * Sert à déposer un ticket « à la fin » quand le geste ne dit pas où : changer
+ * un statut depuis la liste n'indique pas de position, et sans cela le ticket
+ * atterrirait au milieu de la colonne, à un rang calculé entre deux bords
+ * absents.
+ */
+export async function lastRankInColumn(columnId: string): Promise<string | null> {
+  const last = await prisma.ticket.findFirst({
+    where: { columnId },
+    orderBy: { rank: "desc" },
+    select: { rank: true },
+  });
+  return last?.rank ?? null;
+}
+
 export function moveTicket(ticketId: string, columnId: string, rank: string) {
   return prisma.ticket.update({
     where: { id: ticketId },

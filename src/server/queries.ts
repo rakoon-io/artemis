@@ -71,6 +71,12 @@ export async function getBoardData(projectId: string) {
   };
 }
 
+/** Colonnes ordonnées du projet, sans leurs tickets : de quoi peupler un choix
+ *  de statut là où l'on ne dessine pas le tableau. */
+export function getColumns(projectId: string) {
+  return columnService.listColumns(projectId);
+}
+
 export function getTicketsList(projectId: string, filters: TicketFilters = {}) {
   return ticketService.listTickets(projectId, filters);
 }

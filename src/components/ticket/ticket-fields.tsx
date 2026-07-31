@@ -20,6 +20,12 @@ export type Member = Awaited<ReturnType<typeof getMembers>>[number];
 export type SprintOption = Awaited<ReturnType<typeof getSprints>>[number];
 export type LabelOption = Awaited<ReturnType<typeof getLabels>>[number];
 export type TicketRow = Awaited<ReturnType<typeof getTicketsList>>["items"][number];
+/**
+ * Colonne du tableau, c'est-à-dire un STATUT. Réduite à ce qu'une liste
+ * déroulante en a besoin : les surfaces qui la reçoivent n'ont que faire des
+ * tickets qu'elle contient.
+ */
+export type ColumnOption = { id: string; name: string };
 export type TicketDetail = NonNullable<Awaited<ReturnType<typeof getTicketDetail>>>;
 
 /**

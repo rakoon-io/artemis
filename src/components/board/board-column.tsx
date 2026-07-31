@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useDict } from "@/i18n/provider";
 import { fmt } from "@/i18n";
-import { TicketCard } from "./ticket-card";
+import { TicketCard, type CardOptions } from "./ticket-card";
 import type { BoardColumnData, BoardTicket, CurrentUser } from "./kanban-board";
 
 /**
@@ -25,6 +25,7 @@ export function BoardColumn({
   totalCount,
   projectKey,
   currentUser,
+  cardOptions,
   onQuickAdd,
 }: {
   column: BoardColumnData;
@@ -34,6 +35,8 @@ export function BoardColumn({
   totalCount: number;
   projectKey: string;
   currentUser: CurrentUser;
+  /** Listes de choix des champs modifiables sur une carte. */
+  cardOptions: CardOptions;
   /** Fourni uniquement pour la 1re colonne (ajout rapide). */
   onQuickAdd?: (title: string) => Promise<boolean>;
 }) {
@@ -81,6 +84,7 @@ export function BoardColumn({
               ticket={ticket}
               projectKey={projectKey}
               currentUser={currentUser}
+              options={cardOptions}
             />
           ))}
         </SortableContext>

@@ -42,13 +42,27 @@ export interface InlineSelectProps {
   onSave: (value: string) => Promise<boolean>;
   /** Nom du champ, pour l'intitulé accessible (« Modifier {field} »). */
   field: string;
-  /** Sentinelle « aucun » (Radix interdit la chaîne vide) et son libellé. */
-  emptyValue: string;
-  emptyLabel: string;
+  /**
+   * Sentinelle « aucun » (Radix interdit la chaîne vide) et son libellé.
+   *
+   * ABSENTES pour un champ OBLIGATOIRE - type, priorité, statut : il n'y a rien
+   * à retirer, et la proposition était non seulement inutile mais piégeuse, la
+   * choisir envoyant au serveur une valeur qu'il refuse.
+   */
+  emptyValue?: string;
+  emptyLabel?: string;
   /** Rendu en lecture (badge, nom…). À défaut : le libellé de l'option courante. */
   children?: ReactNode;
   /** Sans droit d'édition : rendu figé, sans affordance. */
   disabled?: boolean;
+  /**
+   * Rendu DENSE, sans crayon : le survol et le curseur suffisent à dire que la
+   * cellule s'ouvre. Mesuré dans la liste des tickets : l'icône, même invisible
+   * au repos, réservait sa place dans chacune des sept colonnes modifiables et
+   * élargissait le tableau de 109 pixels - au point de repousser hors de vue la
+   * colonne de droite.
+   */
+  compact?: boolean;
 }
 
 export function InlineSelect({
@@ -60,6 +74,7 @@ export function InlineSelect({
   emptyLabel,
   children,
   disabled = false,
+  compact = false,
 }: InlineSelectProps) {
   const t = useDict();
   const [editing, setEditing] = useState(false);
@@ -71,6 +86,7 @@ export function InlineSelect({
         {options.find((o) => o.value === value)?.label ?? emptyLabel}
       </span>
     );
+  const clearable = emptyValue !== undefined;
 
   if (disabled) return <span className="mt-0.5 block">{display}</span>;
 
@@ -103,7 +119,7 @@ export function InlineSelect({
           {pending ? <Loader2 className="animate-spin" /> : <SelectValue />}
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={emptyValue}>{emptyLabel}</SelectItem>
+          {clearable && <SelectItem value={emptyValue}>{emptyLabel}</SelectItem>}
           {options.map((option) => (
             <SelectItem key={option.value} value={option.value}>
               <span className="flex items-center gap-2">
@@ -134,10 +150,12 @@ export function InlineSelect({
       )}
     >
       <span className="min-w-0 flex-1">{display}</span>
-      <Pencil
-        className="size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/inline:opacity-100 group-focus-visible/inline:opacity-100"
-        aria-hidden
-      />
+      {!compact && (
+        <Pencil
+          className="size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/inline:opacity-100 group-focus-visible/inline:opacity-100"
+          aria-hidden
+        />
+      )}
     </button>
   );
 }

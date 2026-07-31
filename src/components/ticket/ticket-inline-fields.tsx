@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2, Pencil } from "lucide-react";
 import { updateTicketAction } from "@/server/actions/ticket.actions";
+import { moveTicketAction } from "@/server/actions/board.actions";
 import { Button } from "@/components/ui/button";
 import { InlineEdit } from "@/components/ui/inline-edit";
 import { InlineSelect } from "@/components/ui/inline-select";
@@ -14,9 +15,9 @@ import {
   NO_COMPONENT,
   NO_MODULE,
   NO_SPRINT,
+  type ColumnOption,
   type ComponentOption,
   type LabelOption,
-  type Member,
   type ModuleOption,
   type PriorityOption,
   type SprintOption,
@@ -25,8 +26,8 @@ import {
 import { useDict } from "@/i18n/provider";
 import { fmt } from "@/i18n";
 
-/** Sentinelle pour les champs OBLIGATOIRES (type, priorité) : jamais proposée. */
-const NO_TYPE = "__none__";
+/** Ce qu'il faut d'un membre pour l'assigner : rien de plus que son identité. */
+export type AssignableMember = { id: string; name: string | null; email: string };
 
 /**
  * Adaptateur CLIENT entre la page de détail (composant serveur) et la primitive
@@ -40,6 +41,56 @@ const NO_TYPE = "__none__";
  * L'autorisation reste imposée côté serveur par `updateTicketAction` : `canEdit`
  * ne fait que masquer l'affordance (« l'UI masque, le serveur impose »).
  */
+
+/**
+ * STATUT du ticket, c'est-à-dire sa COLONNE.
+ *
+ * Il ne passe pas par la mise à jour d'un champ mais par le DÉPLACEMENT du
+ * Kanban : un statut est une colonne, et une colonne a un ordre. Réutiliser le
+ * même chemin que le glisser-déposer garantit qu'un ticket rangé depuis la
+ * liste se retrouve exactement là où on l'aurait posé à la main - à la fin de
+ * la colonne, faute de position déclarée.
+ */
+export function TicketStatusInline({
+  ticketId,
+  value,
+  columns,
+  canEdit,
+  children,
+  compact,
+}: {
+  ticketId: string;
+  value: string;
+  columns: ColumnOption[];
+  canEdit: boolean;
+  children?: ReactNode;
+  /** Rendu dense, sans crayon (cf. `InlineSelect`). */
+  compact?: boolean;
+}) {
+  const router = useRouter();
+  const t = useDict();
+  return (
+    <InlineSelect
+      value={value}
+      field={t.tickets.colStatus}
+      disabled={!canEdit}
+      compact={compact}
+      options={columns.map((c) => ({ value: c.id, label: c.name }))}
+      onSave={async (next) => {
+        const res = await moveTicketAction({ ticketId, columnId: next });
+        if (!res.ok) {
+          toast.error(res.error);
+          return false;
+        }
+        toast.success(t.common.inline.saved);
+        router.refresh();
+        return true;
+      }}
+    >
+      {children}
+    </InlineSelect>
+  );
+}
 
 /** Titre du ticket, éditable en place. Obligatoire, une seule ligne. */
 export function TicketTitleInline({
@@ -107,11 +158,23 @@ export function TicketAssigneeInline({
   value,
   members,
   canEdit,
+  children,
+  compact,
 }: {
   ticketId: string;
   value: string | null;
-  members: Member[];
+  /**
+   * Réduits à ce que la liste déroulante en fait : de quoi choisir un nom. Le
+   * tableau Kanban ne transporte pas les mêmes membres que la fiche - il n'en
+   * garde que l'identité -, et exiger l'utilisateur complet aurait obligé l'un
+   * des deux à charger des colonnes dont il n'a que faire.
+   */
+  members: AssignableMember[];
   canEdit: boolean;
+  /** Rendu en lecture : la liste des tickets y met sa cellule tronquée. */
+  children?: ReactNode;
+  /** Rendu dense, sans crayon (cf. `InlineSelect`). */
+  compact?: boolean;
 }) {
   const t = useDict();
   const save = useFieldSaver(ticketId);
@@ -122,11 +185,14 @@ export function TicketAssigneeInline({
       emptyValue={NO_ASSIGNEE}
       emptyLabel={t.ticketDetail.unassigned}
       disabled={!canEdit}
+      compact={compact}
       options={members.map((m) => ({ value: m.id, label: m.name ?? m.email }))}
       onSave={(next) =>
         save({ assigneeId: next === NO_ASSIGNEE ? null : next })
       }
-    />
+    >
+      {children}
+    </InlineSelect>
   );
 }
 
@@ -136,11 +202,17 @@ export function TicketSprintInline({
   value,
   sprints,
   canEdit,
+  children,
+  compact,
 }: {
   ticketId: string;
   value: string | null;
   sprints: SprintOption[];
   canEdit: boolean;
+  /** Rendu en lecture : la liste des tickets y met sa cellule tronquée. */
+  children?: ReactNode;
+  /** Rendu dense, sans crayon (cf. `InlineSelect`). */
+  compact?: boolean;
 }) {
   const t = useDict();
   const save = useFieldSaver(ticketId);
@@ -151,9 +223,12 @@ export function TicketSprintInline({
       emptyValue={NO_SPRINT}
       emptyLabel={t.ticketDetail.backlog}
       disabled={!canEdit}
+      compact={compact}
       options={sprints.map((s) => ({ value: s.id, label: s.name }))}
       onSave={(next) => save({ sprintId: next === NO_SPRINT ? null : next })}
-    />
+    >
+      {children}
+    </InlineSelect>
   );
 }
 
@@ -164,12 +239,15 @@ export function TicketComponentInline({
   components,
   canEdit,
   children,
+  compact,
 }: {
   ticketId: string;
   value: string | null;
   components: ComponentOption[];
   canEdit: boolean;
   children?: ReactNode;
+  /** Rendu dense, sans crayon (cf. `InlineSelect`). */
+  compact?: boolean;
 }) {
   const t = useDict();
   const save = useFieldSaver(ticketId);
@@ -180,6 +258,7 @@ export function TicketComponentInline({
       emptyValue={NO_COMPONENT}
       emptyLabel={t.ticketDetail.noComponent}
       disabled={!canEdit || components.length === 0}
+      compact={compact}
       options={components.map((c) => ({
         value: c.id,
         label: c.name,
@@ -206,6 +285,7 @@ export function TicketModuleInline({
   hasComponent,
   canEdit,
   children,
+  compact,
 }: {
   ticketId: string;
   value: string | null;
@@ -213,6 +293,8 @@ export function TicketModuleInline({
   hasComponent: boolean;
   canEdit: boolean;
   children?: ReactNode;
+  /** Rendu dense, sans crayon (cf. `InlineSelect`). */
+  compact?: boolean;
 }) {
   const t = useDict();
   const save = useFieldSaver(ticketId);
@@ -223,6 +305,7 @@ export function TicketModuleInline({
       emptyValue={NO_MODULE}
       emptyLabel={t.ticketDetail.noModule}
       disabled={!canEdit || hasComponent || modules.length === 0}
+      compact={compact}
       options={modules.map((m) => ({
         value: m.id,
         label: m.name,
@@ -242,12 +325,15 @@ export function TicketTypeInline({
   types,
   canEdit,
   children,
+  compact,
 }: {
   ticketId: string;
   value: string;
   types: TicketTypeOption[];
   canEdit: boolean;
   children?: ReactNode;
+  /** Rendu dense, sans crayon (cf. `InlineSelect`). */
+  compact?: boolean;
 }) {
   const t = useDict();
   const save = useFieldSaver(ticketId);
@@ -255,11 +341,9 @@ export function TicketTypeInline({
     <InlineSelect
       value={value}
       field={t.ticketForm.typeLabel}
-      // Le type est obligatoire : la sentinelle ne correspond à aucune option et
-      // n'est donc jamais proposée, mais `InlineSelect` en exige une.
-      emptyValue={NO_TYPE}
-      emptyLabel={t.ticketForm.selectPlaceholder}
+      // Obligatoire : aucune option « aucun » n'est proposée.
       disabled={!canEdit}
+      compact={compact}
       options={types.map((o) => ({ value: o.id, label: o.name, color: o.color }))}
       onSave={(next) => save({ typeId: next })}
     >
@@ -275,12 +359,15 @@ export function TicketPriorityInline({
   priorities,
   canEdit,
   children,
+  compact,
 }: {
   ticketId: string;
   value: string;
   priorities: PriorityOption[];
   canEdit: boolean;
   children?: ReactNode;
+  /** Rendu dense, sans crayon (cf. `InlineSelect`). */
+  compact?: boolean;
 }) {
   const t = useDict();
   const save = useFieldSaver(ticketId);
@@ -288,9 +375,8 @@ export function TicketPriorityInline({
     <InlineSelect
       value={value}
       field={t.ticketForm.priorityLabel}
-      emptyValue={NO_TYPE}
-      emptyLabel={t.ticketForm.selectPlaceholder}
       disabled={!canEdit}
+      compact={compact}
       options={priorities.map((o) => ({
         value: o.id,
         label: o.name,
@@ -313,12 +399,15 @@ export function TicketLabelsInline({
   labels,
   canEdit,
   children,
+  compact,
 }: {
   ticketId: string;
   value: string[];
   labels: LabelOption[];
   canEdit: boolean;
   children?: ReactNode;
+  /** Rendu dense, sans crayon (cf. `InlineSelect`). */
+  compact?: boolean;
 }) {
   const t = useDict();
   const save = useFieldSaver(ticketId);
@@ -381,10 +470,12 @@ export function TicketLabelsInline({
       className="group/inline -mx-2 mt-0.5 flex w-full items-start gap-1.5 rounded-md px-2 py-0.5 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <span className="min-w-0 flex-1">{children}</span>
-      <Pencil
-        className="mt-0.5 size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/inline:opacity-100 group-focus-visible/inline:opacity-100"
-        aria-hidden
-      />
+      {!compact && (
+        <Pencil
+          className="mt-0.5 size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/inline:opacity-100 group-focus-visible/inline:opacity-100"
+          aria-hidden
+        />
+      )}
     </button>
   );
 }
