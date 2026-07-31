@@ -158,6 +158,33 @@ docker run --rm --network dokploy-network --env-file rtr.env \
   artemis:latest npx prisma migrate deploy
 ```
 
+#### Si `..._canonical_emails` s'interrompt
+
+Cette migration met les adresses e-mail en minuscules, parce que la casse en
+faisait des identites distinctes : `Admin@x.io` et `admin@x.io` etaient deux
+comptes, et le titulaire qui tapait son adresse avec une capitale ne se
+connectait plus. Elle **s'arrete plutot que de choisir a votre place** si deux
+comptes se confondent une fois abaisses :
+
+```
+Migration interrompue : ces adresses designent plusieurs comptes une fois mises
+en minuscules (admin@x.io). Fusionnez ou renommez ces comptes, puis relancez.
+```
+
+Rien n'a ete modifie : la transaction est annulee. Listez les comptes en cause,
+
+```sql
+SELECT id, email, name, role, "createdAt" FROM "User"
+ WHERE lower(email) IN (SELECT lower(email) FROM "User"
+                        GROUP BY lower(email) HAVING count(*) > 1)
+ ORDER BY lower(email), "createdAt";
+```
+
+puis tranchez a la main - le plus ancien est en general le vrai titulaire.
+Reattribuez ses tickets et ses appartenances avant de supprimer l'autre, la
+suppression d'un compte emportant ce qui en depend. Relancez ensuite
+`migrate deploy`.
+
 Reprise ponctuelle des donnees derivees du wiki : URL lisible
 (`?page=guide-du-projet`) et texte de recherche (sans accents) des pages creees
 avant ces fonctionnalites. A jouer apres les migrations `..._add_wiki_slug` et

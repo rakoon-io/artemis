@@ -74,7 +74,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
          * compte protège du devinement et offre le verrouillage ; le relâcher fait
          * l'inverse. On place le serrage là où l'attaquant ne choisit pas la clé.
          */
-        const email = parsed.data.email.toLowerCase();
+        /**
+         * `credentialsSchema` rend l'adresse canonique - rognée, minuscules -
+         * avant de la valider. Les compteurs et la recherche portent donc sur
+         * la MÊME clé. Ils divergeaient : les seaux étaient abaissés à la main
+         * ici, la recherche se faisait sur la saisie brute. Deux comptes ne
+         * différant que par la casse partageaient donc leurs compteurs tout en
+         * restant deux comptes.
+         */
+        const email = parsed.data.email;
         const ip = request ? clientIp(new Headers(request.headers)) : "unknown";
         const cleCouple = `login:${ip}:${email}`;
         const cleIp = `login:ip:${ip}`;
@@ -83,7 +91,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (isRateLimited(cleIp, ECHECS_PAR_ORIGINE)) return null;
         if (isRateLimited(cleMail, ECHECS_PAR_COMPTE)) return null;
         const user = await prisma.user.findUnique({
-          where: { email: parsed.data.email },
+          where: { email },
         });
         /**
          * ON VÉRIFIE TOUJOURS UN CONDENSAT, même quand le compte n'existe pas.

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { canonicalEmail } from "@/lib/email-address";
 
 /**
  * Requetes Prisma propres au serveur MCP (l'IA reference les tickets par leur
@@ -117,7 +118,7 @@ export async function lastRankInColumn(
 /** Identifiant d'un utilisateur a partir de son e-mail (filtre par assigne). */
 export async function findUserIdByEmail(email: string): Promise<string | null> {
   const u = await prisma.user.findUnique({
-    where: { email: email.toLowerCase() },
+    where: { email: canonicalEmail(email) },
     select: { id: true },
   });
   return u?.id ?? null;

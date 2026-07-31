@@ -3,6 +3,7 @@
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { appBaseUrl } from "@/lib/email";
+import { emailSchema } from "@/lib/email-address";
 import { headers } from "next/headers";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { setPasswordSchema } from "@/lib/validators";
@@ -56,7 +57,7 @@ export async function setPasswordAction(
   }
 }
 
-const resetRequestSchema = z.object({ email: z.string().email() });
+const resetRequestSchema = z.object({ email: emailSchema });
 
 /**
  * Action **publique** : demande de réinitialisation de mot de passe. Émet un jeton
@@ -70,8 +71,10 @@ export async function requestPasswordResetAction(
   // Ne rien révéler : même réponse que l'e-mail existe ou non, soit valide ou non.
   if (!parsed.success) return { ok: true };
 
+  // Déjà canonique (cf. `emailSchema`) : le seau ne peut donc plus être
+  // contourné en variant la casse, ce que `.toLowerCase()` ici masquait mal.
   const email = parsed.data.email;
-  const rl = rateLimit(`reset:${email.toLowerCase()}`, 5, 15 * 60 * 1000);
+  const rl = rateLimit(`reset:${email}`, 5, 15 * 60 * 1000);
   if (!rl.ok) return { ok: true };
 
   try {

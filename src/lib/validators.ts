@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { emailSchema } from "./email-address";
 import { MAX_LABEL as MAX_INSTANCE_LABEL } from "./instance";
 import { ComponentKind, Role, TicketTemplate } from "@prisma/client";
 
@@ -8,13 +9,13 @@ import { ComponentKind, Role, TicketTemplate } from "@prisma/client";
 const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/, "Couleur hexadécimale (#RRGGBB)");
 
 export const credentialsSchema = z.object({
-  email: z.string().email(),
+  email: emailSchema,
   password: z.string().min(1),
 });
 
 export const registerSchema = z.object({
   name: z.string().min(1, "Nom requis").max(80),
-  email: z.string().email("E-mail invalide"),
+  email: emailSchema,
   password: z.string().min(8, "8 caractères minimum").max(200),
 });
 
@@ -35,7 +36,7 @@ export const updateProjectSchema = z.object({
 
 export const adminCreateUserSchema = z.object({
   name: z.string().min(1, "Nom requis").max(80),
-  email: z.string().email("E-mail invalide"),
+  email: emailSchema,
   // Optionnel : vide/absent => l'utilisateur definit son mot de passe via un lien.
   password: z.string().min(8, "8 caractères minimum").max(200).optional(),
   role: z.nativeEnum(Role),

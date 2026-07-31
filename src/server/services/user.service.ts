@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { Prisma, Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { canonicalEmail } from "@/lib/email-address";
 
 /** Service Utilisateur - minimisation RGPD : n'expose que id/name/email/role. */
 
@@ -28,7 +29,7 @@ export function getUserById(id: string) {
 
 export function getUserByEmail(email: string) {
   return prisma.user.findUnique({
-    where: { email },
+    where: { email: canonicalEmail(email) },
     select: publicUserSelect,
   });
 }
@@ -59,8 +60,15 @@ export interface CreateUserServiceInput {
  * erreur claire si l'e-mail est déjà pris (pré-vérification + garde P2002).
  */
 export async function createUser(input: CreateUserServiceInput) {
+  /**
+   * Canonisé ici AUSSI, et non seulement dans le schéma Zod : ce service est
+   * appelé depuis l'amorçage et depuis MCP, qui n'ont pas de formulaire et donc
+   * pas de schéma en amont. Le doublon d'appel ne coûte rien, l'oubli coûterait
+   * un second compte pour une même boîte aux lettres.
+   */
+  const email = canonicalEmail(input.email);
   const existing = await prisma.user.findUnique({
-    where: { email: input.email },
+    where: { email },
     select: { id: true },
   });
   if (existing) throw new Error("Cet e-mail est déjà utilisé.");
@@ -72,7 +80,7 @@ export async function createUser(input: CreateUserServiceInput) {
     return await prisma.user.create({
       data: {
         name: input.name,
-        email: input.email,
+        email,
         passwordHash,
         role: input.role,
       },
