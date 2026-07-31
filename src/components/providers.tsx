@@ -11,7 +11,20 @@ import { THEME_IDS } from "@/lib/themes";
  * Fournisseurs globaux de l'application (côté client) :
  * thème clair/sombre, session Auth.js, cache de requêtes et notifications.
  */
-export function Providers({ children }: { children: ReactNode }) {
+export function Providers({
+  children,
+  /**
+   * Jeton de la politique de sécurité du contenu, tiré par le middleware.
+   *
+   * `next-themes` écrit un script EN LIGNE pour poser la classe de thème avant
+   * le premier rendu ; sans jeton, la politique le refuse et la page s'affiche
+   * en clair une fraction de seconde avant de basculer.
+   */
+  nonce,
+}: {
+  children: ReactNode;
+  nonce?: string;
+}) {
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -32,6 +45,7 @@ export function Providers({ children }: { children: ReactNode }) {
       enableSystem
       disableTransitionOnChange
       themes={THEME_IDS}
+      nonce={nonce}
     >
       <SessionProvider>
         <QueryClientProvider client={queryClient}>

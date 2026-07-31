@@ -271,6 +271,32 @@ CI/CD en place.
 - Pièces jointes servies via **URLs presignées à durée limitée** (droits vérifiés avant émission).
 - Secrets côté serveur / gestionnaire de secrets Dokploy - **jamais dans le dépôt**.
 
+### Politique de sécurité du contenu
+
+Le middleware tire un **jeton par requête** et l'inscrit dans `script-src`
+(`src/lib/csp.ts`). C'est ce qui permet de se passer d'`unsafe-inline` : sans
+lui, la directive autorisait aussi le script qu'un attaquant serait parvenu à
+écrire dans la page.
+
+Deux conséquences pour l'exploitation :
+
+- **rien à configurer**, mais ne placez devant l'application aucun relais qui
+  réécrive le HTML (injection de bandeau, minification à la volée). Un script
+  ajouté après coup n'aura pas le jeton, et le navigateur le refusera ;
+- un second en-tête part **en observation** (`...-Report-Only`), d'un cran plus
+  strict : styles en ligne et images de tiers. Mesuré au navigateur sur neuf
+  pages authentifiées : **0 refus imposé**, 287 signalements en observation
+  (269 attributs `style`, 18 éléments `<style>`). Ces signalements sont normaux
+  et n'indiquent aucune panne ; ils chiffrent ce que coûterait la fermeture de
+  ces deux portes.
+
+Vérifier après un déploiement :
+
+```bash
+curl -sD - -o /dev/null https://<domaine>/login | grep -i content-security-policy
+# script-src 'self' 'nonce-…'   ← un jeton, et pas de 'unsafe-inline'
+```
+
 ## 11. Mode démo
 
 Variables d'env dédiées (voir `.env.example`) :

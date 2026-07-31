@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { getInstance } from "@/server/services/settings.service";
 import "./globals.css";
 import { Providers } from "@/components/providers";
@@ -88,12 +89,29 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [locale, dict] = await Promise.all([getLocale(), getDictionary()]);
+  const [locale, dict, entetes] = await Promise.all([
+    getLocale(),
+    getDictionary(),
+    headers(),
+  ]);
+
+  /**
+   * LE JETON, JUSQU'AU DERNIER SCRIPT EN LIGNE.
+   *
+   * Next marque tout seul les scripts du flux RSC. Il en reste un qu'il ne
+   * connaît pas : celui que `next-themes` écrit pour poser la classe de thème
+   * AVANT le premier rendu - c'est ce qui évite l'éclair blanc au chargement
+   * d'une page sombre. Sans jeton, la politique le refuserait, et l'application
+   * s'afficherait en clair une fraction de seconde à chaque navigation.
+   *
+   * Le middleware l'a posé dans `x-nonce` (cf. `middleware.ts`).
+   */
+  const nonce = entetes.get("x-nonce") ?? undefined;
 
   return (
     <html lang={locale} suppressHydrationWarning className="h-full">
       <body className="min-h-full bg-background font-sans text-foreground antialiased">
-        <Providers>
+        <Providers nonce={nonce}>
           <LocaleProvider dict={dict} locale={locale}>
             {children}
           </LocaleProvider>
