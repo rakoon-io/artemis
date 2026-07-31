@@ -234,6 +234,12 @@ export const wiki = {
     looseHint:
       "Ces pages n'appartiennent à aucune section. Déplacez-les si vous voulez les ranger.",
 
+    // Repli des comptes rendus anciens : une reunion par semaine fait cinquante
+    // lignes par an dans le menu.
+    olderMeetings: "{count} plus anciennes",
+    olderMeetingsHint:
+      "Les comptes rendus les plus récents restent affichés ; les précédents se déplient ici.",
+
     structure: "Structurer le wiki",
     structureTitle: "Donner ses sections à ce wiki",
     structureDescription:

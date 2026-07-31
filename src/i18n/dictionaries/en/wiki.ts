@@ -232,6 +232,10 @@ export const wiki: WikiDict = {
     looseHint:
       "These pages belong to no section. Move them if you want them filed.",
 
+    olderMeetings: "{count} older",
+    olderMeetingsHint:
+      "The most recent minutes stay visible; earlier ones unfold here.",
+
     structure: "Structure the wiki",
     structureTitle: "Give this wiki its sections",
     structureDescription:

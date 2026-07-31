@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import {
   BookMarked,
   CalendarDays,
+  ChevronRight,
   FileText,
   Plus,
   Wrench,
@@ -76,6 +77,33 @@ const SECTION_ICON = {
   MEETING: CalendarDays,
   IMPLEMENTATION: Wrench,
 } as const;
+
+/**
+ * INTITULÉ DE SECTION : un filet pleine largeur, à la couleur du projet.
+ *
+ * Trois intitulés en petites capitales grises se distinguaient mal des pages
+ * qu'ils coiffaient - on lisait une liste continue, pas trois groupes. Le trait
+ * court sur toute la largeur du menu, jusque sous les marges intérieures : il
+ * ferme la section précédente autant qu'il ouvre la suivante.
+ *
+ * `rounded-b-none` : l'aplat de l'intitulé sélectionné garde ses coins hauts et
+ * vient s'asseoir à plat sur le filet, plutôt que de l'entamer de deux arrondis.
+ */
+const SECTION_HEADER =
+  "flex items-center gap-2 rounded-md rounded-b-none border-b-2 border-primary/60 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition-colors";
+
+/**
+ * PAGE OUVERTE : la couleur du projet, très diluée.
+ *
+ * Le gris neutre (`bg-accent`) servait à la fois au survol et à la sélection :
+ * passer la souris sur une ligne donnait exactement l'aspect de la page qu'on
+ * lisait. La sélection prend donc la couleur du projet, le survol garde le gris
+ * - deux propos, deux teintes.
+ *
+ * Plus dense en sombre : un aplat à 10 % sur un fond clair se voit, le même sur
+ * un fond sombre disparaît.
+ */
+const SELECTED = "bg-primary/10 text-foreground dark:bg-primary/20";
 
 interface WikiListItem {
   id: string;
@@ -312,7 +340,9 @@ export default async function WikiPage({
         <span
           className={cn(
             "ml-1 min-w-0 flex-1 rounded-md px-3 py-2 transition-colors",
-            active ? "bg-accent font-semibold" : "group-hover/page:bg-accent/50",
+            active
+              ? cn(SELECTED, "font-semibold")
+              : "group-hover/page:bg-accent/50",
           )}
         >
           {/* Deux lignes plutôt qu'une troncature sèche : un « Réunion
@@ -353,6 +383,67 @@ export default async function WikiPage({
       if (!da || !db) return da ? -1 : db ? 1 : 0;
       return new Date(db).getTime() - new Date(da).getTime();
     });
+  };
+
+  /**
+   * LE CONTENU D'UNE SECTION, les comptes rendus anciens repliés.
+   *
+   * Une réunion par semaine fait cinquante lignes dans le menu au bout d'un an,
+   * et deux cents au bout de quatre - la section des réunions finirait par
+   * chasser les deux autres hors de l'écran. Les plus récents restent affichés,
+   * le reste attend derrière un pli.
+   *
+   * `<details>` plutôt qu'un état de composant : le pli n'a pas besoin de
+   * JavaScript, survit à un rendu serveur, et se laisse imprimer et chercher
+   * dans la page par le navigateur.
+   *
+   * LE PLI S'OUVRE SUR LA PAGE LUE : arriver sur un compte rendu d'il y a six
+   * mois par un lien ou un favori doit le montrer dans le menu, à sa place -
+   * sans quoi le menu prétendrait qu'on est ailleurs.
+   *
+   * Deux réserves, faute de quoi le pli nuirait plus qu'il n'aiderait :
+   * - seulement sur une section PLATE, celle qu'`orderedSection` a triée par
+   *   date ; sur un arbre, couper au sixième nœud séparerait un enfant de son
+   *   parent ;
+   * - seulement s'il reste au moins deux lignes à cacher : un pli qui masque
+   *   une seule ligne coûte un clic pour ne rien gagner.
+   */
+  const MEETINGS_SHOWN = 6;
+  const sectionBody = (
+    kind: string,
+    nodes: ReturnType<typeof orderedTree<(typeof allPages)[number]>>,
+  ) => {
+    const ordered = orderedSection(kind, nodes);
+    const foldable =
+      kind === "MEETING" &&
+      ordered.length > MEETINGS_SHOWN + 1 &&
+      !ordered.some((node) => node.depth > 0);
+    if (!foldable) return ordered.map((node) => pageLink(node.page, node.depth));
+
+    const older = ordered.slice(MEETINGS_SHOWN);
+    return (
+      <>
+        {ordered
+          .slice(0, MEETINGS_SHOWN)
+          .map((node) => pageLink(node.page, node.depth))}
+        <details
+          open={older.some((node) => node.page.id === current?.id)}
+          className="group/older"
+        >
+          <summary
+            title={t.wiki.sections.olderMeetingsHint}
+            className="flex cursor-pointer list-none items-center gap-1 rounded-md px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden"
+          >
+            <ChevronRight
+              className="size-3.5 shrink-0 transition-transform group-open/older:rotate-90"
+              aria-hidden
+            />
+            {fmt(t.wiki.sections.olderMeetings, { count: older.length })}
+          </summary>
+          {older.map((node) => pageLink(node.page, node.depth))}
+        </details>
+      </>
+    );
   };
 
   // Deux façons d'ouvrir une page, côte à côte : la page libre, et le compte
@@ -473,7 +564,7 @@ export default async function WikiPage({
                         // et une page du plan désignent la même chose.
                         "block rounded-md px-3 py-2 text-sm transition-colors",
                         p.id === current?.id
-                          ? "bg-accent text-foreground"
+                          ? SELECTED
                           : "text-foreground/75 hover:bg-accent/50 hover:text-foreground",
                       )}
                     >
@@ -536,9 +627,9 @@ export default async function WikiPage({
                             rootPageId === current?.id ? "page" : undefined
                           }
                           className={cn(
-                            "flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition-colors",
+                            SECTION_HEADER,
                             rootPageId === current?.id
-                              ? "bg-accent text-foreground"
+                              ? SELECTED
                               : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
                           )}
                         >
@@ -556,9 +647,7 @@ export default async function WikiPage({
                             {t.wiki.sections.empty}
                           </p>
                         ) : (
-                          orderedSection(kind, nodes).map((node) =>
-                            pageLink(node.page, node.depth),
-                          )
+                          sectionBody(kind, nodes)
                         )}
                       </div>
                     );
@@ -568,7 +657,7 @@ export default async function WikiPage({
                     <div className={grouped.length > 0 ? "mt-1" : undefined}>
                       {grouped.length > 0 && (
                         <p
-                          className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                          className={cn(SECTION_HEADER, "text-muted-foreground")}
                           title={t.wiki.sections.looseHint}
                         >
                           {t.wiki.sections.loose}
