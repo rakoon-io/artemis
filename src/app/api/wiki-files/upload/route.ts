@@ -1,3 +1,5 @@
+import { declaredTooLarge, keyLooksIssued, localUploadDisabled } from "@/lib/upload-guard";
+import { clientIp, isRateLimited, recordFailure } from "@/lib/rate-limit";
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/session";
 import { canAccess } from "@/server/access";
@@ -24,6 +26,31 @@ export async function PUT(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
+  // Repli DISQUE uniquement : avec un stockage objet configuré, cette route
+  // n'a plus de raison d'être et ne doit pas offrir une seconde écriture.
+  if (localUploadDisabled()) {
+    return NextResponse.json(
+      { error: "Dépôt local désactivé (stockage objet configuré)." },
+      { status: 400 },
+    );
+  }
+
+  // La taille ANNONCÉE suffit à refuser : lire le corps d'abord, c'est le
+  // charger entier en mémoire avant de découvrir qu'il fait quatre gigaoctets.
+  if (declaredTooLarge(request, MAX_SIZE)) {
+    return NextResponse.json(
+      { error: "Fichier trop volumineux (20 Mo maximum)." },
+      { status: 413 },
+    );
+  }
+
+  // Un dépôt est peu coûteux, mille ne le sont pas : le disque est commun.
+  const cleDebit = `upload:${clientIp(new Headers(request.headers))}`;
+  if (isRateLimited(cleDebit, 60)) {
+    return NextResponse.json({ error: "Trop de dépôts. Réessayez plus tard." }, { status: 429 });
+  }
+  recordFailure(cleDebit, 60 * 1000);
+
   const params = new URL(request.url).searchParams;
   const key = params.get("key") ?? "";
   const filename = (params.get("filename") ?? "").slice(0, 255);
@@ -33,7 +60,9 @@ export async function PUT(request: Request): Promise<NextResponse> {
   // La clé doit désigner une PAGE (`wiki/<pageId>/...`). Le préfixe distinct de
   // celui des tickets interdit qu'une clé forgée d'un espace serve dans l'autre.
   const match = /^wiki\/([^/]+)\//.exec(key);
-  if (!match) {
+  // Et la clé doit être une de celles que le serveur émet pour CETTE page :
+  // sinon on réécrit l'objet d'un autre, ou l'on enlise le dossier de la page.
+  if (!match || !keyLooksIssued(key, "wiki", match[1] ?? "")) {
     return NextResponse.json({ error: "Clé invalide." }, { status: 400 });
   }
   if (!filename) {

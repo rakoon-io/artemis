@@ -130,9 +130,16 @@ export function wikiFileKey(pageId: string, filename: string): string {
   return `wiki/${pageId}/${safeSuffix(filename)}`;
 }
 
-/** Nom de fichier assaini, préfixé d'un aléa pour éviter les collisions. */
+/**
+ * Nom de fichier assaini, préfixé d'un aléa pour éviter les collisions.
+ *
+ * `randomUUID` et non `Math.random` : ce préfixe n'évite pas seulement les
+ * collisions, il est la seule chose qui empêche de DEVINER la clé d'un objet
+ * déjà déposé - donc de l'écraser. Le générateur de `Math.random` est prévisible
+ * à partir de quelques sorties observées, et l'appelant observe les siennes à
+ * chaque dépôt. Un aléa cryptographique coûte ici exactement rien.
+ */
 function safeSuffix(filename: string): string {
   const safe = filename.replace(/[^\w.\-]+/g, "_").slice(-100);
-  const rand = Math.random().toString(36).slice(2, 10);
-  return `${rand}-${safe}`;
+  return `${crypto.randomUUID().slice(0, 12)}-${safe}`;
 }
