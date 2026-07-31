@@ -5,6 +5,34 @@ export const admin: AdminDict = {
   // Shared access guard for both pages
   restrictedTitle: "Access reserved for administrators",
 
+  instance: {
+    restrictedDescription:
+      "This instance's appearance can only be set by an administrator.",
+    title: "This instance",
+    subtitle:
+      "What tells this deployment from the others: a label and a colour, carried by the installed app's icon.",
+    cardTitle: "Label and colour",
+    cardDescription:
+      "Two installs of the same product look alike in the dock, and standalone mode removes the address bar. The label appears on the icon, in the app name and next to the brand.",
+
+    labelField: "Label",
+    labelPlaceholder: "Staging",
+    labelHint: "Leave empty for the reference instance: no badge, no mention in the name.",
+    labelInherited: "Empty = “{value}”, inherited from the environment.",
+
+    colorField: "Colour",
+    colorPlaceholder: "#c2410c",
+    colorHint: "Leave empty for the brand colour.",
+    colorInherited: "Empty = {value}, inherited from the environment.",
+    colorInvalid: "Expected a hex colour (e.g. #c2410c).",
+
+    preview: "Preview",
+    current: "Served icon",
+    installedHint:
+      "Existing installs refresh the icon at their own pace; iOS only picks it up after reinstalling.",
+    saved: "Appearance saved.",
+  },
+
   users: {
     // Page
     restrictedDescription:

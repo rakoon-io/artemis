@@ -132,8 +132,11 @@ Ils teintent l'**icône engendrée** (fond coloré + étiquette peinte dessus), 
   de 192 pixels.
 - Couleur **hexadécimale** (`#rgb` ou `#rrggbb`) ; toute autre valeur est
   ignorée au profit de la couleur de marque, plutôt que d'invalider le manifeste.
-- Ces valeurs sont **scellées au build**, comme l'identité du commit : en
-  changer suppose de reconstruire l'image.
+- Ces arguments ne sont qu'un **point de départ** : ils valent dès le premier
+  démarrage, avant qu'un administrateur ait pu se connecter. Ensuite, la page
+  **« Cette instance »** (menu utilisateur, réservée aux administrateurs) les
+  surcharge à chaud — sans reconstruire ni redémarrer. Vider un champ dans cette
+  page rend la main à la valeur passée ici.
 
 ### 5.4 - Fichier d'environnement `rtr.env`
 ```ini

@@ -55,6 +55,7 @@ export const en: Messages = {
     roleReporter: "Reporter",
     users: "Users",
     emails: "Emails",
+    instance: "This instance",
     signOut: "Sign out",
     language: "Language",
   },

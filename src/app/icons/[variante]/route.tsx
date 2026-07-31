@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { instance } from "@/lib/instance";
+import { getInstance } from "@/server/services/settings.service";
 import { MARK_DATA_URI } from "@/lib/mark-svg";
 
 /**
@@ -9,14 +9,20 @@ import { MARK_DATA_URI } from "@/lib/mark-svg";
  * POURQUOI ENGENDRÉES, ET NON DES FICHIERS
  *
  * Trois déploiements du même produit posaient trois icônes identiques dans le
- * dock. Or l'icône dépend de deux valeurs d'environnement (`ARTEMIS_INSTANCE_*`)
- * qui changent d'un déploiement à l'autre : un fichier livré dans le dépôt ne
- * peut pas en tenir compte. On les dessine donc à la demande.
+ * dock. Or l'apparence se règle par déploiement, et depuis l'administration : un
+ * fichier livré dans le dépôt ne peut en tenir compte. On dessine à la demande.
  *
  * Le coût est nul en pratique : un navigateur ne lit ces images qu'à
- * l'installation, et l'en-tête de cache les fige pour un an. Elles ne dépendent
- * que de variables scellées au build - l'image ne peut pas changer sans qu'on
- * reconstruise, d'où `immutable`.
+ * l'installation, et l'en-tête de cache les fige pour un an.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * « IMMUABLE » RESTE VRAI, GRÂCE AU JETON
+ *
+ * L'apparence étant modifiable, un cache d'un an mentirait... si l'adresse ne
+ * changeait pas avec elle. Le manifeste demande `?v=<jeton>`, empreinte des
+ * réglages : chaque apparence a son adresse, et le contenu d'une adresse donnée
+ * ne change effectivement jamais. Sans ce jeton, régler la couleur n'aurait
+ * servi qu'aux installations à venir.
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * TROIS VARIANTES, ET POURQUOI
@@ -68,7 +74,8 @@ export function GET(
   _request: Request,
   { params }: { params: Promise<{ variante: string }> },
 ) {
-  return params.then(({ variante }) => {
+  return params.then(async ({ variante }) => {
+    const instance = await getInstance();
     const forme = VARIANTES[variante];
     if (!forme) return new Response("Icône inconnue.", { status: 404 });
 

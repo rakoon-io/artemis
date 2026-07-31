@@ -1,5 +1,12 @@
 import type { MetadataRoute } from "next";
-import { instance } from "@/lib/instance";
+import { getInstance } from "@/server/services/settings.service";
+
+/**
+ * JAMAIS PRÉ-RENDU. L'apparence se règle depuis l'administration : figé au
+ * build, ce manifeste aurait continué d'annoncer l'ancien nom et les anciennes
+ * icônes jusqu'au prochain déploiement.
+ */
+export const dynamic = "force-dynamic";
 
 /**
  * MANIFESTE D'APPLICATION - ce qui rend Artemis installable.
@@ -29,7 +36,8 @@ import { instance } from "@/lib/instance";
  * manifeste ne peut pas suivre un choix rangé côté client. On donne la valeur du
  * thème par défaut, celle que voit quelqu'un qui installe sans avoir rien réglé.
  */
-export default function manifest(): MetadataRoute.Manifest {
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  const instance = await getInstance();
   return {
     // Identité STABLE de l'application installée. Sans elle, le navigateur
     // déduit l'identité de `start_url` : changer un jour la page d'accueil
@@ -57,18 +65,31 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: "any",
     categories: ["productivity", "business"],
     // Icônes ENGENDRÉES, aux couleurs de l'instance : un fichier livré dans le
-    // dépôt ne saurait rien de l'environnement où il sera déployé.
+    // dépôt ne saurait rien du déploiement, et encore moins d'un réglage posé
+    // après coup depuis l'administration.
     icons: [
-      { src: "/icons/192", sizes: "192x192", type: "image/png", purpose: "any" },
-      { src: "/icons/512", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: icone("192", instance.token), sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: icone("512", instance.token), sizes: "512x512", type: "image/png", purpose: "any" },
       // MASQUABLE : Android rogne l'icône à la forme de son lanceur. Celle-ci
       // est dessinée bord à bord, motif réduit, pour supporter la découpe.
       {
-        src: "/icons/maskable",
+        src: icone("maskable", instance.token),
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",
       },
     ],
   };
+}
+
+/**
+ * Adresse d'une icône, portant l'empreinte de l'apparence.
+ *
+ * C'est ce jeton qui rend le cache d'un an honnête : changer la couleur change
+ * l'adresse, donc l'image demandée. Sans lui, une icône réglée « immuable »
+ * n'aurait jamais été reprise - et le réglage n'aurait servi qu'aux
+ * installations futures.
+ */
+function icone(variante: string, token: string): string {
+  return `/icons/${variante}?v=${token}`;
 }

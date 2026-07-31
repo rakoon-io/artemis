@@ -720,3 +720,22 @@ model AiUsageDay {
   callCount  Int      @default(0)
   updatedAt  DateTime @updatedAt
 }
+
+// RÉGLAGES DE L'INSTANCE - ce qui distingue CE déploiement des autres.
+//
+// Une seule ligne, d'identifiant fixe : ces réglages ne sont pas « des »
+// réglages qu'on collectionne, mais « les » réglages de l'application. Une table
+// sans contrainte aurait toléré deux lignes concurrentes, et rien n'aurait dit
+// laquelle fait foi.
+//
+// L'environnement (`ARTEMIS_INSTANCE_*`) reste le point de départ : il vaut
+// avant toute connexion, dès le premier démarrage. La base ne fait que le
+// SURCHARGER, ce qui permet de renommer une instance sans reconstruire l'image.
+model AppSettings {
+  id             String   @id @default("app")
+  // Étiquette courte (« Recette »). `null` = instance de référence, sans badge.
+  instanceLabel  String?
+  // Couleur hexadécimale, validée à l'écriture comme à la lecture.
+  instanceColor  String?
+  updatedAt      DateTime @updatedAt
+}

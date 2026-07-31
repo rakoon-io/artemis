@@ -8,6 +8,36 @@ export const admin = {
   // Garde d'acces partagee par les deux pages
   restrictedTitle: "Accès réservé aux administrateurs",
 
+  // Apparence de CETTE instance (page /instance, administrateurs)
+  instance: {
+    restrictedDescription:
+      "L'apparence de cette instance n'est réglable que par un administrateur.",
+    title: "Cette instance",
+    subtitle:
+      "De quoi distinguer ce déploiement des autres : une étiquette et une couleur, reprises par l'icône de l'application installée.",
+    cardTitle: "Étiquette et couleur",
+    cardDescription:
+      "Deux installations du même produit sont identiques dans le dock, et le mode autonome retire la barre d'adresse. L'étiquette apparaît sur l'icône, dans le nom de l'application et à côté de la marque.",
+
+    labelField: "Étiquette",
+    labelPlaceholder: "Recette",
+    labelHint:
+      "Laissez vide pour l'instance de référence : ni pastille, ni mention dans le nom.",
+    labelInherited: "Vide = « {value} », hérité de l'environnement.",
+
+    colorField: "Couleur",
+    colorPlaceholder: "#c2410c",
+    colorHint: "Laissez vide pour la couleur de marque.",
+    colorInherited: "Vide = {value}, hérité de l'environnement.",
+    colorInvalid: "Couleur hexadécimale attendue (ex. #c2410c).",
+
+    preview: "Aperçu",
+    current: "Icône servie",
+    installedHint:
+      "Les installations déjà en place mettront l'icône à jour à leur rythme ; iOS ne la reprendra qu'après réinstallation.",
+    saved: "Apparence enregistrée.",
+  },
+
   users: {
     // Page
     restrictedDescription:

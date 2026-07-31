@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_LABEL as MAX_INSTANCE_LABEL } from "./instance";
 import { ComponentKind, Role, TicketTemplate } from "@prisma/client";
 
 /** Schémas Zod partagés client/serveur - validation à chaque frontière. */
@@ -471,3 +472,24 @@ export const updateWikiPageSchema = z.object({
 export type CreateTicketInput = z.infer<typeof createTicketSchema>;
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 export type CreateSprintInput = z.infer<typeof createSprintSchema>;
+
+/**
+ * Réglages d'apparence de l'instance (page d'administration).
+ *
+ * La couleur est validée ICI ET à la lecture (`readInstance`). Ce n'est pas une
+ * redondance : la validation d'écriture refuse la saisie et le DIT, celle de
+ * lecture protège l'affichage de tout ce qui aurait pu entrer autrement - une
+ * ligne posée à la main en base, une valeur d'environnement fantaisiste.
+ *
+ * Les deux champs acceptent la chaîne VIDE : c'est ainsi qu'on efface un
+ * réglage depuis un formulaire, où l'on vide un champ plutôt que d'y écrire
+ * « null ».
+ */
+export const instanceSettingsSchema = z.object({
+  label: z.string().trim().max(MAX_INSTANCE_LABEL).optional(),
+  color: z
+    .string()
+    .trim()
+    .regex(/^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}))?$/, "Couleur hexadécimale attendue (ex. #c2410c).")
+    .optional(),
+});

@@ -41,6 +41,16 @@ export interface Instance {
   color: string;
   /** Nom affiché : « Artemis », ou « Artemis · Recette ». */
   name: string;
+  /**
+   * Jeton court qui change dès que l'apparence change.
+   *
+   * Il voyage dans l'adresse des icônes. Sans lui, une icône réglée « pour un
+   * an, immuable » ne serait JAMAIS reprise après modification - or elle est
+   * désormais modifiable depuis l'administration. Le jeton fait de chaque
+   * apparence une adresse distincte : le cache reste agressif, et pourtant
+   * juste, parce qu'il ne ment plus sur ce qu'il conserve.
+   */
+  token: string;
 }
 
 /** Une couleur hexadécimale à 3 ou 6 chiffres, seule forme acceptée. */
@@ -63,24 +73,64 @@ export function readInstance(raw: {
   color?: string | null;
 }): Instance {
   const label = (raw.label ?? "").trim().slice(0, MAX_LABEL) || null;
-  const color = (raw.color ?? "").trim();
+  const brut = (raw.color ?? "").trim();
+  const color = HEX.test(brut) ? brut.toLowerCase() : BRAND_COLOR;
   return {
     label,
-    color: HEX.test(color) ? color.toLowerCase() : BRAND_COLOR,
+    color,
     // Le point médian sépare sans hiérarchiser : « Artemis » reste le produit,
     // « Recette » dit lequel. Un tiret aurait suggéré un sous-produit.
     name: label ? `Artemis · ${label}` : "Artemis",
+    token: appearanceToken(label, color),
   };
 }
 
 /**
- * L'instance courante, lue dans l'environnement.
+ * Empreinte de l'apparence : deux réglages identiques donnent le même jeton,
+ * deux réglages différents en donnent d'autres.
  *
- * Les deux variables sont scellées au build (cf. `next.config.ts`) : l'icône est
- * engendrée côté serveur, mais la teinte doit aussi atteindre le navigateur, et
- * une variable lue au runtime n'y parviendrait pas.
+ * Une somme de contrôle maison, et non une fonction de hachage cryptographique :
+ * rien ici n'est secret ni ne doit résister à une attaque - on cherche seulement
+ * une adresse courte et stable. `node:crypto` obligerait par ailleurs ce module,
+ * partagé, à ne plus tourner que sur le serveur.
  */
-export const instance: Instance = readInstance({
+function appearanceToken(label: string | null, color: string): string {
+  const source = `${label ?? ""}|${color}`;
+  let h = 2166136261;
+  for (let i = 0; i < source.length; i++) {
+    h ^= source.charCodeAt(i);
+    // Facteur de FNV-1a, écrit en multiplications partielles : `h * 16777619`
+    // dépasserait la précision des entiers de JavaScript et perdrait des bits.
+    h = (h + (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24)) >>> 0;
+  }
+  return h.toString(36);
+}
+
+/**
+ * Ce que dit l'ENVIRONNEMENT - le point de départ, avant toute personnalisation.
+ *
+ * Il vaut dès le premier démarrage, avant qu'un administrateur ait pu se
+ * connecter, et reste la valeur d'une instance qu'on ne touche jamais. La base
+ * ne fait que le surcharger (cf. `resolveInstance`).
+ */
+export const envInstance: Instance = readInstance({
   label: process.env.ARTEMIS_INSTANCE_LABEL,
   color: process.env.ARTEMIS_INSTANCE_COLOR,
 });
+
+/**
+ * Superpose les réglages enregistrés à ceux de l'environnement.
+ *
+ * CHAMP PAR CHAMP, et non en bloc : régler la seule couleur depuis
+ * l'administration ne doit pas effacer l'étiquette venue de l'environnement.
+ * `null` en base signifie « rien de choisi ici », pas « effacer » - c'est la
+ * chaîne VIDE qui efface, et il faut donc les distinguer.
+ */
+export function resolveInstance(
+  stored: { instanceLabel: string | null; instanceColor: string | null } | null,
+): Instance {
+  return readInstance({
+    label: stored?.instanceLabel ?? process.env.ARTEMIS_INSTANCE_LABEL,
+    color: stored?.instanceColor ?? process.env.ARTEMIS_INSTANCE_COLOR,
+  });
+}

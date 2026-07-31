@@ -1,4 +1,4 @@
-import { instance } from "@/lib/instance";
+import { getInstance } from "@/server/services/settings.service";
 
 /**
  * QUEL DÉPLOIEMENT AI-JE SOUS LES YEUX.
@@ -25,7 +25,8 @@ import { instance } from "@/lib/instance";
  * Rien ne s'affiche sur l'instance de référence : c'est aux autres de se
  * signaler (cf. `src/lib/instance.ts`).
  */
-export function InstanceBadge() {
+export async function InstanceBadge() {
+  const instance = await getInstance();
   if (!instance.label) return null;
 
   return (

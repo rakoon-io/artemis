@@ -61,6 +61,7 @@ export const fr = {
     roleReporter: "Rapporteur",
     users: "Utilisateurs",
     emails: "E-mails",
+    instance: "Cette instance",
     signOut: "Se déconnecter",
     language: "Langue",
   },
