@@ -10,9 +10,11 @@ import {
   deleteReleaseAction,
   setReleaseStateAction,
 } from "@/server/actions/release.actions";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { countDone } from "@/lib/release-progress";
 import {
   Dialog,
   DialogClose,
@@ -23,7 +25,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { cn, formatDate } from "@/lib/utils";
+import { cn, formatDate, initials } from "@/lib/utils";
 import { useDict } from "@/i18n/provider";
 import { fmt } from "@/i18n";
 import {
@@ -41,6 +43,37 @@ export interface ReleaseTicketRow {
   type: { name: string; color: string };
   priority: { name: string; color: string };
   assignee: { name: string | null; email: string } | null;
+}
+
+/**
+ * AVANCEMENT D'UNE VERSION, en une barre.
+ *
+ * « 1 sur 4 terminés » se lit, mais ne se compare pas : côte à côte, six
+ * versions en chiffres demandent six divisions mentales. Une barre se compare
+ * d'un coup d'œil, ce qui est exactement ce qu'on vient faire sur cette page.
+ *
+ * Le compte chiffré RESTE à côté : la barre dit la proportion, le texte dit la
+ * quantité - « 1 sur 4 » et « 25 sur 100 » ont la même barre et ne demandent pas
+ * le même travail.
+ */
+function ProgressBar({ done, total }: { done: number; total: number }) {
+  const t = useDict();
+  const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+  return (
+    <div
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={total}
+      aria-valuenow={done}
+      aria-label={fmt(t.releases.progress, { done, total })}
+      className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
+    >
+      <div
+        className="h-full rounded-full bg-primary transition-[width]"
+        style={{ width: `${pct}%` }}
+      />
+    </div>
+  );
 }
 
 export interface ReleaseRow {
@@ -88,9 +121,9 @@ export function ReleaseCard({
 
   const released = release.state === ReleaseState.RELEASED;
   const total = release.tickets.length;
-  const done = release.tickets.filter(
-    (ticket) => ticket.column.order >= lastColumnOrder,
-  ).length;
+  // Le même décompte que celui du service : un `filter` recopié à la main aurait
+  // fini par diverger de la règle qu'il applique.
+  const done = countDone(release.tickets, lastColumnOrder);
   async function toggleState() {
     setPending(true);
     const res = await setReleaseStateAction(release.id, !released);
@@ -141,6 +174,8 @@ export function ReleaseCard({
             </Badge>
           )}
         </div>
+
+        {total > 0 && <ProgressBar done={done} total={total} />}
       </CardHeader>
 
       <CardContent>
@@ -161,6 +196,7 @@ export function ReleaseCard({
                 <span
                   className="size-2 shrink-0 rounded-full"
                   style={{ backgroundColor: ticket.type.color }}
+                  title={ticket.type.name}
                   aria-hidden
                 />
                 <Link
@@ -169,6 +205,19 @@ export function ReleaseCard({
                 >
                   {ticket.title}
                 </Link>
+                {/* Priorité et assigné étaient DÉJÀ chargés par la requête, et
+                    jetés au rendu. Ce sont pourtant les deux questions qu'on se
+                    pose devant une version qui n'avance pas : qu'est-ce qui est
+                    urgent, et qui s'en occupe. */}
+                <span className="hidden shrink-0 items-center gap-1.5 text-xs text-muted-foreground sm:flex">
+                  <span
+                    className="size-2 rounded-full"
+                    style={{ backgroundColor: ticket.priority.color }}
+                    aria-hidden
+                  />
+                  {ticket.priority.name}
+                </span>
+                <Assignee assignee={ticket.assignee} />
                 <Badge
                   variant="outline"
                   className={cn(
@@ -206,6 +255,31 @@ export function ReleaseCard({
         <RemoveRelease release={release} />
       </CardFooter>
     </Card>
+  );
+}
+
+/**
+ * Qui s'en occupe, en une pastille. Les initiales plutôt que le nom : sur une
+ * ligne déjà pleine, un nom complet chasserait le titre du ticket, qui est ce
+ * qu'on lit. Le nom reste au survol, et pour les technologies d'assistance.
+ */
+function Assignee({
+  assignee,
+}: {
+  assignee: { name: string | null; email: string } | null;
+}) {
+  const t = useDict();
+  if (!assignee) {
+    return (
+      <span className="sr-only">{t.ticketDetail.unassigned}</span>
+    );
+  }
+  const label = assignee.name ?? assignee.email;
+  return (
+    <Avatar className="size-5 shrink-0" title={label}>
+      <AvatarFallback className="text-[9px]">{initials(label)}</AvatarFallback>
+      <span className="sr-only">{label}</span>
+    </Avatar>
   );
 }
 

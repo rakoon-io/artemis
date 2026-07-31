@@ -357,6 +357,35 @@ export function listBacklogTickets(projectId: string) {
   });
 }
 
+/**
+ * Tickets du projet rattachés à AUCUNE version, pour la vue Versions.
+ *
+ * Le pendant du backlog des sprints, et la même question posée autrement :
+ * « qu'est-ce qui n'est prévu dans aucune livraison ? ». C'est la liste dans
+ * laquelle on puise pour remplir une version - sans elle, la page ne montrait
+ * que ce qui était déjà rangé, donc jamais ce qu'il restait à ranger.
+ *
+ * `column.order` en plus du nom : la vue distingue ce qui est achevé du reste,
+ * et se fie au rang de la colonne, jamais à son intitulé.
+ */
+export function listTicketsWithoutRelease(projectId: string) {
+  return prisma.ticket.findMany({
+    where: { projectId, releaseId: null },
+    orderBy: { updatedAt: "desc" },
+    select: {
+      id: true,
+      key: true,
+      title: true,
+      reporterId: true,
+      assigneeId: true,
+      column: { select: { name: true, order: true } },
+      type: { select: { name: true, color: true } },
+      priority: { select: { name: true, color: true } },
+      assignee: { select: { name: true, email: true } },
+    },
+  });
+}
+
 export function getTicketById(id: string) {
   return prisma.ticket.findUnique({
     where: { id },

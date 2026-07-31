@@ -38,6 +38,16 @@ export const releases = {
   progress: "{done} sur {total} terminés",
   noTickets: "Aucun ticket dans cette version.",
 
+  // Colonne de droite : ce qui n'est prevu dans aucune livraison
+  unassigned: "Sans version",
+  unassignedHint: "tickets rattachés à aucune version",
+  unassignedEmpty: "Tout est rattaché à une version.",
+  assignTo: "Rattacher à",
+  assignAria: "Rattacher le ticket à une version",
+  noReleaseCreateOne: "Aucune version. Créez-en une.",
+  ticketAssigned: "Ticket rattaché à la version.",
+  ticketUnassigned: "Ticket détaché de sa version.",
+
   remove: "Supprimer",
   removeTitle: "Supprimer « {name} » ?",
   removeDescription:

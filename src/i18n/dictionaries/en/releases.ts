@@ -35,6 +35,15 @@ export const releases: ReleasesDict = {
   progress: "{done} of {total} done",
   noTickets: "No ticket in this version.",
 
+  unassigned: "No version",
+  unassignedHint: "tickets attached to no version",
+  unassignedEmpty: "Everything is attached to a version.",
+  assignTo: "Attach to",
+  assignAria: "Attach ticket to a version",
+  noReleaseCreateOne: "No version. Create one.",
+  ticketAssigned: "Ticket attached to the version.",
+  ticketUnassigned: "Ticket detached from its version.",
+
   remove: "Delete",
   removeTitle: "Delete “{name}”?",
   removeDescription:

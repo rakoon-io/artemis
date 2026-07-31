@@ -3,10 +3,15 @@ import { notFound } from "next/navigation";
 import { ReleaseState } from "@prisma/client";
 import { auth } from "@/auth";
 import { getAccessibleProjectByKey } from "@/server/access";
-import { getColumns, getReleasesWithTickets } from "@/server/queries";
+import {
+  getColumns,
+  getReleasesWithTickets,
+  getTicketsWithoutRelease,
+} from "@/server/queries";
 import { Badge } from "@/components/ui/badge";
 import { CreateReleaseDialog } from "@/components/release/create-release-dialog";
 import { ReleaseCard } from "@/components/release/release-card";
+import { UnassignedTickets } from "@/components/release/unassigned-tickets";
 import { getDictionary } from "@/i18n/server";
 
 export const metadata: Metadata = { title: "Versions" };
@@ -30,9 +35,10 @@ export default async function VersionsPage({
   const project = await getAccessibleProjectByKey(session?.user, key);
   if (!project) notFound();
 
-  const [releases, columns] = await Promise.all([
+  const [releases, columns, unassigned] = await Promise.all([
     getReleasesWithTickets(project.id),
     getColumns(project.id),
+    getTicketsWithoutRelease(project.id),
   ]);
 
   /**
@@ -61,40 +67,75 @@ export default async function VersionsPage({
         <CreateReleaseDialog projectId={project.id} />
       </div>
 
-      {releases.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
-          {t.releases.empty}
-        </div>
-      ) : (
+      {/**
+       * LIVRER, C'EST RANGER : les versions à gauche, ce qui n'est rangé nulle
+       * part à droite.
+       *
+       * La page ne montrait que les versions - donc uniquement ce qui était déjà
+       * prévu. On voyait se remplir sans savoir dans quoi l'on puisait, ni
+       * combien il restait. C'est la disposition de la vue Sprints, et la même
+       * question posée sur l'autre axe : le sprint dit QUAND on travaille, la
+       * version dit CE QU'ON LIVRE.
+       */}
+      <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <div className="space-y-8">
-          {[
-            { items: planned, label: t.releases.planned },
-            { items: shipped, label: t.releases.released },
-          ].map(({ items, label }) =>
-            items.length === 0 ? null : (
-              <section key={label} className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                    {label}
-                  </h2>
-                  <Badge variant="outline">{items.length}</Badge>
-                </div>
-                <div className="grid gap-4 2xl:grid-cols-2">
-                  {items.map((release) => (
-                    <ReleaseCard
-                      key={release.id}
-                      release={release}
-                      projectKey={project.key}
-                      lastColumnOrder={lastColumnOrder}
-                      late={release.late}
-                    />
-                  ))}
-                </div>
-              </section>
-            ),
+          {releases.length === 0 ? (
+            <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+              {t.releases.empty}
+            </div>
+          ) : (
+            [
+              { items: planned, label: t.releases.planned },
+              { items: shipped, label: t.releases.released },
+            ].map(({ items, label }) =>
+              items.length === 0 ? null : (
+                <section key={label} className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                      {label}
+                    </h2>
+                    <Badge variant="outline">{items.length}</Badge>
+                  </div>
+                  {/* Pleine largeur de la colonne : le contenu d'une version se
+                      lit en lignes, pas en vignettes. */}
+                  <div className="space-y-4">
+                    {items.map((release) => (
+                      <ReleaseCard
+                        key={release.id}
+                        release={release}
+                        projectKey={project.key}
+                        lastColumnOrder={lastColumnOrder}
+                        late={release.late}
+                      />
+                    ))}
+                  </div>
+                </section>
+              ),
+            )
           )}
         </div>
-      )}
+
+        {/* `top-16` : la barre du haut est collante et haute de 57 pixels ; plus
+            près, la colonne viendrait se ranger dessous. */}
+        <section className="space-y-3 xl:sticky xl:top-16">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              {t.releases.unassigned}
+            </h2>
+            <Badge variant="outline">{unassigned.length}</Badge>
+            <span className="text-xs text-muted-foreground">
+              {t.releases.unassignedHint}
+            </span>
+          </div>
+          <UnassignedTickets
+            tickets={unassigned}
+            releases={planned.map((r) => ({ id: r.id, name: r.name }))}
+            projectKey={project.key}
+            currentUser={session?.user ?? null}
+            lastColumnOrder={lastColumnOrder}
+          />
+        </section>
+      </div>
     </div>
   );
 }

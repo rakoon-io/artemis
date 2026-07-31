@@ -110,6 +110,11 @@ export function getBacklogTickets(projectId: string) {
   return ticketService.listBacklogTickets(projectId);
 }
 
+/** Tickets rattachés à aucune version, pour la vue Versions. */
+export function getTicketsWithoutRelease(projectId: string) {
+  return ticketService.listTicketsWithoutRelease(projectId);
+}
+
 /** Pages de wiki du projet (barre latérale). */
 export function getWikiPages(projectId: string) {
   return wikiService.listWikiPages(projectId);
