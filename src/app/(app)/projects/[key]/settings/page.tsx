@@ -47,7 +47,7 @@ export default async function SettingsPage({
 
   if (!session?.user || !isAdmin(session.user)) {
     return (
-      <div className="mx-auto max-w-2xl">
+      <div className="mx-auto w-full max-w-2xl">
         <Card>
           <CardHeader>
             <CardTitle>{t.settings.adminOnlyTitle}</CardTitle>
@@ -89,7 +89,20 @@ export default async function SettingsPage({
   }));
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-6">
+    /**
+     * `w-full` EN PLUS de `max-w-4xl` : sans lui, la page changeait de largeur
+     * d'un onglet à l'autre - 794 pixels sur « Membres », 848 sur
+     * « Composants », mesurés.
+     *
+     * Ce bloc est un élément flexible d'une colonne. Dans ce cas, des marges
+     * automatiques sur l'axe transversal ANNULENT l'étirement : la largeur
+     * cesse d'être « tout l'espace, plafonné » pour devenir « celle du contenu,
+     * plafonnée ». Chaque onglet imposait donc la sienne, et la page respirait
+     * au rythme des clics.
+     *
+     * `w-full` rend la largeur explicite, et le plafond reprend son rôle.
+     */
+    <div className="mx-auto w-full max-w-4xl space-y-6 p-6">
       <div className="space-y-1">
         <p className="font-mono text-xs text-muted-foreground">{project.key}</p>
         <h1 className="text-2xl font-semibold tracking-tight">

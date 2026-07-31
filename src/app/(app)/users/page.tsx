@@ -26,7 +26,7 @@ export default async function UsersPage() {
 
   if (!session?.user || !isAdmin(session.user)) {
     return (
-      <div className="mx-auto max-w-2xl p-4 md:p-6">
+      <div className="mx-auto w-full max-w-2xl p-4 md:p-6">
         <Card>
           <CardHeader>
             <CardTitle>{t.admin.restrictedTitle}</CardTitle>
@@ -42,7 +42,7 @@ export default async function UsersPage() {
   const users = await getMembers();
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-4 md:p-6">
+    <div className="mx-auto w-full max-w-4xl space-y-6 p-4 md:p-6">
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">
           {t.admin.users.title}

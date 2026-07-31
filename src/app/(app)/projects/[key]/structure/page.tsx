@@ -120,7 +120,7 @@ export default async function StructurePage({
   const transverse = components.filter((c) => !c.moduleId);
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-6">
+    <div className="mx-auto w-full max-w-4xl space-y-6 p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <p className="font-mono text-xs text-muted-foreground">{project.key}</p>
