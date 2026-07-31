@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { authConfig } from "@/auth.config";
 import { prisma } from "@/lib/db";
 import { credentialsSchema } from "@/lib/validators";
-import { rateLimit } from "@/lib/rate-limit";
+import { clientIp, clearFailures, isRateLimited, recordFailure } from "@/lib/rate-limit";
 
 /**
  * Instance complète Auth.js (runtime Node) : Credentials + bcrypt + Prisma.
@@ -16,6 +16,12 @@ import { rateLimit } from "@/lib/rate-limit";
  */
 const REVALIDATION_MS = 60 * 1000;
 
+/** Échecs tolérés sur la fenêtre : couple serré, origine large, compte en dernier recours. */
+const ECHECS_PAR_COUPLE = 10;
+const ECHECS_PAR_ORIGINE = 50;
+const ECHECS_PAR_COMPTE = 200;
+const FENETRE_MS = 15 * 60 * 1000;
+
 const HASH_LEURRE = "$2a$12$C6UzMDM.H6dfI/f/IKcEe.J0Q4nD8yqcAdU8ZH2mS/tSN3o8kY5aq";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -23,16 +29,59 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
       credentials: { email: {}, password: {} },
-      authorize: async (raw) => {
+      authorize: async (raw, request) => {
         const parsed = credentialsSchema.safeParse(raw);
         if (!parsed.success) return null;
-        // M1 - limitation des tentatives de connexion par e-mail (anti brute-force).
-        const rl = rateLimit(
-          `login:${parsed.data.email.toLowerCase()}`,
-          10,
-          15 * 60 * 1000,
-        );
-        if (!rl.ok) return null;
+
+        /**
+         * DEUX COMPTEURS, ET L'ON NE COMPTE QUE LES ÉCHECS.
+         *
+         * ─────────────────────────────────────────────────────────────────────
+         * CE QUE L'ANCIEN COMPTAIT
+         *
+         * Un seul seau, indexé sur l'ADRESSE, incrémenté à chaque appel - donc
+         * avant même de vérifier le mot de passe, et y compris sur les
+         * connexions réussies. Deux conséquences opposées, toutes deux
+         * fâcheuses :
+         *
+         * - dix requêtes portant l'adresse de quelqu'un l'empêchaient de se
+         *   connecter pendant un quart d'heure. Verrouiller le compte d'un tiers
+         *   ne demandait que de connaître son adresse, et la victime ne pouvait
+         *   pas distinguer ce blocage d'un mot de passe erroné ;
+         * - à l'inverse, essayer UN mot de passe courant sur dix mille comptes
+         *   ne rencontrait aucun frein, chaque adresse ayant son propre seau.
+         *
+         * ─────────────────────────────────────────────────────────────────────
+         * CE QU'ON COMPTE MAINTENANT : LE COUPLE, PAS LE COMPTE
+         *
+         * Ne compter que les échecs ne suffisait pas - mesuré : douze tentatives
+         * ratées d'un tiers verrouillaient encore la victime. Tant que le seuil
+         * porte sur le COMPTE SEUL, ce seuil est l'arme.
+         *
+         * Le compteur serré porte donc sur le couple (origine, compte). Celui qui
+         * mitraille depuis chez lui se bloque lui-même, et la victime, qui vient
+         * d'ailleurs, entre sans obstacle.
+         *
+         * Deux garde-fous l'entourent :
+         * - par ORIGINE, plus large : borne le balayage d'un mot de passe courant
+         *   sur des milliers de comptes, que le compteur par couple ne verrait pas ;
+         * - par COMPTE, très haut : dernier recours contre une attaque répartie
+         *   sur de nombreuses origines. Assez élevé pour qu'un tiers seul ne
+         *   l'atteigne jamais, assez bas pour qu'une telle attaque reste vaine
+         *   contre un bcrypt de coût 12.
+         *
+         * Le compromis est assumé, et il n'a pas de solution gratuite : durcir le
+         * compte protège du devinement et offre le verrouillage ; le relâcher fait
+         * l'inverse. On place le serrage là où l'attaquant ne choisit pas la clé.
+         */
+        const email = parsed.data.email.toLowerCase();
+        const ip = request ? clientIp(new Headers(request.headers)) : "unknown";
+        const cleCouple = `login:${ip}:${email}`;
+        const cleIp = `login:ip:${ip}`;
+        const cleMail = `login:mail:${email}`;
+        if (isRateLimited(cleCouple, ECHECS_PAR_COUPLE)) return null;
+        if (isRateLimited(cleIp, ECHECS_PAR_ORIGINE)) return null;
+        if (isRateLimited(cleMail, ECHECS_PAR_COMPTE)) return null;
         const user = await prisma.user.findUnique({
           where: { email: parsed.data.email },
         });
@@ -51,7 +100,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           parsed.data.password,
           user?.passwordHash ?? HASH_LEURRE,
         );
-        if (!user?.passwordHash || !ok) return null;
+        if (!user?.passwordHash || !ok) {
+          recordFailure(cleCouple, FENETRE_MS);
+          recordFailure(cleIp, FENETRE_MS);
+          recordFailure(cleMail, FENETRE_MS);
+          return null;
+        }
+        // Une réussite efface l'ardoise du couple : celui qui se trompe deux fois
+        // avant de réussir ne traîne rien. Les garde-fous larges, eux, subsistent.
+        clearFailures(cleCouple);
         return {
           id: user.id,
           email: user.email,

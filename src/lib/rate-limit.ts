@@ -54,6 +54,39 @@ export function rateLimit(
   return { ok: true, remaining: limit - bucket.count, retryAfterSec: 0 };
 }
 
+/**
+ * Le seuil est-il atteint, SANS rien consommer ?
+ *
+ * `rateLimit` compte à chaque appel : sur une connexion, il comptait donc les
+ * réussites comme les échecs, et comptait AVANT même de vérifier le mot de
+ * passe. Dix requêtes portant l'adresse de quelqu'un suffisaient à l'empêcher de
+ * se connecter pendant un quart d'heure - sans qu'il puisse distinguer ce blocage
+ * d'un mot de passe erroné.
+ *
+ * En séparant « regarder » de « consommer », on ne compte plus que ce qui doit
+ * l'être : les tentatives ratées.
+ */
+export function isRateLimited(key: string, limit: number): boolean {
+  const bucket = store.get(key);
+  return !!bucket && bucket.resetAt > Date.now() && bucket.count >= limit;
+}
+
+/** Enregistre une tentative ratée dans le compteur. */
+export function recordFailure(key: string, windowMs: number): void {
+  const now = Date.now();
+  const bucket = store.get(key);
+  if (!bucket || bucket.resetAt <= now) {
+    store.set(key, { count: 1, resetAt: now + windowMs });
+    return;
+  }
+  bucket.count += 1;
+}
+
+/** Efface le compteur : une connexion réussie ne doit rien laisser derrière. */
+export function clearFailures(key: string): void {
+  store.delete(key);
+}
+
 /** Purge opportuniste des entrées expirées (évite une croissance non bornée). */
 function sweep(): void {
   const now = Date.now();
@@ -84,6 +117,12 @@ if (typeof setInterval !== "undefined" && !globalForRateLimit.__rakoonRateLimitS
  * La dernière entrée est celle qu'a inscrite le relais le plus proche de nous,
  * le seul que nous ayons des raisons de croire. Avec un unique relais devant
  * l'application, c'est l'adresse réelle du client.
+ *
+ * CE QUE CELA SUPPOSE, et qu'il faut savoir : qu'il Y AIT un relais. Exposée
+ * directement, l'application recevrait un en-tête entièrement écrit par le
+ * client, et tout comptage par origine deviendrait contournable en changeant
+ * une ligne. Le déploiement documenté place Traefik devant (cf. DEPLOY.md) ;
+ * s'en écarter demande de revoir ceci.
  */
 export function clientIp(headers: Headers): string {
   const xff = headers.get("x-forwarded-for");
