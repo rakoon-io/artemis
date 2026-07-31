@@ -14,6 +14,8 @@ import { rateLimit } from "@/lib/rate-limit";
  * Condensat de comparaison à vide : bcrypt, coût 12, d'une valeur aléatoire.
  * Il ne correspond à aucun mot de passe utilisable.
  */
+const REVALIDATION_MS = 60 * 1000;
+
 const HASH_LEURRE = "$2a$12$C6UzMDM.H6dfI/f/IKcEe.J0Q4nD8yqcAdU8ZH2mS/tSN3o8kY5aq";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -55,8 +57,60 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: user.email,
           name: user.name ?? undefined,
           role: user.role,
+          sessionEpoch: user.sessionEpoch,
         };
       },
     }),
   ],
+  callbacks: {
+    ...authConfig.callbacks,
+    /**
+     * RELECTURE PÉRIODIQUE DU COMPTE, qui rend enfin la révocation effective.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * CE QUI NE MARCHAIT PAS
+     *
+     * Le rôle était copié dans le jeton à la connexion et plus jamais relu.
+     * Rétrograder quelqu'un, ou supprimer son compte, ne lui retirait donc rien :
+     * il gardait ses pouvoirs jusqu'à l'expiration. Et réinitialiser un mot de
+     * passe - le geste que l'on fait précisément quand on se croit compromis -
+     * laissait le cookie volé parfaitement valide.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * PÉRIODIQUE, ET NON À CHAQUE APPEL
+     *
+     * `auth()` est appelé plusieurs fois par affichage : relire la base à chaque
+     * fois ajouterait autant de requêtes à chaque page. On borne donc la
+     * fraîcheur à une minute. C'est le délai maximal d'une révocation, et le
+     * prix d'une requête indexée par minute et par session ouverte.
+     *
+     * Ce rappel vit ICI et non dans `auth.config.ts` : cette dernière est la
+     * configuration « edge » du middleware, qui ne peut pas parler à Prisma.
+     * Le middleware ne tranche que « connecté ou non » ; les décisions qui
+     * dépendent du rôle passent toutes par `auth()`, côté Node, donc par ici.
+     */
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.role = user.role;
+        token.epoch = user.sessionEpoch ?? 0;
+        token.checkedAt = Date.now();
+        return token;
+      }
+      const id = typeof token.id === "string" ? token.id : null;
+      if (!id) return token;
+      const checkedAt = typeof token.checkedAt === "number" ? token.checkedAt : 0;
+      if (Date.now() - checkedAt < REVALIDATION_MS) return token;
+
+      const compte = await prisma.user.findUnique({
+        where: { id },
+        select: { role: true, sessionEpoch: true },
+      });
+      // Compte supprimé, ou sessions révoquées depuis : `null` éteint la session.
+      if (!compte || compte.sessionEpoch !== (token.epoch ?? 0)) return null;
+      token.role = compte.role;
+      token.checkedAt = Date.now();
+      return token;
+    },
+  },
 });

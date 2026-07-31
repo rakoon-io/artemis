@@ -80,9 +80,17 @@ export async function consumeSetupToken(
         include: { user: { select: { email: true } } },
       });
       if (!row || row.expiresAt.getTime() <= Date.now()) return null;
+      /**
+       * Le compteur de révocation est incrémenté EN MÊME TEMPS que le mot de
+       * passe : toutes les sessions ouvertes de ce compte s'éteignent.
+       *
+       * C'est ce qu'on attend d'une réinitialisation - on la demande justement
+       * quand on soupçonne qu'un autre est entré. Sans cela, elle changeait le
+       * mot de passe et laissait le voleur connecté.
+       */
       await tx.user.update({
         where: { id: row.userId },
-        data: { passwordHash: await hacher() },
+        data: { passwordHash: await hacher(), sessionEpoch: { increment: 1 } },
       });
       await tx.passwordSetupToken.delete({ where: { id: row.id } });
       return row.user.email;

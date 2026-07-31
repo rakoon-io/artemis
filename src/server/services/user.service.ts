@@ -90,10 +90,20 @@ export async function createUser(input: CreateUserServiceInput) {
   }
 }
 
+/**
+ * Change le rôle, et COUPE les sessions ouvertes du compte.
+ *
+ * Le jeton relit la base au plus une fois par minute : sans incrémenter le
+ * compteur, une rétrogradation mettrait jusqu'à soixante secondes à mordre. Ce
+ * n'est pas grand-chose, sauf que ce geste se fait précisément dans l'urgence -
+ * on retire ses droits à quelqu'un dont on ne veut plus. L'incrément rend la
+ * session invalide au prochain appel, et la personne se reconnecte avec son
+ * nouveau rôle.
+ */
 export function updateUserRole(id: string, role: Role) {
   return prisma.user.update({
     where: { id },
-    data: { role },
+    data: { role, sessionEpoch: { increment: 1 } },
     select: publicUserSelect,
   });
 }

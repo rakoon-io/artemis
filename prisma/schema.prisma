@@ -85,6 +85,12 @@ model User {
   name               String?
   passwordHash       String?
   role               Role                @default(REPORTER)
+  // COMPTEUR DE RÉVOCATION. Le jeton de session porte la valeur qu'il avait à la
+  // connexion ; l'incrémenter invalide d'un coup toutes les sessions ouvertes de
+  // ce compte, sans avoir à les stocker. C'est ce qui donne enfin un effet à un
+  // changement de mot de passe : jusque-là, le voleur d'un cookie le gardait
+  // valide alors même que la victime venait de le réinitialiser.
+  sessionEpoch       Int                 @default(0)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   reported           Ticket[]            @relation("reporter")

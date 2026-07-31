@@ -10,6 +10,8 @@ declare module "next-auth" {
   }
   interface User {
     role?: Role;
+    /** Compteur de révocation au moment de la connexion (cf. `sessionEpoch`). */
+    sessionEpoch?: number;
   }
 }
 
@@ -17,5 +19,9 @@ declare module "next-auth/jwt" {
   interface JWT {
     id?: string;
     role?: Role;
+    /** Valeur du compteur de révocation gravée à la connexion. */
+    epoch?: number;
+    /** Instant de la dernière relecture en base, pour ne pas la refaire à chaque appel. */
+    checkedAt?: number;
   }
 }
