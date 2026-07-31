@@ -1,9 +1,15 @@
 "use client";
 
-import { useRef, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type DragEvent as ReactDragEvent,
+} from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Download, ImageIcon, Loader2, Paperclip, Plus, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -46,6 +52,31 @@ function readableSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
 }
 
+/**
+ * Empêche le NAVIGATEUR d'ouvrir un fichier lâché à côté de la zone.
+ *
+ * Sans cela, un dépôt manqué de quelques pixels remplace l'application par
+ * l'image - et emporte au passage la page en cours d'édition. Le geste est
+ * neutralisé pour les seuls glissements de FICHIERS : le reste, y compris le
+ * déplacement des cartes du tableau ou d'un bloc dans l'éditeur, ne voit rien.
+ */
+function useStrayFileDropGuard(active: boolean) {
+  useEffect(() => {
+    if (!active) return;
+    const carriesFiles = (event: DragEvent) =>
+      Array.from(event.dataTransfer?.types ?? []).includes("Files");
+    const swallow = (event: DragEvent) => {
+      if (carriesFiles(event)) event.preventDefault();
+    };
+    window.addEventListener("dragover", swallow);
+    window.addEventListener("drop", swallow);
+    return () => {
+      window.removeEventListener("dragover", swallow);
+      window.removeEventListener("drop", swallow);
+    };
+  }, [active]);
+}
+
 export function WikiAttachments({
   pageId,
   files,
@@ -59,8 +90,15 @@ export function WikiAttachments({
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [over, setOver] = useState(false);
+  /**
+   * `dragenter` et `dragleave` se déclenchent AUSSI en entrant et sortant des
+   * éléments enfants. Un simple booléen clignoterait dès que le curseur passe
+   * au-dessus du texte de la zone : on compte les entrées et les sorties.
+   */
+  const depth = useRef(0);
 
-  if (files.length === 0 && !canEdit) return null;
+  useStrayFileDropGuard(canEdit);
 
   async function add(list: FileList | null) {
     if (!list || list.length === 0) return;
@@ -80,6 +118,11 @@ export function WikiAttachments({
     router.refresh();
   }
 
+  const carriesFiles = (event: ReactDragEvent<HTMLElement>) =>
+    Array.from(event.dataTransfer.types).includes("Files");
+
+  if (files.length === 0 && !canEdit) return null;
+
   return (
     <section className="space-y-2 border-t pt-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -87,32 +130,9 @@ export function WikiAttachments({
           <Paperclip className="size-4 shrink-0 text-muted-foreground" aria-hidden />
           {t.wiki.files.title}
         </p>
-        {canEdit && (
-          <>
-            <input
-              ref={inputRef}
-              type="file"
-              multiple
-              className="hidden"
-              onChange={(event) => void add(event.target.files)}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={uploading}
-              onClick={() => inputRef.current?.click()}
-            >
-              {uploading ? <Loader2 className="animate-spin" /> : <Plus />}
-              {uploading ? t.wiki.files.uploading : t.wiki.files.add}
-            </Button>
-          </>
-        )}
       </div>
 
-      {files.length === 0 ? (
-        <p className="text-xs text-muted-foreground">{t.wiki.files.pasteHint}</p>
-      ) : (
+      {files.length > 0 && (
         <ul className="space-y-1">
           {files.map((file) => (
             <li key={file.id} className="group/file flex items-center gap-2">
@@ -141,6 +161,64 @@ export function WikiAttachments({
             </li>
           ))}
         </ul>
+      )}
+
+      {canEdit && (
+        <div
+          /**
+           * ZONE DE DÉPÔT. Le cadre pointillé est là en permanence : n'apparaître
+           * qu'au survol d'un fichier, c'est n'exister que pour qui sait déjà
+           * qu'il peut déposer.
+           *
+           * Le bouton reste dedans - c'est lui qui porte l'accès au clavier, un
+           * rectangle qu'on clique n'en ayant aucun.
+           */
+          onDragEnter={(event) => {
+            if (!carriesFiles(event)) return;
+            depth.current += 1;
+            setOver(true);
+          }}
+          onDragOver={(event) => {
+            // Sans cela, le dépôt est refusé et le navigateur ouvre le fichier.
+            if (carriesFiles(event)) event.preventDefault();
+          }}
+          onDragLeave={(event) => {
+            if (!carriesFiles(event)) return;
+            depth.current = Math.max(0, depth.current - 1);
+            if (depth.current === 0) setOver(false);
+          }}
+          onDrop={(event) => {
+            if (!carriesFiles(event)) return;
+            event.preventDefault();
+            depth.current = 0;
+            setOver(false);
+            void add(event.dataTransfer.files);
+          }}
+          className={cn(
+            "flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 rounded-md border border-dashed p-3 text-center text-xs text-muted-foreground transition-colors",
+            over && "border-primary bg-primary/5",
+          )}
+        >
+          <input
+            ref={inputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={(event) => void add(event.target.files)}
+          />
+          <span>{t.wiki.files.dropHint}</span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={uploading}
+            onClick={() => inputRef.current?.click()}
+          >
+            {uploading ? <Loader2 className="animate-spin" /> : <Plus />}
+            {uploading ? t.wiki.files.uploading : t.wiki.files.add}
+          </Button>
+          <p className="w-full text-muted-foreground">{t.wiki.files.pasteHint}</p>
+        </div>
       )}
     </section>
   );

@@ -66,8 +66,14 @@ export interface MarkdownEditorProps {
   disabled?: boolean;
   /** Contenu inséré à droite des onglets (ex. bouton « Agrandir »). */
   toolbarExtra?: React.ReactNode;
-  /** Touches non gérées par l'autocomplétion (ex. ⌘+Entrée pour enregistrer). */
-  onKeyDown?: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  /**
+   * Touches non gérées par l'autocomplétion (ex. ⌘+Entrée pour enregistrer).
+   *
+   * Le type est celui d'un élément quelconque : en mise en forme, la frappe
+   * remonte d'une zone `contenteditable` et non d'un `<textarea>`. Les deux
+   * appelants ne lisent que la touche et ses modificateurs.
+   */
+  onKeyDown?: (event: React.KeyboardEvent<HTMLElement>) => void;
   /**
    * COLLAGE D'IMAGE. Reçoit le fichier, le dépose où il doit l'être, et rend de
    * quoi le citer - `null` si le dépôt échoue, auquel cas rien n'est inséré.
@@ -381,7 +387,16 @@ export function MarkdownEditor({
 
   if (rich) {
     return (
-      <div className="space-y-2">
+      /**
+       * Les raccourcis d'enregistrement écoutés SUR LE CONTENEUR : la frappe
+       * remonte de la zone d'édition jusqu'ici. Ils manquaient purement et
+       * simplement en mise en forme - c'est-à-dire dans le mode par défaut -,
+       * alors que toutes les surfaces d'édition en place les annoncent.
+       *
+       * L'autocomplétion arrête la propagation des touches qu'elle consomme :
+       * Échap referme la liste sans annuler la modification en cours.
+       */
+      <div className="space-y-2" onKeyDown={onKeyDown}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           {modeSwitch}
           {toolbarExtra}

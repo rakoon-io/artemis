@@ -10,7 +10,7 @@ import {
 
 import { auth } from "@/auth";
 import { isAdmin } from "@/lib/policies";
-import { cn, formatDate } from "@/lib/utils";
+import { cn, formatDate, formatDateTime } from "@/lib/utils";
 import {
   ancestorsOf,
   groupBySection,
@@ -730,7 +730,7 @@ export default async function WikiPage({
                         current.author?.email ??
                         t.wiki.index.unknownAuthor}
                       {t.wiki.index.editedOn}
-                      {formatDate(current.updatedAt)}
+                      {formatDateTime(current.updatedAt)}
                     </p>
                     {/* Signalé sur TOUTE page du paquet, pas seulement la
                         racine : en arrivant sur un chapitre par la recherche,
@@ -873,7 +873,7 @@ export default async function WikiPage({
                     <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-dashed p-3">
                       <p className="text-xs text-muted-foreground">
                         {fmt(t.wiki.history.frozenNotice, {
-                          date: formatDate(frozen.createdAt),
+                          date: formatDateTime(frozen.createdAt),
                         })}
                         {frozen.author
                           ? ` ${fmt(t.wiki.history.by, {
@@ -981,7 +981,7 @@ export default async function WikiPage({
                                 active && "bg-accent font-medium",
                               )}
                             >
-                              <span>{formatDate(revision.createdAt)}</span>
+                              <span>{formatDateTime(revision.createdAt)}</span>
                               <span className="text-muted-foreground">
                                 {fmt(t.wiki.history.by, { name: author })}
                               </span>

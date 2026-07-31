@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { WikiContent } from "@/components/wiki/wiki-content";
 import { PageOutline } from "@/components/wiki/page-outline";
 import { anchorFor } from "@/lib/markdown-outline";
-import { formatDate } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
 import { formatVersionLabel } from "@/lib/spec-package";
 import { getDictionary } from "@/i18n/server";
 import { fmt } from "@/i18n";
@@ -79,7 +79,7 @@ export async function SpecVersionView({
           </h1>
           <p className="text-xs text-muted-foreground">
             {fmt(t.wiki.specs.frozenNotice, {
-              date: formatDate(version.createdAt),
+              date: formatDateTime(version.createdAt),
             })}
             {author
               ? ` — ${fmt(t.wiki.specs.publishedBy, { name: author })}`

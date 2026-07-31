@@ -8,6 +8,8 @@ import { extractOutline } from "@/lib/markdown-outline";
 import { TicketHoverLink, type TicketHint } from "./ticket-hover-link";
 import { linkifyTicketKeys } from "@/lib/wiki-markdown";
 import { scanCallouts } from "@/lib/wiki-callouts";
+import { stripEditorArtifacts } from "@/lib/markdown-artifacts";
+import { readImageWidth } from "@/lib/wiki-image-size";
 import { CalloutTitle } from "./callout-title";
 
 /**
@@ -39,7 +41,12 @@ export function WikiContent({
   // change aucune ligne, les positions restent donc valables. L'inverse aurait
   // été vrai aussi, mais le faire d'abord garde la lecture des marqueurs sur le
   // texte tel que l'auteur l'a écrit.
-  const callouts = scanCallouts(content);
+  //
+  // Le nettoyage passe en premier : les pages enregistrées avant qu'on ne le
+  // corrige portent encore les « <br /> » de l'éditeur riche, qui s'afficheraient
+  // en toutes lettres. Il vide la ligne sans la retirer, les repères de ligne
+  // ci-dessous restent donc justes.
+  const callouts = scanCallouts(stripEditorArtifacts(content));
   const source = linkifyTicketKeys(callouts.content, ticketMap, projectKey);
 
   // Ancres de section, pour que le sommaire ait où pointer.
@@ -84,6 +91,29 @@ export function WikiContent({
           <CalloutTitle kind={kind} />
           {children}
         </div>
+      );
+    },
+    /**
+     * IMAGE, à la largeur demandée par son adresse (cf. `@/lib/wiki-image-size`).
+     *
+     * La largeur est posée en STYLE et non en attribut `width` : conjuguée au
+     * `max-width: 100%` de la feuille de style, elle cède la place sur un écran
+     * étroit au lieu de déborder. L'attribut HTML, lui, l'aurait emporté.
+     */
+    img({ src, alt, title }) {
+      const asked = readImageWidth(typeof src === "string" ? src : "");
+      return (
+        /* Balise `<img>` ordinaire : les adresses sont arbitraires - fichiers
+           déposés ou images externes -, et l'optimiseur de Next exige une liste
+           de domaines qu'un wiki ne peut pas prévoir. */
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={asked.src}
+          alt={alt ?? ""}
+          title={title}
+          loading="lazy"
+          style={asked.width ? { width: `${asked.width}px` } : undefined}
+        />
       );
     },
     h1: heading(1),

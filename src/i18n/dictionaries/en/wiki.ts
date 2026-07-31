@@ -78,6 +78,7 @@ export const wiki: WikiDict = {
       mention: "Mention a task",
       strike: "Strikethrough",
       orderedList: "Numbered list",
+      resizeImage: "Drag to resize; double-click for the original size",
     },
   },
 
@@ -220,6 +221,7 @@ export const wiki: WikiDict = {
     removeTitle: "Remove “{name}”?",
     removeDescription:
       "The file will be permanently deleted. The page content is not changed: if it references this file, the reference will remain visible and lead nowhere.",
+    dropHint: "Drop files here",
     pasteHint: "Paste an image into the text to insert it directly.",
   },
 

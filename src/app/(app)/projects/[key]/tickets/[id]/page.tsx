@@ -14,7 +14,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { currentUser } from "@/lib/session";
 import { can, canEditTicket } from "@/lib/policies";
-import { formatDate, initials } from "@/lib/utils";
+import { formatDateTime, initials } from "@/lib/utils";
 import { getAccessibleProjectByKey } from "@/server/access";
 import {
   getAssignableUsers,
@@ -462,13 +462,13 @@ export default async function TicketDetailPage({
                   <p className="text-xs text-muted-foreground">
                     {t.ticketDetail.createdAt}
                   </p>
-                  <p className="mt-0.5">{formatDate(ticket.createdAt)}</p>
+                  <p className="mt-0.5">{formatDateTime(ticket.createdAt)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">
                     {t.ticketDetail.updatedAt}
                   </p>
-                  <p className="mt-0.5">{formatDate(ticket.updatedAt)}</p>
+                  <p className="mt-0.5">{formatDateTime(ticket.updatedAt)}</p>
                 </div>
               </div>
             </CardContent>

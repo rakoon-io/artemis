@@ -20,7 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { formatDate } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
 import { formatVersionLabel } from "@/lib/spec-package";
 import {
   deleteSpecVersionAction,
@@ -311,7 +311,7 @@ export function SpecPanel({
                     </Badge>
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {formatDate(version.createdAt)}
+                    {formatDateTime(version.createdAt)}
                     {author
                       ? ` — ${fmt(t.wiki.specs.publishedBy, { name: author })}`
                       : ""}

@@ -45,6 +45,18 @@ const MARKERS: Record<string, CalloutKind> = {
   CAUTION: "warning",
 };
 
+/** Marqueur ÉCRIT pour chaque genre - un seul par genre, les synonymes ne se
+ *  lisent que dans l'autre sens. */
+export const CALLOUT_MARKER: Record<CalloutKind, string> = {
+  note: "NOTE",
+  warning: "WARNING",
+  important: "IMPORTANT",
+};
+
+export function isCalloutKind(value: unknown): value is CalloutKind {
+  return value === "note" || value === "warning" || value === "important";
+}
+
 export interface CalloutScan {
   /** Markdown débarrassé des marqueurs, prêt à être rendu. */
   content: string;
@@ -119,7 +131,84 @@ export function scanCallouts(markdown: string): CalloutScan {
 
 /** Markdown d'un encart vide, tel que l'insère la barre d'outils. */
 export function calloutTemplate(kind: CalloutKind): string {
-  const marker =
-    kind === "note" ? "NOTE" : kind === "warning" ? "WARNING" : "IMPORTANT";
-  return `> [!${marker}]\n> `;
+  return `> [!${CALLOUT_MARKER[kind]}]\n> `;
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   LE MARQUEUR VU DE L'ÉDITEUR RICHE
+
+   L'éditeur en mise en forme ne travaille pas sur des lignes mais sur l'arbre
+   qu'en tire remark. Le marqueur y a deux formes selon la façon dont l'auteur
+   a écrit sa citation :
+
+       > [!NOTE]              > [!NOTE]
+       > Le texte.
+                              > Le texte.
+
+   La première ne fait qu'UN paragraphe - le saut de ligne y est « doux » -,
+   la seconde en fait deux. Les deux doivent donner le même encart, sans quoi
+   une page se relirait autrement selon qui l'a écrite.
+
+   Ce module rend le genre ET le corps débarrassé du marqueur : l'éditeur ne
+   met donc jamais « [!NOTE] » dans le document, il le réécrit à
+   l'enregistrement. C'est ce qui permet à l'encart de s'afficher comme il se
+   lira, au lieu d'exposer sa syntaxe à qui n'écrit pas de Markdown.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/** Forme minimale d'un nœud mdast, réduite à ce que ce module regarde. */
+export interface MarkdownNodeLike {
+  type: string;
+  value?: string;
+  children?: MarkdownNodeLike[];
+}
+
+/** Marqueur nu - « [!NOTE] » -, tel qu'il apparaît une fois le « > » analysé. */
+const BARE_MARKER_RE = /^\\?\[!([A-Za-z]+)\\?\]$/;
+
+/** Genre déclaré par un marqueur seul sur sa ligne, ou `null`. */
+export function calloutMarker(text: string): CalloutKind | null {
+  const found = BARE_MARKER_RE.exec(text.trim());
+  return found ? (MARKERS[found[1].toUpperCase()] ?? null) : null;
+}
+
+/**
+ * Sépare le marqueur du corps d'une citation.
+ *
+ * Rend `null` pour une citation ordinaire - c'est-à-dire la grande majorité :
+ * l'absence de marqueur n'est pas une anomalie, c'est le cas courant.
+ */
+export function splitCalloutMarker(
+  children: readonly MarkdownNodeLike[],
+): { kind: CalloutKind; body: MarkdownNodeLike[] } | null {
+  const first = children[0];
+  if (!first || first.type !== "paragraph") return null;
+
+  const inline = first.children ?? [];
+  const head = inline[0];
+  if (!head || head.type !== "text" || typeof head.value !== "string") return null;
+
+  // Le marqueur occupe la première LIGNE du paragraphe. Selon les greffons
+  // actifs, le reste du paragraphe suit dans la même valeur ou après un nœud
+  // « break » ; les deux se traitent ici, pour que ce module ne dépende pas de
+  // la configuration de l'éditeur qui l'appelle.
+  const [firstLine, ...following] = head.value.split("\n");
+  const kind = calloutMarker(firstLine);
+  if (!kind) return null;
+
+  const remainder = following.join("\n");
+  const tail = inline.slice(1);
+  const inlineBody: MarkdownNodeLike[] = remainder
+    ? [{ type: "text", value: remainder }, ...tail]
+    : // Un « break » juste après le marqueur n'est que la fin de sa ligne.
+      tail[0]?.type === "break"
+      ? tail.slice(1)
+      : tail;
+
+  const rest = children.slice(1);
+  return {
+    kind,
+    body: inlineBody.length
+      ? [{ ...first, children: inlineBody }, ...rest]
+      : [...rest],
+  };
 }

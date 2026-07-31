@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { calloutTemplate, scanCallouts } from "./wiki-callouts";
+import {
+  calloutMarker,
+  calloutTemplate,
+  scanCallouts,
+  splitCalloutMarker,
+  type MarkdownNodeLike,
+} from "./wiki-callouts";
 
 describe("scanCallouts — reconnaître", () => {
   it("retire le marqueur et retient le genre", () => {
@@ -113,5 +119,101 @@ describe("scanCallouts — marqueur échappé par le sérialiseur", () => {
     const md = "> \\[ceci\\] n'est pas un marqueur";
     expect(scanCallouts(md).content).toBe(md);
     expect(scanCallouts(md).byLine.size).toBe(0);
+  });
+
+  it("reconnaît un marqueur suivi d'une ligne de citation vide", () => {
+    // Forme que produit l'éditeur riche : le marqueur et le texte y sont deux
+    // paragraphes, séparés par un « > » seul.
+    const { content, byLine } = scanCallouts("> [!WARNING]\n>\n> Attention.");
+    expect(byLine.get(1)).toBe("warning");
+    expect(content).toBe(">\n> Attention.");
+  });
+});
+
+describe("calloutMarker", () => {
+  it("lit un marqueur nu", () => {
+    expect(calloutMarker("[!NOTE]")).toBe("note");
+    expect(calloutMarker("  [!IMPORTANT]  ")).toBe("important");
+    expect(calloutMarker("\\[!WARNING]")).toBe("warning");
+  });
+
+  it("refuse ce qui n'en est pas un", () => {
+    expect(calloutMarker("[!TRUC]")).toBeNull();
+    expect(calloutMarker("[!NOTE] et la suite")).toBeNull();
+    expect(calloutMarker("")).toBeNull();
+  });
+});
+
+/* Formes d'arbre que l'éditeur riche doit reconnaître. Les deux écritures
+   ci-dessous sont du Markdown équivalent pour un lecteur ; elles ne le sont pas
+   pour remark, qui fait un paragraphe de l'une et deux de l'autre. */
+const text = (value: string): MarkdownNodeLike => ({ type: "text", value });
+const para = (...children: MarkdownNodeLike[]): MarkdownNodeLike => ({
+  type: "paragraph",
+  children,
+});
+
+describe("splitCalloutMarker", () => {
+  it("sépare un marqueur écrit sur son propre paragraphe", () => {
+    const split = splitCalloutMarker([para(text("[!NOTE]")), para(text("Corps."))]);
+    expect(split?.kind).toBe("note");
+    expect(split?.body).toEqual([para(text("Corps."))]);
+  });
+
+  it("sépare un marqueur suivi d'un saut analysé", () => {
+    // « > [!NOTE]\n> Corps. » : un seul paragraphe, coupé par un nœud « break ».
+    const split = splitCalloutMarker([
+      para(text("[!WARNING]"), { type: "break" }, text("Corps.")),
+    ]);
+    expect(split?.kind).toBe("warning");
+    expect(split?.body).toEqual([para(text("Corps."))]);
+  });
+
+  it("sépare un marqueur dont le saut est resté dans la valeur", () => {
+    const split = splitCalloutMarker([para(text("[!IMPORTANT]\nCorps."))]);
+    expect(split?.kind).toBe("important");
+    expect(split?.body).toEqual([para(text("Corps."))]);
+  });
+
+  it("garde les blocs qui suivent, quels qu'ils soient", () => {
+    const list: MarkdownNodeLike = { type: "list", children: [] };
+    const split = splitCalloutMarker([para(text("[!NOTE]")), list, para(text("Fin."))]);
+    expect(split?.body).toEqual([list, para(text("Fin."))]);
+  });
+
+  it("accepte le marqueur échappé par le sérialiseur", () => {
+    const split = splitCalloutMarker([para(text("\\[!NOTE]")), para(text("a"))]);
+    expect(split?.kind).toBe("note");
+  });
+
+  it("rend un corps vide pour un marqueur seul", () => {
+    expect(splitCalloutMarker([para(text("[!NOTE]"))])).toEqual({
+      kind: "note",
+      body: [],
+    });
+  });
+
+  it("laisse une citation ordinaire tranquille", () => {
+    expect(splitCalloutMarker([para(text("Une citation."))])).toBeNull();
+    expect(splitCalloutMarker([])).toBeNull();
+  });
+
+  it("ne prend pas un marqueur en MILIEU de citation", () => {
+    expect(
+      splitCalloutMarker([para(text("Avant.")), para(text("[!NOTE]"))]),
+    ).toBeNull();
+  });
+
+  it("ne prend pas un marqueur qui commence par autre chose qu'un texte", () => {
+    // Un encart dont la première ligne serait en gras n'en est pas un.
+    expect(
+      splitCalloutMarker([para({ type: "strong", children: [text("[!NOTE]")] })]),
+    ).toBeNull();
+  });
+
+  it("ne prend pas un premier bloc qui n'est pas un paragraphe", () => {
+    expect(
+      splitCalloutMarker([{ type: "heading", children: [text("[!NOTE]")] }]),
+    ).toBeNull();
   });
 });

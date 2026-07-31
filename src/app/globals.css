@@ -360,22 +360,62 @@
 .wiki-callout-title {
   @apply flex items-center gap-1.5 font-semibold;
 }
+
+/* ─── IMAGE REDIMENSIONNABLE (éditeur) ───────────────────────────────────────
+   La poignée n'apparaît qu'au survol ou quand l'image est sélectionnée : une
+   pastille permanente sur chaque image ferait un texte constellé de boutons.
+   `touch-action: none` est indispensable au doigt, sans quoi le glissement
+   ferait défiler la page au lieu de redimensionner. */
+.wiki-image-frame {
+  @apply relative inline-block max-w-full;
+}
+.wiki-image-frame > img {
+  @apply block;
+}
+.wiki-image-grip {
+  @apply absolute bottom-2 right-1 size-3.5 rounded-sm border-2 border-background bg-primary opacity-0 shadow transition-opacity;
+  cursor: nwse-resize;
+  touch-action: none;
+}
+.wiki-image-frame:hover > .wiki-image-grip,
+.wiki-image-frame.ProseMirror-selectednode > .wiki-image-grip {
+  @apply opacity-100;
+}
+/* Au doigt, il n'y a pas de survol : la poignée reste visible. */
+@media (pointer: coarse) {
+  .wiki-image-grip {
+    @apply opacity-100;
+  }
+}
+
+/* DANS L'ÉDITEUR, l'encart est une `<blockquote>` portant son genre en attribut :
+   le marqueur n'existe pas dans le document, l'intitulé est donc dessiné à
+   partir de `data-label`, déjà traduit. À la lecture, c'est un vrai élément qui
+   le porte - avec son icône -, et cette règle ne s'applique pas. */
+.wiki-callout[data-label]::before {
+  content: attr(data-label);
+  @apply mb-2 block font-semibold;
+}
+
 .wiki-callout-note {
   @apply border-sky-500/40 border-l-sky-500 bg-sky-500/10;
 }
-.wiki-callout-note .wiki-callout-title {
+.wiki-callout-note .wiki-callout-title,
+.wiki-callout-note[data-label]::before {
   @apply text-sky-700 dark:text-sky-300;
 }
 .wiki-callout-warning {
   @apply border-amber-500/40 border-l-amber-500 bg-amber-500/10;
 }
-.wiki-callout-warning .wiki-callout-title {
+.wiki-callout-warning .wiki-callout-title,
+.wiki-callout-warning[data-label]::before {
   @apply text-amber-700 dark:text-amber-300;
 }
 .wiki-callout-important {
   @apply border-red-500/40 border-l-red-500 bg-red-500/10;
 }
-.wiki-callout-important .wiki-callout-title {
+.wiki-callout-important .wiki-callout-title,
+.wiki-callout-important[data-label]::before {
   @apply text-red-700 dark:text-red-300;
 }
 
@@ -434,7 +474,11 @@
   @apply font-semibold;
 }
 
-.wiki-prose blockquote {
+/* Citation ORDINAIRE. L'exception est nommée plutôt que surchargée : dans
+   l'éditeur, un encart EST une `<blockquote>`, et deux règles de même
+   spécificité se seraient départagées à l'ordre d'écriture - l'encart aurait
+   hérité du filet gris et de l'italique. */
+.wiki-prose blockquote:not(.wiki-callout) {
   @apply border-l-2 border-border pl-4 italic text-muted-foreground;
 }
 .wiki-prose table {

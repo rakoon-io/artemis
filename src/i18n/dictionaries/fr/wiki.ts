@@ -80,6 +80,7 @@ export const wiki = {
       mention: "Citer une tâche",
       strike: "Barré",
       orderedList: "Liste numérotée",
+      resizeImage: "Faire glisser pour redimensionner ; double-clic pour la taille d'origine",
     },
   },
 
@@ -222,6 +223,7 @@ export const wiki = {
     removeTitle: "Retirer « {name} » ?",
     removeDescription:
       "Le fichier sera définitivement supprimé. Le contenu de la page n'est pas modifié : s'il cite ce fichier, la citation restera visible et ne mènera plus nulle part.",
+    dropHint: "Glissez des fichiers ici",
     pasteHint: "Collez une image dans le texte pour l'y insérer directement.",
   },
 

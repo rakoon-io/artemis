@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { cn, formatDate, initials } from "@/lib/utils";
+import { cn, formatDate, formatTime, initials } from "@/lib/utils";
 import { getDictionary } from "@/i18n/server";
 import { effectiveModule } from "@/lib/effective-module";
 import {
@@ -179,8 +179,12 @@ export async function TicketTable({
                   <span className="text-muted-foreground">-</span>
                 )}
               </td>
+              {/* Le jour et l'heure EMPILÉS : mis bout à bout, ils élargissaient
+                  d'un tiers une colonne que le tableau ne pouvait déjà pas
+                  montrer entièrement. */}
               <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">
-                {formatDate(ticket.updatedAt)}
+                <div>{formatDate(ticket.updatedAt)}</div>
+                <div className="text-xs">{formatTime(ticket.updatedAt)}</div>
               </td>
             </tr>
           ))}

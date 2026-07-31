@@ -24,16 +24,22 @@ import {
   editorViewCtx,
   editorViewOptionsCtx,
   rootCtx,
+  serializerCtx,
 } from "@milkdown/kit/core";
 import { $prose } from "@milkdown/kit/utils";
-import { Plugin } from "@milkdown/kit/prose/state";
+import { Plugin, Selection } from "@milkdown/kit/prose/state";
 import type { EditorView } from "@milkdown/kit/prose/view";
 import { commonmark } from "@milkdown/kit/preset/commonmark";
 import { gfm } from "@milkdown/kit/preset/gfm";
 import { history } from "@milkdown/kit/plugin/history";
-import { listener, listenerCtx } from "@milkdown/kit/plugin/listener";
 import { callCommand } from "@milkdown/kit/utils";
+import { wrapIn } from "@milkdown/kit/prose/commands";
+import type { Node as ProseNode } from "@milkdown/kit/prose/model";
 import {
+  blockquoteAttr,
+  blockquoteSchema,
+  imageSchema,
+  remarkPreserveEmptyLinePlugin,
   toggleEmphasisCommand,
   toggleInlineCodeCommand,
   toggleStrongCommand,
@@ -47,7 +53,15 @@ import { Milkdown, MilkdownProvider, useEditor, useInstance } from "@milkdown/re
 import type { CmdKey } from "@milkdown/kit/core";
 import { Button } from "@/components/ui/button";
 import { MENTION_LIST_WIDTH, MentionList } from "./mention-list";
-import { calloutTemplate, type CalloutKind } from "@/lib/wiki-callouts";
+import {
+  CALLOUT_MARKER,
+  isCalloutKind,
+  splitCalloutMarker,
+  type CalloutKind,
+  type MarkdownNodeLike,
+} from "@/lib/wiki-callouts";
+import { stripEditorArtifacts } from "@/lib/markdown-artifacts";
+import { imageResizeNodeView, imageWithWidth } from "./image-resize";
 import {
   detectMention,
   rankTickets,
@@ -91,6 +105,105 @@ import "@milkdown/kit/prose/view/style/prosemirror.css";
 const CONTENT_CLASS =
   "wiki-prose relative min-h-40 bg-transparent px-3 py-2 outline-none";
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   ENCART = CITATION + GENRE
+
+   Un encart s'enregistre comme une citation dont la première ligne porte un
+   marqueur (cf. `@/lib/wiki-callouts`). L'éditeur affichait donc « [!WARNING] »
+   en toutes lettres et en anglais : on cliquait « Attention » et l'on voyait
+   apparaître du jargon dans son texte. Une commande de mise en forme ne doit
+   pas laisser sa syntaxe sur la table.
+
+   Le marqueur est donc LU à l'ouverture et RÉÉCRIT à l'enregistrement, sans
+   jamais exister dans le document. Le genre vit dans un attribut de la
+   citation, et l'affichage en tire le cadre coloré et son intitulé - ce que
+   l'on verra à la lecture.
+
+   Pourquoi étendre la citation plutôt que créer un nœud « encart » : parce que
+   c'en est une. Tout ce que ProseMirror sait déjà faire d'une citation - la
+   fabriquer, en sortir, l'imbriquer, la coller - continue de valoir, et un
+   encart dont on retire le genre redevient une citation ordinaire sans que rien
+   ne se convertisse.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/** Genre porté par un nœud, si c'en est un connu. */
+function calloutKindOf(node: ProseNode): CalloutKind | null {
+  const kind: unknown = node.attrs?.kind;
+  return isCalloutKind(kind) ? kind : null;
+}
+
+/**
+ * Les nœuds mdast de Milkdown déclarent leurs champs en `unknown` (signature
+ * d'index) ; `splitCalloutMarker` n'en lit que le type et le texte. La
+ * conversion est donc sûre, et cantonnée à ces deux fonctions.
+ */
+const asMarkdownNodes = (nodes: unknown): MarkdownNodeLike[] =>
+  (nodes ?? []) as MarkdownNodeLike[];
+
+function calloutBlockquote(labels: Record<CalloutKind, string>) {
+  return blockquoteSchema.extendSchema((prev) => (ctx) => {
+    const base = prev(ctx);
+    return {
+      ...base,
+      attrs: { kind: { default: null } },
+      parseDOM: [
+        {
+          tag: "blockquote",
+          getAttrs: (dom: HTMLElement) => {
+            const kind = dom.getAttribute("data-callout");
+            return { kind: isCalloutKind(kind) ? kind : null };
+          },
+        },
+      ],
+      toDOM: (node: ProseNode) => {
+        const attrs = ctx.get(blockquoteAttr.key)(node) as Record<string, string>;
+        const kind = calloutKindOf(node);
+        if (!kind) return ["blockquote", attrs, 0];
+        return [
+          "blockquote",
+          {
+            ...attrs,
+            "data-callout": kind,
+            // L'intitulé est traduit ici et dessiné par le style : le document,
+            // lui, n'en porte pas trace.
+            "data-label": labels[kind],
+            class: [attrs.class, "wiki-callout", `wiki-callout-${kind}`]
+              .filter(Boolean)
+              .join(" "),
+          },
+          0,
+        ];
+      },
+      parseMarkdown: {
+        match: base.parseMarkdown.match,
+        runner: (state, node, type) => {
+          const split = splitCalloutMarker(asMarkdownNodes(node.children));
+          state.openNode(type, split ? { kind: split.kind } : undefined);
+          state.next((split ? split.body : asMarkdownNodes(node.children)) as never);
+          state.closeNode();
+        },
+      },
+      toMarkdown: {
+        match: base.toMarkdown.match,
+        runner: (state, node) => {
+          state.openNode("blockquote");
+          const kind = calloutKindOf(node);
+          if (kind) {
+            state.openNode("paragraph");
+            // Nœud « html » et non « text » : un crochet en début de ligne
+            // serait échappé - « \[!NOTE] » -, et la marque ressortirait à la
+            // lecture brute du Markdown, dans un export ou un terminal.
+            state.addNode("html", undefined, `[!${CALLOUT_MARKER[kind]}]`);
+            state.closeNode();
+          }
+          state.next(node.content);
+          state.closeNode();
+        },
+      },
+    };
+  });
+}
+
 function Toolbar({
   disabled,
   onMention,
@@ -113,34 +226,38 @@ function Toolbar({
   );
 
   /**
-   * ENCART : une citation dont la première ligne porte le marqueur.
+   * ENCART : on pose un GENRE sur la citation qui contient le curseur, ou l'on
+   * enveloppe la sélection dans une citation qui le porte.
    *
-   * Le marqueur reste VISIBLE pendant la saisie, et c'est assumé : le représenter
-   * autrement demanderait un nœud sur mesure, alors qu'il s'agit d'une citation
-   * ordinaire que ProseMirror sait déjà relire et réécrire sans rien perdre. À la
-   * lecture, il disparaît au profit du bandeau coloré.
+   * Rien n'est écrit dans le texte - le marqueur est réécrit à
+   * l'enregistrement. Le bouton bascule : le presser sur un encart du même
+   * genre le ramène à une citation ordinaire, ce qui donne de quoi défaire sans
+   * chercher.
    */
   const callout = useCallback(
     (kind: CalloutKind) => () => {
       if (loading) return;
       getEditor()?.action((ctx) => {
         const view = ctx.get(editorViewCtx);
-        const marker = calloutTemplate(kind).split("\n")[0].replace(/^>\s*/, "");
-        const { tr, schema } = view.state;
-        const paragraph = schema.nodes.paragraph;
-        const quote = schema.nodes.blockquote;
-        if (!paragraph || !quote) return;
-        // UN SEUL paragraphe, celui du marqueur. Un second, vide, ressortait en
-        // « <br /> » à la sérialisation - du HTML en toutes lettres au milieu de
-        // l'encart. On écrit la suite en appuyant sur Entrée, comme dans toute
-        // citation.
-        view.dispatch(
-          tr
-            .replaceSelectionWith(
-              quote.create(null, [paragraph.create(null, schema.text(marker))]),
-            )
-            .scrollIntoView(),
-        );
+        const quote = view.state.schema.nodes.blockquote;
+        if (!quote) return;
+
+        const { $from } = view.state.selection;
+        for (let depth = $from.depth; depth > 0; depth -= 1) {
+          const node = $from.node(depth);
+          if (node.type !== quote) continue;
+          const next = node.attrs.kind === kind ? null : kind;
+          view.dispatch(
+            view.state.tr.setNodeMarkup($from.before(depth), undefined, {
+              ...node.attrs,
+              kind: next,
+            }),
+          );
+          view.focus();
+          return;
+        }
+
+        wrapIn(quote, { kind })(view.state, view.dispatch);
         view.focus();
       });
     },
@@ -310,11 +427,38 @@ function EditorSurface({
   const ticketsRef = useRef(tickets);
   const notifyRef = useRef(onMentionChange);
   const pasteRef = useRef(onPasteImage);
+  const changeRef = useRef(onChange);
+  const emptyRef = useRef(onEmptyChange);
   useEffect(() => {
     ticketsRef.current = tickets;
     notifyRef.current = onMentionChange;
     pasteRef.current = onPasteImage;
+    changeRef.current = onChange;
+    emptyRef.current = onEmptyChange;
   });
+
+  /**
+   * Publie le texte du document.
+   *
+   * Appelé à CHAQUE frappe, sans temporisation. Le greffon `listener` de
+   * Milkdown, lui, attend 200 ms de silence avant de sérialiser : qui tapait
+   * puis validait aussitôt - ⌘/Ctrl + Entrée, ou un clic rapide sur
+   * « Enregistrer » - perdait ses derniers mots, la valeur remontée étant en
+   * retard sur ce qu'il voyait. Constaté, reproduit, et sans remède du côté de
+   * l'appelant : une transmission par état React ne peut pas rattraper son
+   * retard dans l'événement même qui déclenche l'enregistrement.
+   *
+   * La sérialisation à chaque frappe est ce que fait déjà la saisie Markdown,
+   * dont le champ est contrôlé. Mesurée sur la plus grosse page du wiki
+   * (3 800 caractères, tableaux et blocs de code compris) et en mode
+   * développement, donc au pire : 0,8 ms en médiane, 3,8 ms au pire - un
+   * seizième d'image à l'écran.
+   */
+  const publish = useCallback((markdown: string) => {
+    const cleaned = stripEditorArtifacts(markdown);
+    changeRef.current(cleaned);
+    emptyRef.current(!cleaned.trim());
+  }, []);
 
   const clear = useCallback(() => {
     mentionRef.current = null;
@@ -386,15 +530,39 @@ function EditorSurface({
     [anchorRef, clear],
   );
 
+  /**
+   * Intitulés des encarts, figés à la construction : ils sont dessinés par le
+   * schéma, que l'éditeur ne rebâtit pas (cf. l'en-tête). Changer de langue
+   * recharge l'application, ils suivent donc au montage suivant.
+   */
+  const t = useDict();
+  const calloutLabels: Record<CalloutKind, string> = {
+    note: t.wiki.callouts.note,
+    warning: t.wiki.callouts.warning,
+    important: t.wiki.callouts.important,
+  };
+
   useEditor(
     (root) =>
       Editor.make()
         .config((ctx) => {
           ctx.set(rootCtx, root);
-          ctx.set(defaultValueCtx, value);
+          // Nettoyé à l'entrée aussi : une page enregistrée avant que l'on ne
+          // corrige cela porte encore des `<br />`, et sans la conservation des
+          // lignes vides, Milkdown les afficherait en toutes lettres dans la
+          // zone de saisie. Rouvrir puis enregistrer une vieille page suffit
+          // désormais à la nettoyer.
+          ctx.set(defaultValueCtx, stripEditorArtifacts(value));
           ctx.update(editorViewOptionsCtx, (prev) => ({
             ...prev,
             editable: () => !disabled,
+            /* L'IMAGE se laisse tirer par le coin (cf. `./image-resize`). Aucun
+               des deux préréglages n'installe de vue de nœud : rien n'est
+               écrasé ici. */
+            nodeViews: {
+              ...prev.nodeViews,
+              image: imageResizeNodeView(t.wiki.form.tools.resizeImage),
+            },
             attributes: {
               class: CONTENT_CLASS,
               "aria-label": placeholder ?? "",
@@ -451,62 +619,147 @@ function EditorSurface({
               return true;
             },
             /**
+             * DÉPÔT D'IMAGE dans le texte, au point où on la lâche - et non à
+             * l'endroit où traînait le curseur. Même chemin que le collage : le
+             * fichier est déposé sur la page, puis cité par son adresse stable.
+             *
+             * Les autres fichiers ne sont pas pris ici : leur place est dans les
+             * pièces jointes, qui ont leur propre zone. Le geste manqué ne fait
+             * rien - la garde posée par ce panneau empêche le navigateur
+             * d'ouvrir le fichier à la place de l'application.
+             */
+            handleDrop: (view: EditorView, event: DragEvent) => {
+              const upload = pasteRef.current;
+              const images = Array.from(event.dataTransfer?.files ?? []).filter((f) =>
+                f.type.startsWith("image/"),
+              );
+              if (!upload || images.length === 0) return false;
+              event.preventDefault();
+
+              const at = view.posAtCoords({
+                left: event.clientX,
+                top: event.clientY,
+              })?.pos;
+              if (at !== undefined) {
+                view.dispatch(
+                  view.state.tr.setSelection(
+                    Selection.near(view.state.doc.resolve(at)),
+                  ),
+                );
+              }
+              view.focus();
+              void (async () => {
+                for (const file of images) {
+                  const done = await upload(file);
+                  if (!done) continue;
+                  const type = view.state.schema.nodes.image;
+                  if (!type) continue;
+                  // Insertion à la sélection COURANTE : après chaque image, elle
+                  // se trouve juste derrière, les suivantes s'enchaînent donc
+                  // dans l'ordre où on les a lâchées.
+                  view.dispatch(
+                    view.state.tr.replaceSelectionWith(
+                      type.create({ src: done.src, alt: done.alt }),
+                    ),
+                  );
+                }
+              })();
+              return true;
+            },
+            /**
              * Tant que la liste est ouverte, elle CONSOMME les touches de
              * navigation : sans cela, Entrée couperait le paragraphe sous la
              * liste et les flèches déplaceraient le curseur au lieu de changer
              * de proposition.
+             *
+             * Consommer, c'est aussi ARRÊTER LA PROPAGATION : le conteneur écoute
+             * plus haut les raccourcis d'enregistrement, et Échap y annulerait la
+             * modification en cours au lieu de simplement refermer la liste.
              */
             handleKeyDown: (_view: EditorView, event: KeyboardEvent) => {
               const mention = mentionRef.current;
               const results = resultsRef.current;
               if (!mention || results.length === 0) return false;
+              const consumed = () => {
+                event.stopPropagation();
+                return true;
+              };
               if (event.key === "ArrowDown" || event.key === "ArrowUp") {
                 const step = event.key === "ArrowDown" ? 1 : -1;
                 indexRef.current =
                   (indexRef.current + step + results.length) % results.length;
                 notifyRef.current(mention, results, indexRef.current);
-                return true;
+                return consumed();
               }
               if (event.key === "Enter" || event.key === "Tab") {
                 pick(results[Math.min(indexRef.current, results.length - 1)]);
-                return true;
+                return consumed();
               }
               if (event.key === "Escape") {
                 clear();
-                return true;
+                return consumed();
               }
               return false;
             },
           }));
-          ctx.get(listenerCtx).markdownUpdated((_, markdown, previous) => {
-            // Le premier événement rejoue la valeur initiale : le laisser passer
-            // marquerait le formulaire comme modifié sans que rien ne le soit.
-            if (previous !== undefined && markdown !== previous) onChange(markdown);
-            onEmptyChange(!markdown.trim());
-          });
           register({
             trigger: () => insertAt(ctx.get(editorViewCtx)),
             pick,
           });
         })
-        .use(commonmark)
+        /**
+         * Le préréglage MOINS deux choses, PLUS notre citation.
+         *
+         * LA CITATION est remplacée explicitement plutôt qu'empilée : deux
+         * définitions du même nœud laisseraient dépendre le résultat de l'ordre
+         * d'enregistrement. Les commandes et raccourcis du préréglage
+         * continuent de fonctionner, eux résolvent la citation par son nom dans
+         * le schéma final.
+         *
+         * LA CONSERVATION DES LIGNES VIDES est retirée. Milkdown écrit une
+         * balise `<br />` pour chaque ligne vide laissée entre deux blocs, faute
+         * de pouvoir l'exprimer en Markdown - où deux blocs sont TOUJOURS
+         * séparés d'une ligne blanche, sans qu'il existe de façon d'en écrire
+         * deux. Cette balise ressortait en toutes lettres à la lecture, le rendu
+         * n'interprétant pas le HTML. Mieux vaut perdre l'espacement, qui n'est
+         * pas représentable, que d'écrire du HTML dans un document Markdown.
+         */
+        .use(
+          commonmark
+            .filter(
+              (plugin) =>
+                !(blockquoteSchema as readonly unknown[]).includes(plugin) &&
+                !(imageSchema as readonly unknown[]).includes(plugin) &&
+                !(remarkPreserveEmptyLinePlugin as readonly unknown[]).includes(plugin),
+            )
+            .concat(calloutBlockquote(calloutLabels))
+            // L'IMAGE porte sa largeur, et se laisse tirer par le coin.
+            .concat(imageWithWidth()),
+        )
         .use(gfm)
         .use(history)
-        .use(listener)
         /**
          * Plugin ProseMirror plutôt qu'un écouteur de frappe : sa méthode
          * `update` est appelée à CHAQUE changement de vue - texte saisi, mais
          * aussi flèche, clic, ou sélection posée autrement. Se contenter du
          * clavier laisserait la liste ouverte après un clic ailleurs.
+         *
+         * C'est aussi d'ici que le texte est publié, le greffon `listener` de
+         * Milkdown temporisant trop pour un enregistrement au clavier (cf.
+         * `publish`). Le premier appel n'a pas lieu à la construction : la
+         * valeur initiale ne se rejoue donc pas, et le formulaire ne se déclare
+         * pas modifié avant qu'on ne le modifie.
          */
         .use(
           $prose(
-            () =>
+            (ctx) =>
               new Plugin({
                 view: () => ({
-                  update: (view) => {
+                  update: (view, previous) => {
                     viewRef.current = view;
                     refresh(view);
+                    if (previous.doc.eq(view.state.doc)) return;
+                    publish(ctx.get(serializerCtx)(view.state.doc));
                   },
                   destroy: clear,
                 }),

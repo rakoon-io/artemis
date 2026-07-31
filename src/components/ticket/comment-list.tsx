@@ -1,5 +1,5 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { formatDate, initials } from "@/lib/utils";
+import { formatDateTime, initials } from "@/lib/utils";
 import { getDictionary } from "@/i18n/server";
 import type { TicketDetail } from "./ticket-fields";
 
@@ -31,7 +31,7 @@ export async function CommentList({ comments }: { comments: CommentItem[] }) {
                 {comment.author.name ?? comment.author.email}
               </span>
               <span className="text-xs text-muted-foreground">
-                {formatDate(comment.createdAt)}
+                {formatDateTime(comment.createdAt)}
               </span>
             </div>
             <p className="mt-1 whitespace-pre-wrap break-words text-sm">

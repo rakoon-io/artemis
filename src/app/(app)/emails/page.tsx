@@ -3,6 +3,7 @@ import type { EmailStatus } from "@prisma/client";
 
 import { auth } from "@/auth";
 import { isAdmin } from "@/lib/policies";
+import { formatDateTime } from "@/lib/utils";
 import { getDictionary } from "@/i18n/server";
 import { getEmailLog } from "@/server/queries";
 import { Badge } from "@/components/ui/badge";
@@ -98,10 +99,7 @@ export default async function EmailsPage() {
                   {emails.map((email) => (
                     <tr key={email.id} className="border-b last:border-0">
                       <td className="whitespace-nowrap px-4 py-2 text-muted-foreground">
-                        {new Date(email.createdAt).toLocaleString("fr-FR", {
-                          dateStyle: "short",
-                          timeStyle: "short",
-                        })}
+                        {formatDateTime(email.createdAt)}
                       </td>
                       <td className="max-w-[14rem] truncate px-4 py-2">
                         {email.to}
