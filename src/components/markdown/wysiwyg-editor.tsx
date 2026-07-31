@@ -381,6 +381,7 @@ interface RichMention {
 }
 
 function EditorSurface({
+  id,
   value,
   onChange,
   onEmptyChange,
@@ -392,6 +393,8 @@ function EditorSurface({
   onMentionChange,
   register,
 }: {
+  /** Porté par la zone de saisie, pour qu'un `<Label>` externe la désigne. */
+  id?: string;
   value: string;
   onChange: (markdown: string) => void;
   onEmptyChange: (empty: boolean) => void;
@@ -564,6 +567,7 @@ function EditorSurface({
               image: imageResizeNodeView(t.wiki.form.tools.resizeImage),
             },
             attributes: {
+              ...(id ? { id } : {}),
               class: CONTENT_CLASS,
               "aria-label": placeholder ?? "",
               // Lu par le CSS de l'invite : un éditeur vide doit dire ce qu'on
@@ -793,6 +797,7 @@ function insertAt(view: EditorView) {
 }
 
 export function WysiwygEditor({
+  id,
   value,
   onChange,
   disabled,
@@ -800,6 +805,12 @@ export function WysiwygEditor({
   tickets = [],
   onPasteImage,
 }: {
+  /**
+   * Identifiant de la zone de saisie. Sans lui, un `<Label for=…>` posé par
+   * l'appelant ne désignait plus rien dès qu'on passait en mise en forme : la
+   * zone n'est pas un `<textarea>`, et l'identifiant s'arrêtait à la saisie brute.
+   */
+  id?: string;
   value: string;
   onChange: (markdown: string) => void;
   disabled?: boolean;
@@ -842,6 +853,7 @@ export function WysiwygEditor({
           }
         />
         <EditorSurface
+          id={id}
           value={value}
           onChange={onChange}
           onEmptyChange={setEmpty}

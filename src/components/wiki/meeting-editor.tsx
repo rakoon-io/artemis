@@ -25,6 +25,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AutoTextarea } from "@/components/ui/auto-textarea";
+import { MarkdownEditor } from "@/components/markdown/markdown-editor";
+import { uploadWikiFile, wikiFileHref } from "./wiki-file-upload";
+import type { TicketRef } from "@/lib/wiki-mentions";
 import {
   Dialog,
   DialogClose,
@@ -156,6 +159,9 @@ export function MeetingEditor({
   pageTitle,
   parentId,
   content,
+  projectKey,
+  tickets,
+  ticketMap,
   aiEnabled = false,
   onDone,
 }: {
@@ -168,6 +174,10 @@ export function MeetingEditor({
    */
   parentId: string | null;
   content: string;
+  /** De quoi citer une tâche et l'afficher dans l'en-tête, comme ailleurs. */
+  projectKey: string;
+  tickets: TicketRef[];
+  ticketMap: Record<string, string>;
   /** L'IA est-elle configurée sur ce serveur ? Décidé côté serveur. */
   aiEnabled?: boolean;
   onDone: () => void;
@@ -396,17 +406,33 @@ export function MeetingEditor({
         {themes.length > 0 && ai}
       </div>
 
+      {/* L'EN-TÊTE est du texte libre, rendu en Markdown à la lecture : il se
+          saisit donc avec l'éditeur commun, comme toute autre page. Il y gagne
+          la mise en forme visible, la citation d'une tâche et le collage
+          d'image ; les POINTS, eux, gardent leur champ nu - un point est une
+          phrase, pas un document. */}
       <div className="space-y-1.5">
         <Label htmlFor={`meeting-preamble-${pageId}`}>
           {t.wiki.meeting.preambleLabel}
         </Label>
-        <AutoTextarea
+        <MarkdownEditor
           id={`meeting-preamble-${pageId}`}
           value={preamble}
-          onChange={(event) => setPreamble(event.target.value)}
+          onChange={setPreamble}
+          tickets={tickets}
+          projectKey={projectKey}
+          ticketMap={ticketMap}
           placeholder={t.wiki.meeting.preamblePlaceholder}
+          rows={6}
           disabled={pending}
-          className="min-h-16"
+          onPasteImage={async (file) => {
+            const done = await uploadWikiFile(pageId, file);
+            if (!done) {
+              toast.error(t.wiki.files.uploadFailed);
+              return null;
+            }
+            return { src: wikiFileHref(done.id), alt: done.filename };
+          }}
         />
       </div>
 
@@ -843,6 +869,9 @@ export function MeetingSection({
   pageTitle,
   parentId,
   content,
+  projectKey,
+  tickets,
+  ticketMap,
   canEdit,
   aiEnabled,
   defaultEditing = false,
@@ -852,6 +881,9 @@ export function MeetingSection({
   pageTitle: string;
   parentId: string | null;
   content: string;
+  projectKey: string;
+  tickets: TicketRef[];
+  ticketMap: Record<string, string>;
   canEdit: boolean;
   aiEnabled?: boolean;
   /**
@@ -874,6 +906,9 @@ export function MeetingSection({
         pageTitle={pageTitle}
         parentId={parentId}
         content={content}
+        projectKey={projectKey}
+        tickets={tickets}
+        ticketMap={ticketMap}
         aiEnabled={aiEnabled}
         onDone={() => setEditing(false)}
       />

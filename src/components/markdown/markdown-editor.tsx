@@ -403,6 +403,7 @@ export function MarkdownEditor({
         </div>
         <WysiwygEditor
           key={richKey}
+          id={id}
           value={value}
           onChange={onChange}
           disabled={disabled}

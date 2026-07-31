@@ -917,6 +917,9 @@ export default async function WikiPage({
                     pageTitle={current.title}
                     parentId={current.parentId}
                     content={current.content}
+                    projectKey={project.key}
+                    tickets={ticketRefs}
+                    ticketMap={ticketMap}
                     canEdit
                     aiEnabled={isMistralConfigured()}
                     defaultEditing={sp.edit === "points"}
