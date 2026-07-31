@@ -11,6 +11,10 @@ import { getDictionary } from "@/i18n/server";
 import { Badge } from "@/components/ui/badge";
 import { CreateSprintDialog } from "@/components/sprint/create-sprint-dialog";
 import { SprintCard, SprintTicketItem } from "@/components/sprint/sprint-card";
+import {
+  SprintDndProvider,
+  TicketDropZone,
+} from "@/components/sprint/sprint-dnd";
 
 /** Groupes affichés, dans l'ordre Actif, Planifiés, Terminés. */
 const GROUPS = [
@@ -71,6 +75,9 @@ export default async function SprintsPage({
          * on voit ce qu'on remplit ET ce dans quoi on puise, ce qui est le geste
          * même de cette page.
          */
+        <SprintDndProvider
+          sprintNames={Object.fromEntries(sprints.map((s) => [s.id, s.name]))}
+        >
         <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
           <div className="space-y-8">
           {GROUPS.map((group) => {
@@ -94,6 +101,7 @@ export default async function SprintsPage({
                       tickets={sprint.tickets}
                       projectKey={project.key}
                       sprintOptions={sprintOptions}
+                      currentUser={session?.user ?? null}
                     />
                   ))}
                 </div>
@@ -102,10 +110,16 @@ export default async function SprintsPage({
           })}
           </div>
 
-          {/* La réserve reste visible pendant qu'on remplit les sprints - et se
-              range sous eux dès que l'écran ne peut plus les mettre côte à
-              côte. */}
-          <section className="space-y-3 xl:sticky xl:top-4">
+          {/**
+           * La réserve reste visible pendant qu'on remplit les sprints - et se
+           * range sous eux dès que l'écran ne peut plus les mettre côte à côte.
+           *
+           * `top-16` et non `top-4` : la barre du haut est elle-même collante et
+           * haute de 57 pixels. À seize, la réserve venait se coller SOUS elle -
+           * quarante et un pixels avalés, mesurés, dont son propre intitulé. Elle
+           * paraissait ne pas tenir alors qu'elle tenait, mais trop haut.
+           */}
+          <section className="space-y-3 xl:sticky xl:top-16">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 {t.sprints.backlog}
@@ -115,26 +129,30 @@ export default async function SprintsPage({
                 {t.sprints.ticketsWithoutSprint}
               </span>
             </div>
-            {backlog.length === 0 ? (
-              <p className="rounded-md border border-dashed px-3 py-4 text-sm text-muted-foreground">
-                {t.sprints.backlogEmpty}
-              </p>
-            ) : (
-              <ul className="slim-scrollbar max-h-[calc(100dvh-16rem)] divide-y overflow-y-auto rounded-lg border">
-                {backlog.map((ticket) => (
-                  <li key={ticket.id}>
-                    <SprintTicketItem
-                      ticket={ticket}
-                      projectKey={project.key}
-                      currentSprintId={null}
-                      sprintOptions={sprintOptions}
-                    />
-                  </li>
-                ))}
-              </ul>
-            )}
+            <TicketDropZone sprintId={null}>
+              {backlog.length === 0 ? (
+                <p className="rounded-md border border-dashed px-3 py-4 text-sm text-muted-foreground">
+                  {t.sprints.backlogEmpty}
+                </p>
+              ) : (
+                <ul className="slim-scrollbar max-h-[calc(100dvh-16rem)] divide-y overflow-y-auto rounded-lg border">
+                  {backlog.map((ticket) => (
+                    <li key={ticket.id}>
+                      <SprintTicketItem
+                        ticket={ticket}
+                        projectKey={project.key}
+                        currentSprintId={null}
+                        sprintOptions={sprintOptions}
+                        currentUser={session?.user ?? null}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </TicketDropZone>
           </section>
         </div>
+        </SprintDndProvider>
       )}
     </div>
   );

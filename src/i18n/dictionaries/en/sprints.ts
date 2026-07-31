@@ -60,6 +60,15 @@ export const sprints: SprintsDict = {
   noSprintCreateOne: "No sprint. Create one.",
   backlogNoSprint: "Backlog (no sprint)",
 
+  dragHandleAria: "Drag ticket {ticket}",
+  dropHint: "Drop a ticket here",
+  announceDragStart: "Started dragging ticket {ticket}.",
+  announceDragOver: "Ticket {ticket} is over {over}.",
+  announceDragOverNone: "Ticket {ticket} is over no target.",
+  announceDragEnd: "Ticket {ticket} was dropped on {over}.",
+  announceDragEndNone: "Ticket {ticket} was released.",
+  announceDragCancel: "Dragging of ticket {ticket} cancelled.",
+
   // Planning actions (buttons)
   startAction: "Start",
   closeAction: "Close",

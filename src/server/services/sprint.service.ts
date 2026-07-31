@@ -29,6 +29,10 @@ export function listSprintsWithTickets(projectId: string) {
           id: true,
           key: true,
           title: true,
+          // Cf. `listBacklogTickets` : la poignée de déplacement se décide avec
+          // les mêmes champs que l'autorisation serveur.
+          reporterId: true,
+          assigneeId: true,
           column: { select: { name: true } },
           type: { select: { name: true, color: true } },
           priority: { select: { name: true, color: true } },

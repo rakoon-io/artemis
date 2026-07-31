@@ -10,13 +10,18 @@ import {
   Check,
   Flag,
   FolderInput,
+  GripVertical,
   Loader2,
   Play,
   RotateCcw,
   Trash2,
 } from "lucide-react";
+import { useDraggable } from "@dnd-kit/core";
 import { SprintState } from "@prisma/client";
 import type { Sprint } from "@prisma/client";
+import { canEditTicket, type PolicyUser } from "@/lib/policies";
+import { cn } from "@/lib/utils";
+import { TicketDropZone, type DraggedTicket } from "./sprint-dnd";
 import {
   deleteSprintAction,
   setSprintStateAction,
@@ -59,6 +64,9 @@ export interface SprintTicketRow {
   id: string;
   key: string;
   title: string;
+  /** Propriété du ticket : de quoi trancher qui peut le déplacer. */
+  reporterId: string;
+  assigneeId: string | null;
   column: { name: string };
   type: { name: string; color: string };
   priority: { name: string; color: string };
@@ -159,20 +167,60 @@ function TicketSprintMenu({
   );
 }
 
-/** Ligne d'un ticket dans la vue Sprints : lien + badges + menu de distribution. */
+/**
+ * Ligne d'un ticket dans la vue Sprints : poignée, lien, badges, menu.
+ *
+ * LA POIGNÉE PORTE LE DÉPLACEMENT, PAS LA LIGNE. Poser les écouteurs sur la
+ * ligne entière rendrait le titre indéplaçable au clic - c'est la leçon déjà
+ * apprise sur les cartes du tableau. Elle n'apparaît qu'à qui peut réellement
+ * déplacer le ticket : le serveur refuserait les autres, l'afficher serait leur
+ * promettre ce qu'ils n'obtiendront pas.
+ */
 export function SprintTicketItem({
   ticket,
   projectKey,
   currentSprintId,
   sprintOptions,
+  currentUser,
 }: {
   ticket: SprintTicketRow;
   projectKey: string;
   currentSprintId: string | null;
   sprintOptions: SprintChoice[];
+  currentUser: PolicyUser | null;
 }) {
+  const t = useDict();
+  const canMove = canEditTicket(currentUser, ticket);
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: ticket.id,
+    disabled: !canMove,
+    data: {
+      key: ticket.key,
+      title: ticket.title,
+      sprintId: currentSprintId,
+    } satisfies DraggedTicket,
+  });
+
   return (
-    <div className="flex items-center gap-2 px-2 py-1.5 text-sm">
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "flex items-center gap-2 px-2 py-1.5 text-sm",
+        isDragging && "opacity-40",
+      )}
+    >
+      {canMove && (
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          title={fmt(t.sprints.dragHandleAria, { ticket: ticket.key })}
+          aria-label={fmt(t.sprints.dragHandleAria, { ticket: ticket.key })}
+          className="-ml-1 shrink-0 cursor-grab touch-none rounded-sm p-0.5 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
+        >
+          <GripVertical className="size-3.5" aria-hidden />
+        </button>
+      )}
       <Link
         href={`/projects/${projectKey}/tickets/${ticket.id}`}
         className="flex min-w-0 flex-1 items-center gap-2 transition-colors hover:text-primary"
@@ -219,11 +267,13 @@ export function SprintCard({
   tickets,
   projectKey,
   sprintOptions,
+  currentUser,
 }: {
   sprint: Sprint;
   tickets: SprintTicketRow[];
   projectKey: string;
   sprintOptions: SprintChoice[];
+  currentUser: PolicyUser | null;
 }) {
   const t = useDict();
   const router = useRouter();
@@ -292,24 +342,27 @@ export function SprintCard({
         </div>
       </CardHeader>
       <CardContent className="flex-1">
-        {tickets.length === 0 ? (
-          <p className="rounded-md border border-dashed px-3 py-4 text-center text-sm text-muted-foreground">
-            {t.sprints.noTicketsInSprint}
-          </p>
-        ) : (
-          <ul className="divide-y rounded-md border">
-            {tickets.map((ticket) => (
-              <li key={ticket.id}>
-                <SprintTicketItem
-                  ticket={ticket}
-                  projectKey={projectKey}
-                  currentSprintId={sprint.id}
-                  sprintOptions={sprintOptions}
-                />
-              </li>
-            ))}
-          </ul>
-        )}
+        <TicketDropZone sprintId={sprint.id}>
+          {tickets.length === 0 ? (
+            <p className="rounded-md border border-dashed px-3 py-4 text-center text-sm text-muted-foreground">
+              {t.sprints.noTicketsInSprint}
+            </p>
+          ) : (
+            <ul className="divide-y rounded-md border">
+              {tickets.map((ticket) => (
+                <li key={ticket.id}>
+                  <SprintTicketItem
+                    ticket={ticket}
+                    projectKey={projectKey}
+                    currentSprintId={sprint.id}
+                    sprintOptions={sprintOptions}
+                    currentUser={currentUser}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+        </TicketDropZone>
       </CardContent>
       <CardFooter className="gap-2">
           {sprint.state === SprintState.PLANNED && (

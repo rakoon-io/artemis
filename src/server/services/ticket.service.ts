@@ -345,6 +345,10 @@ export function listBacklogTickets(projectId: string) {
       id: true,
       key: true,
       title: true,
+      // De quoi trancher `canEditTicket` à l'affichage : la poignée de
+      // déplacement ne doit apparaître qu'à qui le serveur laissera faire.
+      reporterId: true,
+      assigneeId: true,
       column: { select: { name: true } },
       type: { select: { name: true, color: true } },
       priority: { select: { name: true, color: true } },

@@ -60,6 +60,16 @@ export const sprints = {
   noSprintCreateOne: "Aucun sprint. Créez-en un.",
   backlogNoSprint: "Backlog (aucun sprint)",
 
+  // Glisser-deposer du backlog vers un sprint
+  dragHandleAria: "Faire glisser le ticket {ticket}",
+  dropHint: "Déposez un ticket ici",
+  announceDragStart: "Déplacement du ticket {ticket} commencé.",
+  announceDragOver: "Le ticket {ticket} est au-dessus de {over}.",
+  announceDragOverNone: "Le ticket {ticket} n'est au-dessus d'aucune cible.",
+  announceDragEnd: "Le ticket {ticket} a été déposé sur {over}.",
+  announceDragEndNone: "Le ticket {ticket} a été relâché.",
+  announceDragCancel: "Déplacement du ticket {ticket} annulé.",
+
   // Actions de planification (boutons)
   startAction: "Démarrer",
   closeAction: "Clôturer",
