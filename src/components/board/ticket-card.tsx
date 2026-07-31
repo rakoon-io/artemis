@@ -84,20 +84,22 @@ export function TicketCardView({
   const t = useDict();
   const ticketModule = effectiveModule(ticket);
   const assigneeName = ticket.assignee?.name ?? ticket.assignee?.email ?? null;
-  const extraLabels = ticket.labels.length - 4;
 
   return (
     <Card
+      /* COMPACTE et peu arrondie : une colonne n'en montrait que trois. Le
+         rayon par défaut - celui des cartes de contenu - donnait à une vignette
+         de deux cents pixels l'allure d'un panneau. */
       className={cn(
-        "group/card gap-0 p-2.5",
+        "group/card gap-0 rounded-md p-2",
         overlay && "rotate-1 shadow-lg ring-2 ring-ring",
       )}
     >
-      <div className="flex items-start gap-1.5">
+      <div className="flex items-start gap-1">
         {handle}
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 space-y-1">
           <div className="flex items-center justify-between gap-2">
-            <span className="font-mono text-xs text-muted-foreground">
+            <span className="shrink-0 whitespace-nowrap font-mono text-xs text-muted-foreground">
               {ticket.key}
             </span>
             {options ? (
@@ -111,24 +113,29 @@ export function TicketCardView({
                 <ColorBadge
                   name={ticket.priority.name}
                   color={ticket.priority.color}
+                  dense
                 />
               </TicketPriorityInline>
             ) : (
               <ColorBadge
                 name={ticket.priority.name}
                 color={ticket.priority.color}
+                dense
               />
             )}
           </div>
 
           <Link
             href={`/projects/${projectKey}/tickets/${ticket.id}`}
-            className="mt-1.5 block rounded-sm text-sm font-medium leading-snug hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="block rounded-sm text-[13px] font-medium leading-snug hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <span className="line-clamp-3">{ticket.title}</span>
+            <span className="line-clamp-2">{ticket.title}</span>
           </Link>
 
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          {/* Une SEULE rangée pour tout ce qui qualifie le ticket : type,
+              rattachement, labels, assigné. Elles étaient deux, et la carte
+              gagnait vingt pixels de hauteur pour montrer les mêmes choses. */}
+          <div className="flex flex-wrap items-center gap-1">
             {options ? (
               <TicketTypeInline
                 ticketId={ticket.id}
@@ -137,10 +144,14 @@ export function TicketCardView({
                 canEdit={canEdit}
                 compact
               >
-                <ColorBadge name={ticket.type.name} color={ticket.type.color} />
+                <ColorBadge
+                  name={ticket.type.name}
+                  color={ticket.type.color}
+                  dense
+                />
               </TicketTypeInline>
             ) : (
-              <ColorBadge name={ticket.type.name} color={ticket.type.color} />
+              <ColorBadge name={ticket.type.name} color={ticket.type.color} dense />
             )}
             {/* Composant concerné : situe la demande dans le produit. */}
             {ticket.component && (
@@ -149,6 +160,7 @@ export function TicketCardView({
                 kind={ticket.component.kind}
                 color={ticket.component.color}
                 kindLabel={t.taxonomy.componentKinds[ticket.component.kind]}
+                dense
               />
             )}
             {/* Module affiché UNIQUEMENT à défaut de composant : quand il y en a
@@ -156,71 +168,72 @@ export function TicketCardView({
                 carte. Sans cela, un ticket contextualisé au seul niveau du
                 module paraîtrait dépourvu de tout rattachement sur le tableau. */}
             {!ticket.component && ticketModule && (
-              <ModuleBadge name={ticketModule.name} color={ticketModule.color} />
+              <ModuleBadge
+                name={ticketModule.name}
+                color={ticketModule.color}
+              />
             )}
-          </div>
-
-          {(ticket.labels.length > 0 || assigneeName || (options && canEdit)) && (
-            <div className="mt-2 flex items-end justify-between gap-2">
-              <div className="flex min-w-0 flex-wrap gap-1">
-                {ticket.labels.slice(0, 4).map(({ label }) => (
-                  <span
-                    key={label.id}
-                    className="inline-flex max-w-[8rem] items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] text-muted-foreground"
-                  >
-                    <span
-                      className="size-2 shrink-0 rounded-full"
-                      style={{ backgroundColor: label.color }}
-                    />
-                    <span className="truncate">{label.name}</span>
-                  </span>
+            {/* LABELS EN PASTILLES, sans leur nom : écrits en toutes lettres, ils
+                faisaient passer la rangée sur deux lignes, soit une carte de moins
+                par colonne. La couleur suffit à reconnaître ce qu'on a soi-même
+                posé ; le nom reste au survol, et en toutes lettres dans la liste
+                et sur la fiche. */}
+            {ticket.labels.length > 0 && (
+              <span className="flex items-center gap-1">
+                {ticket.labels.map(({ label }) => (
+                  <Tooltip key={label.id}>
+                    <TooltipTrigger asChild>
+                      <span
+                        className="size-2.5 shrink-0 rounded-full ring-1 ring-inset ring-black/10 dark:ring-white/15"
+                        style={{ backgroundColor: label.color }}
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent>{label.name}</TooltipContent>
+                  </Tooltip>
                 ))}
-                {extraLabels > 0 && (
-                  <span className="text-[10px] text-muted-foreground">
-                    +{extraLabels}
-                  </span>
-                )}
-              </div>
+              </span>
+            )}
 
+            {/* L'assigné FERME la rangée, poussé à droite : c'est le repère
+                qu'on cherche en balayant une colonne du regard. */}
+            <span className="ml-auto shrink-0">
               {options ? (
-                <span className="shrink-0">
-                  <TicketAssigneeInline
-                    ticketId={ticket.id}
-                    value={ticket.assigneeId}
-                    members={options.members}
-                    canEdit={canEdit}
-                    compact
-                  >
-                    {assigneeName ? (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Avatar className="size-6 shrink-0">
-                            <AvatarFallback className="text-[10px]">
-                              {initials(assigneeName)}
-                            </AvatarFallback>
-                          </Avatar>
-                        </TooltipTrigger>
-                        <TooltipContent>{assigneeName}</TooltipContent>
-                      </Tooltip>
-                    ) : (
-                      /* PLACE VIDE : sans elle, une carte non assignée n'offrait
+                <TicketAssigneeInline
+                  ticketId={ticket.id}
+                  value={ticket.assigneeId}
+                  members={options.members}
+                  canEdit={canEdit}
+                  compact
+                >
+                  {assigneeName ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Avatar className="size-5 shrink-0">
+                          <AvatarFallback className="text-[10px]">
+                            {initials(assigneeName)}
+                          </AvatarFallback>
+                        </Avatar>
+                      </TooltipTrigger>
+                      <TooltipContent>{assigneeName}</TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    /* PLACE VIDE : sans elle, une carte non assignée n'offrait
                          rien à cliquer. Elle ne paraît qu'au survol de la carte -
                          et toujours au doigt, où il n'y a pas de survol - pour ne
                          pas constellez le tableau de pastilles grises. */
-                      <span
-                        className="flex size-6 shrink-0 items-center justify-center rounded-full border border-dashed text-muted-foreground opacity-0 transition-opacity group-hover/card:opacity-100 pointer-coarse:opacity-100"
-                        aria-hidden
-                      >
-                        <UserPlus className="size-3" />
-                      </span>
-                    )}
-                  </TicketAssigneeInline>
-                </span>
+                    <span
+                      className="flex size-5 shrink-0 items-center justify-center rounded-full border border-dashed text-muted-foreground opacity-0 transition-opacity group-hover/card:opacity-100 pointer-coarse:opacity-100"
+                      aria-hidden
+                    >
+                      <UserPlus className="size-3" />
+                    </span>
+                  )}
+                </TicketAssigneeInline>
               ) : (
                 assigneeName && (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Avatar className="size-6 shrink-0">
+                      <Avatar className="size-5 shrink-0">
                         <AvatarFallback className="text-[10px]">
                           {initials(assigneeName)}
                         </AvatarFallback>
@@ -230,8 +243,8 @@ export function TicketCardView({
                   </Tooltip>
                 )
               )}
-            </div>
-          )}
+            </span>
+          </div>
         </div>
       </div>
     </Card>

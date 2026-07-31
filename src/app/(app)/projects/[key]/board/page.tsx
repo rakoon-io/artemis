@@ -62,7 +62,12 @@ export default async function BoardPage({
 
   return (
     <KanbanBoard
-      className="h-[calc(100dvh-12rem)]"
+      /* Ce qui reste sous l'en-tête et au-dessus du pied de page. La hauteur
+         était calculée en dur - « 100dvh moins 12rem » - et se trompait de
+         49 pixels : le bandeau du projet en fait 220, et le pied de page n'était
+         pas compté du tout. D'où une page plus haute que l'écran, et du vide
+         sous le pied. */
+      className="min-h-0 flex-1"
       columns={columns}
       projectId={project.id}
       projectKey={project.key}

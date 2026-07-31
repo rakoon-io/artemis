@@ -324,7 +324,13 @@ export function KanbanBoard({
 
   return (
     <TooltipProvider>
-      <div className={cn("flex min-h-0 flex-col gap-3", className)}>
+      {/* `data-fill-viewport` : la coque de l'application se donne alors une
+          hauteur définie, et le tableau occupe exactement ce qui reste sous
+          l'en-tête et au-dessus du pied de page (cf. `(app)/layout.tsx`). */}
+      <div
+        data-fill-viewport
+        className={cn("flex min-h-0 flex-col gap-3", className)}
+      >
         {/* Barre de filtres */}
         <div className="flex flex-wrap items-center gap-2">
           <FilterMenu
@@ -397,6 +403,15 @@ export function KanbanBoard({
         </div>
 
         <DndContext
+          /**
+           * Identifiant FIXE. Sans lui, dnd-kit numérote ses descriptions
+           * d'accessibilité avec un compteur de module : le serveur, qui rend
+           * plusieurs fois dans le même processus, écrivait
+           * « DndDescribedBy-17 » là où le navigateur, fraîchement chargé,
+           * attendait « DndDescribedBy-0 » - un écart d'hydratation signalé à
+           * chaque visite du tableau.
+           */
+          id="board"
           sensors={sensors}
           collisionDetection={closestCorners}
           accessibility={{ announcements }}
@@ -404,7 +419,7 @@ export function KanbanBoard({
           onDragEnd={handleDragEnd}
           onDragCancel={() => setActiveId(null)}
         >
-          <div className="flex min-h-0 flex-1 gap-4 overflow-x-auto pb-2">
+          <div className="slim-scrollbar flex min-h-0 flex-1 gap-4 overflow-x-auto pb-2">
             {columns.map((column, index) => (
               <BoardColumn
                 key={column.id}

@@ -26,7 +26,19 @@ export default async function AppLayout({
   const aiBudget = env.AI_DAILY_BUDGET_USD;
 
   return (
-    <div className="flex min-h-screen flex-col">
+    /**
+     * La coque occupe AU MOINS l'écran, et EXACTEMENT l'écran dès qu'une page
+     * demande à le remplir (`data-fill-viewport`, posé par le tableau Kanban).
+     *
+     * Sans hauteur définie, un `flex-1` plus bas ne distribue rien : il n'y a
+     * pas d'espace restant à partager tant que la racine se dimensionne sur son
+     * contenu. C'est pourquoi le tableau calculait sa hauteur en dur - et se
+     * trompait de 49 pixels, le pied de page n'étant pas compté.
+     *
+     * `:has()` plutôt qu'un drapeau remonté par contexte : la décision appartient
+     * à la page, la coque n'a pas à la connaître, et rien ne transite par du JS.
+     */
+    <div className="flex min-h-screen flex-col has-[[data-fill-viewport]]:h-dvh has-[[data-fill-viewport]]:overflow-hidden">
       {isDemo && (
         <div className="border-b bg-amber-100 px-4 py-1.5 text-center text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-200">
           Environnement de démonstration — les données sont réinitialisées
@@ -48,7 +60,10 @@ export default async function AppLayout({
           <UserMenu user={user} />
         </div>
       </header>
-      <main className="w-full flex-1">{children}</main>
+      {/* `flex flex-col` : une page qui veut occuper la hauteur restante - le
+          tableau Kanban - n'a plus à deviner celle du bandeau ni du pied de page.
+          Elle se déclare `flex-1`, et ce qui reste lui revient. */}
+      <main className="flex w-full min-h-0 flex-1 flex-col">{children}</main>
       <footer className="flex items-center justify-center gap-2 border-t py-4 text-center text-xs text-muted-foreground">
         <span>Développé par Thomas Broussard</span>
         {isDemo && (

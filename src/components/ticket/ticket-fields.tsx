@@ -1,6 +1,7 @@
 import type { ComponentKind, TicketTemplate } from "@prisma/client";
 import { Blocks, FileText, Server, type LucideIcon } from "lucide-react";
 import type { ModuleRef } from "@/lib/effective-module";
+import { cn } from "@/lib/utils";
 import type {
   getMembers,
   getSprints,
@@ -93,17 +94,34 @@ export const ALL = "__all__";
  * appliquée en ligne : pastille pleine + bordure/fond teintés ; le texte reste
  * en `foreground` pour garantir le contraste en thème clair comme sombre.
  */
-export function ColorBadge({ name, color }: { name: string; color: string }) {
+/**
+ * `dense` : gabarit du TABLEAU KANBAN, où trois badges par carte se disputent
+ * deux cent cinquante pixels. Deux points de moins de part et d'autre, et la
+ * rangée tient sur une ligne au lieu de deux - à multiplier par le nombre de
+ * cartes visibles, c'est une carte de plus par colonne.
+ */
+export function ColorBadge({
+  name,
+  color,
+  dense = false,
+}: {
+  name: string;
+  color: string;
+  dense?: boolean;
+}) {
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium"
+      className={cn(
+        "inline-flex items-center rounded-md border font-medium",
+        dense ? "gap-1 px-1.5 py-0 text-[10px]" : "gap-1.5 px-2 py-0.5 text-xs",
+      )}
       style={{
         borderColor: `color-mix(in srgb, ${color} 40%, transparent)`,
         backgroundColor: `color-mix(in srgb, ${color} 12%, transparent)`,
       }}
     >
       <span
-        className="size-2 shrink-0 rounded-full"
+        className={cn("shrink-0 rounded-full", dense ? "size-1.5" : "size-2")}
         style={{ backgroundColor: color }}
         aria-hidden
       />
@@ -136,16 +154,21 @@ export function ComponentBadge({
   kind,
   color,
   kindLabel,
+  dense = false,
 }: {
   name: string;
   kind: ComponentKind;
   color: string;
   kindLabel: string;
+  dense?: boolean;
 }) {
   const Icon = COMPONENT_KIND_ICONS[kind] ?? FileText;
   return (
     <span
-      className="inline-flex max-w-full items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium"
+      className={cn(
+        "inline-flex max-w-full items-center rounded-md border font-medium",
+        dense ? "gap-1 px-1.5 py-0 text-[10px]" : "gap-1.5 px-2 py-0.5 text-xs",
+      )}
       style={{
         borderColor: `color-mix(in srgb, ${color} 40%, transparent)`,
         backgroundColor: `color-mix(in srgb, ${color} 12%, transparent)`,
@@ -168,14 +191,25 @@ export function ComponentBadge({
  * lise d'un coup d'œil quand les deux se côtoient : le module situe, le
  * composant précise.
  */
-export function ModuleBadge({ name, color }: { name: string; color: string }) {
+export function ModuleBadge({
+  name,
+  color,
+  dense = false,
+}: {
+  name: string;
+  color: string;
+  dense?: boolean;
+}) {
   return (
     <span
-      className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-dashed px-2 py-0.5 text-xs font-medium text-muted-foreground"
+      className={cn(
+        "inline-flex max-w-full items-center rounded-md border border-dashed font-medium text-muted-foreground",
+        dense ? "gap-1 px-1.5 py-0 text-[10px]" : "gap-1.5 px-2 py-0.5 text-xs",
+      )}
       title={name}
     >
       <span
-        className="size-2 shrink-0 rounded-full"
+        className={cn("shrink-0 rounded-full", dense ? "size-1.5" : "size-2")}
         style={{ backgroundColor: color }}
         aria-hidden
       />

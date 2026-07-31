@@ -15,9 +15,17 @@ export interface ThemeDef {
   mode: ThemeMode;
   /**
    * Couleurs d'aperçu (CSS `oklch`) pour la vignette du sélecteur : le fond, une
-   * surface/carte (révèle la teinte de la palette), la couleur d'accent et le texte.
+   * surface/carte (révèle la teinte de la palette), la bordure, la couleur
+   * d'accent et le texte. Ce sont les jetons RÉELS de la palette - la vignette
+   * n'invente rien, sans quoi elle promettrait ce qu'on n'obtiendrait pas.
    */
-  swatch: { bg: string; surface: string; primary: string; fg: string };
+  swatch: {
+    bg: string;
+    surface: string;
+    border: string;
+    primary: string;
+    fg: string;
+  };
 }
 
 const ARTEMIS_LIGHT = "oklch(0.505 0.175 285)";
@@ -29,50 +37,98 @@ export const THEMES: ThemeDef[] = [
     id: "light",
     label: "Artemis Clair",
     mode: "light",
-    swatch: { bg: "oklch(0.995 0 0)", surface: "oklch(0.925 0 0)", primary: ARTEMIS_LIGHT, fg: "oklch(0.16 0 0)" },
+    swatch: {
+      bg: "oklch(0.995 0 0)",
+      surface: "oklch(0.967 0 0)",
+      border: "oklch(0.84 0 0)",
+      primary: ARTEMIS_LIGHT,
+      fg: "oklch(0.16 0 0)",
+    },
   },
   {
     id: "sand",
     label: "Sable",
     mode: "light",
-    swatch: { bg: "oklch(0.986 0.008 82)", surface: "oklch(0.90 0.038 80)", primary: ARTEMIS_LIGHT, fg: "oklch(0.20 0.012 66)" },
+    swatch: {
+      bg: "oklch(0.986 0.008 82)",
+      surface: "oklch(0.945 0.014 82)",
+      border: "oklch(0.82 0.02 82)",
+      primary: ARTEMIS_LIGHT,
+      fg: "oklch(0.20 0.012 66)",
+    },
   },
   {
     id: "mist",
     label: "Brume",
     mode: "light",
-    swatch: { bg: "oklch(0.986 0.006 250)", surface: "oklch(0.90 0.038 248)", primary: ARTEMIS_LIGHT, fg: "oklch(0.21 0.02 262)" },
+    swatch: {
+      bg: "oklch(0.986 0.006 250)",
+      surface: "oklch(0.952 0.012 250)",
+      border: "oklch(0.825 0.02 250)",
+      primary: ARTEMIS_LIGHT,
+      fg: "oklch(0.21 0.02 262)",
+    },
   },
   {
     id: "sage",
     label: "Menthe",
     mode: "light",
-    swatch: { bg: "oklch(0.986 0.008 162)", surface: "oklch(0.90 0.038 162)", primary: ARTEMIS_LIGHT, fg: "oklch(0.20 0.015 168)" },
+    swatch: {
+      bg: "oklch(0.986 0.008 162)",
+      surface: "oklch(0.95 0.014 160)",
+      border: "oklch(0.825 0.022 160)",
+      primary: ARTEMIS_LIGHT,
+      fg: "oklch(0.20 0.015 168)",
+    },
   },
   // ── Sombres ──────────────────────────────────────────────────────────────
   {
     id: "dark",
     label: "Artemis Nuit",
     mode: "dark",
-    swatch: { bg: "oklch(0.17 0.03 280)", surface: "oklch(0.30 0.045 283)", primary: ARTEMIS_DARK, fg: "oklch(0.97 0.01 285)" },
+    swatch: {
+      bg: "oklch(0.17 0.03 280)",
+      surface: "oklch(0.265 0.03 283)",
+      border: "oklch(0.75 0.05 285 / 26%)",
+      primary: ARTEMIS_DARK,
+      fg: "oklch(0.97 0.01 285)",
+    },
   },
   {
     id: "midnight",
     label: "Minuit",
     mode: "dark",
-    swatch: { bg: "oklch(0.155 0.024 260)", surface: "oklch(0.29 0.04 260)", primary: ARTEMIS_DARK, fg: "oklch(0.96 0.01 250)" },
+    swatch: {
+      bg: "oklch(0.155 0.024 260)",
+      surface: "oklch(0.28 0.032 260)",
+      border: "oklch(0.8 0.04 258 / 26%)",
+      primary: ARTEMIS_DARK,
+      fg: "oklch(0.96 0.01 250)",
+    },
   },
   {
     id: "slate",
     label: "Ardoise",
     mode: "dark",
-    swatch: { bg: "oklch(0.21 0.012 250)", surface: "oklch(0.34 0.022 250)", primary: ARTEMIS_DARK, fg: "oklch(0.965 0.005 250)" },
+    swatch: {
+      bg: "oklch(0.21 0.012 250)",
+      surface: "oklch(0.305 0.016 250)",
+      border: "oklch(0.9 0.02 250 / 20%)",
+      primary: ARTEMIS_DARK,
+      fg: "oklch(0.965 0.005 250)",
+    },
   },
   {
     id: "carbon",
     label: "Carbone",
     mode: "dark",
-    swatch: { bg: "oklch(0.08 0 0)", surface: "oklch(0.24 0 0)", primary: ARTEMIS_DARK, fg: "oklch(0.98 0 0)" },
+    swatch: {
+      bg: "oklch(0.08 0 0)",
+      surface: "oklch(0.185 0 0)",
+      border: "oklch(1 0 0 / 19%)",
+      primary: ARTEMIS_DARK,
+      fg: "oklch(0.98 0 0)",
+    },
   },
 ];
 

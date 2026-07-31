@@ -47,7 +47,7 @@ export function BoardColumn({
   return (
     <section
       aria-label={column.name}
-      className="flex h-full min-w-[16rem] max-w-[24rem] flex-1 flex-col rounded-xl border bg-muted/30"
+      className="relative flex h-full min-w-[16rem] max-w-[24rem] flex-1 flex-col rounded-xl border bg-muted/30"
     >
       <header className="flex items-center justify-between gap-2 border-b px-3 py-2">
         <div className="flex min-w-0 items-center gap-2">
@@ -70,7 +70,10 @@ export function BoardColumn({
       <div
         ref={setNodeRef}
         className={cn(
-          "flex-1 space-y-2 overflow-y-auto p-2 transition-colors",
+          /* `pb-14` : la place du bouton flottant. Sans elle, il recouvrait le
+             coin de la dernière carte - et donc son assigné - dès qu'une colonne
+             était pleine. */
+          "slim-scrollbar flex-1 space-y-2 overflow-y-auto p-2 pb-14 transition-colors",
           isOver && "bg-accent/50",
         )}
       >
@@ -114,24 +117,33 @@ function QuickAdd({ onSubmit }: { onSubmit: (title: string) => Promise<boolean> 
   }
 
   if (!open) {
+    /**
+     * BOUTON FLOTTANT plutôt qu'une barre en pied de colonne.
+     *
+     * La barre occupait quarante-cinq pixels sur toute la largeur, en
+     * permanence, pour une action qu'on déclenche une fois de temps en temps -
+     * autant de hauteur retirée aux cartes, qui sont la raison d'être de la
+     * colonne. Posé au-dessus du contenu, dans le coin, il ne coûte plus rien et
+     * reste atteignable sans faire défiler.
+     */
     return (
-      <div className="border-t p-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full justify-start text-muted-foreground"
-          onClick={() => setOpen(true)}
-        >
-          <Plus />
-          {t.board.addTicket}
-        </Button>
-      </div>
+      <Button
+        size="icon"
+        className="absolute bottom-3 right-3 z-10 size-9 rounded-full shadow-lg"
+        title={t.board.addTicket}
+        aria-label={t.board.addTicket}
+        onClick={() => setOpen(true)}
+      >
+        <Plus />
+      </Button>
     );
   }
 
   return (
     <form
-      className="space-y-2 border-t p-2"
+      /* Ouvert, le formulaire prend la place du bouton : posé par-dessus le bas
+         de la colonne, il n'en réduit pas la hauteur utile. */
+      className="absolute inset-x-2 bottom-2 z-10 space-y-2 rounded-lg border bg-popover p-2 shadow-lg"
       onSubmit={async (event) => {
         event.preventDefault();
         const value = title.trim();

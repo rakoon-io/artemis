@@ -146,7 +146,12 @@ export function InlineSelect({
       title={fmt(t.common.inline.editAria, { field })}
       aria-label={fmt(t.common.inline.editAria, { field })}
       className={cn(
-        "group/inline -mx-2 mt-0.5 flex w-full items-center gap-1.5 rounded-md px-2 py-0.5 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "group/inline flex items-center gap-1.5 rounded-md text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        /* `w-full` occupe la ligne, ce qu'il faut dans un panneau en colonne -
+           et ce qui, dans une rangée de badges qui s'enroule, rejetait tous les
+           suivants à la ligne d'après. Le dépassement latéral, lui, donne de
+           l'air au panneau mais coûtait douze pixels par badge sur une carte. */
+        compact ? "-mx-1 px-1" : "w-full -mx-2 mt-0.5 px-2 py-0.5",
       )}
     >
       <span className="min-w-0 flex-1">{display}</span>

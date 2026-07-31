@@ -361,6 +361,42 @@
   @apply flex items-center gap-1.5 font-semibold;
 }
 
+/* ─── BARRES DE DÉFILEMENT DISCRÈTES ─────────────────────────────────────────
+   Celle du navigateur - sur macOS avec une souris branchée, elle ne s'efface
+   pas - est un bloc gris opaque qui s'impose au milieu d'une colonne de cartes,
+   plus visible que les cartes elles-mêmes. On la réduit et on la teinte avec les
+   jetons du thème : elle reste une commande visible, sans peser autant que le
+   contenu qu'elle sert.
+
+   Les deux écritures cohabitent sans se contredire : Chromium récent et Firefox
+   suivent `scrollbar-width`/`scrollbar-color` et ignorent alors le pseudo-élément
+   `::-webkit-scrollbar`, dont vivent encore Safari et les Chromium plus anciens. */
+.slim-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.slim-scrollbar::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.slim-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.slim-scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--border);
+  border-radius: 9999px;
+  /* Une bordure transparente « rognée au contenu » affine le pouce sans réduire
+     la zone d'attrapage : on garde dix pixels pour la souris, quatre à l'œil. */
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+.slim-scrollbar:hover {
+  scrollbar-color: var(--muted-foreground) transparent;
+}
+.slim-scrollbar:hover::-webkit-scrollbar-thumb {
+  background-color: var(--muted-foreground);
+}
+
 /* ─── IMAGE REDIMENSIONNABLE (éditeur) ───────────────────────────────────────
    La poignée n'apparaît qu'au survol ou quand l'image est sélectionnée : une
    pastille permanente sur chaque image ferait un texte constellé de boutons.

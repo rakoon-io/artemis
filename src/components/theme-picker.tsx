@@ -15,26 +15,45 @@ import { cn } from "@/lib/utils";
 import { DARK_THEMES, LIGHT_THEMES, type ThemeDef } from "@/lib/themes";
 
 /**
- * Mini aperçu de la palette : une petite « fenêtre » avec une barre d'accent, le
- * fond, et une carte de surface qui révèle la teinte propre à chaque palette
- * (pour les distinguer clairement dans le menu).
+ * APERÇU d'une palette : une miniature de l'application.
+ *
+ * L'ancienne vignette donnait le plus de place à la BARRE D'ACCENT - la seule
+ * couleur identique d'un thème à l'autre, l'indigo d'Artemis - et réduisait à
+ * deux pixels la surface teintée, qui est précisément ce qui distingue « Sable »
+ * de « Brume » ou de « Menthe ». Les quatre palettes claires paraissaient donc
+ * identiques, et l'on ne pouvait choisir qu'en appliquant.
+ *
+ * La vignette montre désormais, du plus grand au plus petit, ce qui varie le
+ * plus : le fond, la surface d'une carte avec sa bordure, une ligne de texte, et
+ * la pastille d'accent en dernier.
  */
 function Swatch({ swatch }: { swatch: ThemeDef["swatch"] }) {
   return (
     <span
-      className="relative block h-6 w-8 shrink-0 overflow-hidden rounded-[5px] border border-black/10 shadow-sm dark:border-white/15"
-      style={{ background: swatch.bg }}
+      className="relative block h-8 w-11 shrink-0 overflow-hidden rounded-[6px] border shadow-sm"
+      style={{ background: swatch.bg, borderColor: swatch.border }}
       aria-hidden
     >
-      {/* Barre d'accent (en-tête de la fenêtre) */}
+      {/* La « carte » : c'est elle qui porte la teinte de la palette. */}
       <span
-        className="absolute inset-x-0 top-0 h-1.5"
+        className="absolute inset-x-1 bottom-1 top-3 rounded-[3px] border"
+        style={{ background: swatch.surface, borderColor: swatch.border }}
+      >
+        {/* Deux lignes de texte, à l'échelle. */}
+        <span
+          className="absolute left-1 right-2 top-1 h-[3px] rounded-full opacity-70"
+          style={{ background: swatch.fg }}
+        />
+        <span
+          className="absolute bottom-1 left-1 right-4 h-[3px] rounded-full opacity-40"
+          style={{ background: swatch.fg }}
+        />
+      </span>
+      {/* Pastille d'accent, en dernier : c'est la seule couleur que les palettes
+          d'un même mode ont en commun. */}
+      <span
+        className="absolute right-1 top-1 size-2 rounded-full"
         style={{ background: swatch.primary }}
-      />
-      {/* Carte de surface (révèle la teinte de la palette) */}
-      <span
-        className="absolute inset-x-1 bottom-1 h-2 rounded-[2px]"
-        style={{ background: swatch.surface }}
       />
     </span>
   );
