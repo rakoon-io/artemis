@@ -135,7 +135,7 @@ export default async function SprintsPage({
                   {t.sprints.backlogEmpty}
                 </p>
               ) : (
-                <ul className="slim-scrollbar max-h-[calc(100dvh-16rem)] divide-y overflow-y-auto rounded-lg border">
+                <ul className="slim-scrollbar max-h-[calc(100dvh-16rem)] divide-y overflow-y-auto rounded-lg border [&>li:empty]:hidden">
                   {backlog.map((ticket) => (
                     <li key={ticket.id}>
                       <SprintTicketItem

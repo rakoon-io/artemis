@@ -21,7 +21,7 @@ import { SprintState } from "@prisma/client";
 import type { Sprint } from "@prisma/client";
 import { canEditTicket, type PolicyUser } from "@/lib/policies";
 import { cn } from "@/lib/utils";
-import { TicketDropZone, type DraggedTicket } from "./sprint-dnd";
+import { TicketDropZone, useJustLeft, type DraggedTicket } from "./sprint-dnd";
 import {
   deleteSprintAction,
   setSprintStateAction,
@@ -191,6 +191,7 @@ export function SprintTicketItem({
 }) {
   const t = useDict();
   const canMove = canEditTicket(currentUser, ticket);
+  const justLeft = useJustLeft(ticket.id, currentSprintId);
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: ticket.id,
     disabled: !canMove,
@@ -200,6 +201,11 @@ export function SprintTicketItem({
       sprintId: currentSprintId,
     } satisfies DraggedTicket,
   });
+
+  // Déjà parti : sa ligne d'origine n'a plus lieu d'être, même si le serveur
+  // n'a pas fini de répondre. Le `<li>` qui l'entoure se replie sur du vide
+  // (cf. `[&>li:empty]:hidden` sur les listes).
+  if (justLeft) return null;
 
   return (
     <div
@@ -343,12 +349,15 @@ export function SprintCard({
       </CardHeader>
       <CardContent className="flex-1">
         <TicketDropZone sprintId={sprint.id}>
+          {/* `li:empty` : la ligne d'un ticket qui vient de partir ne rend rien ;
+              son `<li>` doit se replier avec elle, sinon le trait de séparation
+              resterait, seul, à la place du ticket. */}
           {tickets.length === 0 ? (
             <p className="rounded-md border border-dashed px-3 py-4 text-center text-sm text-muted-foreground">
               {t.sprints.noTicketsInSprint}
             </p>
           ) : (
-            <ul className="divide-y rounded-md border">
+            <ul className="divide-y rounded-md border [&>li:empty]:hidden">
               {tickets.map((ticket) => (
                 <li key={ticket.id}>
                   <SprintTicketItem

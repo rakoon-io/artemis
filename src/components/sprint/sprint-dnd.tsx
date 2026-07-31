@@ -1,6 +1,12 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -48,6 +54,34 @@ import { fmt } from "@/i18n";
 /** Cible de dépôt du backlog. Un sprint est désigné par son identifiant. */
 export const BACKLOG_DROP_ID = "backlog";
 
+/**
+ * LE TICKET QUI VIENT DE PARTIR.
+ *
+ * Entre le lâcher et l'arrivée des données du serveur, il s'écoule cent
+ * cinquante millisecondes - mesurées - pendant lesquelles la ligne est encore
+ * affichée à SA PLACE D'ORIGINE. Ajoutée à l'animation de dépôt, cela donnait
+ * l'impression que le ticket revenait d'où il venait, alors qu'il était déjà
+ * parti (cf. `SprintDndProvider`).
+ *
+ * On retient donc, le temps de l'aller-retour, d'où le ticket s'en va ; sa
+ * ligne d'origine s'efface aussitôt.
+ *
+ * RIEN À NETTOYER : la condition porte sur la liste de DÉPART. Une fois les
+ * données rafraîchies, le ticket n'est plus rendu là - et à sa nouvelle place,
+ * la liste ne correspond plus, donc il s'affiche. Un souvenir périmé est sans
+ * effet, ce qui évite d'avoir à l'effacer au bon moment.
+ */
+const PartiContext = createContext<{
+  ticketId: string;
+  from: string | null;
+} | null>(null);
+
+/** Vrai si ce ticket vient d'être déplacé HORS de cette liste. */
+export function useJustLeft(ticketId: string, bucketId: string | null): boolean {
+  const parti = useContext(PartiContext);
+  return parti?.ticketId === ticketId && parti.from === bucketId;
+}
+
 /** Ce qu'une ligne emporte avec elle pendant le déplacement. */
 export interface DraggedTicket {
   key: string;
@@ -73,6 +107,9 @@ export function SprintDndProvider({
   const t = useDict();
   const router = useRouter();
   const [dragged, setDragged] = useState<DraggedTicket | null>(null);
+  const [parti, setParti] = useState<{ ticketId: string; from: string | null } | null>(
+    null,
+  );
 
   const sensors = useSensors(
     // Huit pixels avant de considérer que l'on déplace : sans ce seuil, le
@@ -128,8 +165,15 @@ export function SprintDndProvider({
     // n'aboutir à aucun changement afficherait une notification mensongère.
     if (target === data.sprintId) return;
 
-    const res = await setTicketSprintAction(String(event.active.id), target);
+    // La ligne d'origine s'efface AVANT l'aller-retour, pas après : c'est cette
+    // attente-là qui donnait l'impression d'un retour à la case départ.
+    const ticketId = String(event.active.id);
+    setParti({ ticketId, from: data.sprintId });
+
+    const res = await setTicketSprintAction(ticketId, target);
     if (!res.ok) {
+      // Le serveur a refusé : le ticket n'a jamais bougé, sa ligne revient.
+      setParti(null);
       toast.error(res.error);
       return;
     }
@@ -148,8 +192,21 @@ export function SprintDndProvider({
       onDragEnd={(event) => void handleDragEnd(event)}
       onDragCancel={() => setDragged(null)}
     >
-      {children}
-      <DragOverlay>
+      <PartiContext.Provider value={parti}>{children}</PartiContext.Provider>
+      {/**
+       * PAS D'ANIMATION DE DÉPÔT.
+       *
+       * Par défaut, dnd-kit ramène le calque à la position du nœud d'origine en
+       * deux cent cinquante millisecondes. Comme ce nœud est resté dans la liste
+       * de départ le temps de l'aller-retour, le calque volait EN ARRIÈRE - vers
+       * le backlog - juste après un dépôt réussi. On lisait un refus là où il y
+       * avait un succès.
+       *
+       * Le calque disparaît donc là où on l'a lâché, pendant que la ligne
+       * d'origine s'efface : le ticket est parti dans la direction où on l'a
+       * poussé, et rien ne le contredit.
+       */}
+      <DragOverlay dropAnimation={null}>
         {dragged && (
           <div className="flex max-w-sm items-center gap-2 rounded-md border bg-card px-2 py-1.5 text-sm shadow-lg">
             <span className="shrink-0 font-mono text-xs text-muted-foreground">
