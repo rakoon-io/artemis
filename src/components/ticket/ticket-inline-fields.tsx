@@ -456,6 +456,24 @@ export function TicketLabelsInline({
 
   if (!canEdit || labels.length === 0) return <>{children}</>;
 
+  /**
+   * DANS UNE GRILLE, pas de panneau : le formulaire à trois boutons pousse la
+   * ligne de quarante pixels et déplace tout le tableau au moment où l'on ouvre
+   * le champ. On rend directement le sélecteur, dont la liste flotte au-dessus
+   * de la page, et chaque bascule s'enregistre - il n'y a plus d'état
+   * intermédiaire à confirmer, donc plus rien à confirmer.
+   */
+  if (compact) {
+    return (
+      <LabelMultiSelect
+        labels={labels}
+        selected={value}
+        onChange={(ids) => void save({ labelIds: ids })}
+        compact
+      />
+    );
+  }
+
   if (editing) {
     return (
       <div className="mt-1 space-y-2">

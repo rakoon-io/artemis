@@ -171,6 +171,7 @@ export function TicketCardView({
               <ModuleBadge
                 name={ticketModule.name}
                 color={ticketModule.color}
+                dense
               />
             )}
             {/* LABELS EN PASTILLES, sans leur nom : écrits en toutes lettres, ils
@@ -179,7 +180,10 @@ export function TicketCardView({
                 posé ; le nom reste au survol, et en toutes lettres dans la liste
                 et sur la fiche. */}
             {ticket.labels.length > 0 && (
-              <span className="flex items-center gap-1">
+              /* Les pastilles occupent la MÊME hauteur que les cartouches :
+                 alignées sur leur ligne médiane, elles ne creusent plus la
+                 rangée. */
+              <span className="flex h-6 items-center gap-1">
                 {ticket.labels.map(({ label }) => (
                   <Tooltip key={label.id}>
                     <TooltipTrigger asChild>

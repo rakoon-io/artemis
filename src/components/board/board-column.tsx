@@ -182,11 +182,16 @@ function QuickAdd({ onSubmit }: { onSubmit: (title: string) => Promise<boolean> 
       <Button
         size="sm"
         className="absolute bottom-3 right-3 z-10 h-8 rounded-full px-3 text-xs shadow-lg"
-        title={t.board.addTicket}
+        /* « Ajout rapide », et non « Ajouter un ticket » : le bouton de l'en-tête
+           dit déjà « Nouveau ticket » et ouvre le formulaire complet. Deux
+           intitulés voisins pour deux gestes différents laissaient croire à un
+           doublon - celui-ci ne demande qu'un titre, et dépose dans CETTE
+           colonne. L'infobulle le dit en toutes lettres. */
+        title={t.board.quickAddHint}
         onClick={() => setOpen(true)}
       >
         <Plus />
-        {t.board.addTicket}
+        {t.board.quickAdd}
       </Button>
     );
   }

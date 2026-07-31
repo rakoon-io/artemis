@@ -8,6 +8,8 @@ export const board: BoardDict = {
   // Column / WIP limit
   wipLimit: "WIP limit: {limit}",
   olderDone: "Older ({count})",
+  quickAdd: "Quick add",
+  quickAddHint: "Create a ticket in this column, with a title only",
   dropHere: "Drop a ticket here",
 
   // Quick add

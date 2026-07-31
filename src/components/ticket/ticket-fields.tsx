@@ -97,11 +97,20 @@ export const ALL = "__all__";
  * en `foreground` pour garantir le contraste en thème clair comme sombre.
  */
 /**
- * `dense` : gabarit du TABLEAU KANBAN, où trois badges par carte se disputent
+ * `dense` : gabarit du TABLEAU KANBAN, où trois cartouches par carte se disputent
  * deux cent cinquante pixels. Deux points de moins de part et d'autre, et la
  * rangée tient sur une ligne au lieu de deux - à multiplier par le nombre de
  * cartes visibles, c'est une carte de plus par colonne.
+ *
+ * Le gabarit est PARTAGÉ par les trois cartouches - type, composant, module -
+ * pour qu'ils aient la même hauteur, le même rayon et la même graisse. Chacun
+ * avait le sien, et une même rangée en alignait de quatre tailles différentes.
+ * La hauteur est FIXÉE plutôt que déduite du contenu : une icône ou un nom sur
+ * deux lignes suffisait sinon à faire dépasser l'un d'eux.
  */
+const DENSE_BADGE =
+  "h-6 gap-1 px-1.5 py-0 text-[10px] leading-none whitespace-nowrap";
+const ROOMY_BADGE = "gap-1.5 px-2 py-0.5 text-xs";
 export function ColorBadge({
   name,
   color,
@@ -115,7 +124,7 @@ export function ColorBadge({
     <span
       className={cn(
         "inline-flex items-center rounded-md border font-medium",
-        dense ? "gap-1 px-1.5 py-0 text-[10px]" : "gap-1.5 px-2 py-0.5 text-xs",
+        dense ? DENSE_BADGE : ROOMY_BADGE,
       )}
       style={{
         borderColor: `color-mix(in srgb, ${color} 40%, transparent)`,
@@ -169,7 +178,7 @@ export function ComponentBadge({
     <span
       className={cn(
         "inline-flex max-w-full items-center rounded-md border font-medium",
-        dense ? "gap-1 px-1.5 py-0 text-[10px]" : "gap-1.5 px-2 py-0.5 text-xs",
+        dense ? DENSE_BADGE : ROOMY_BADGE,
       )}
       style={{
         borderColor: `color-mix(in srgb, ${color} 40%, transparent)`,
@@ -177,7 +186,11 @@ export function ComponentBadge({
       }}
       title={`${kindLabel} · ${name}`}
     >
-      <Icon className="size-3 shrink-0" style={{ color }} aria-hidden />
+      <Icon
+        className={cn("shrink-0", dense ? "size-2.5" : "size-3")}
+        style={{ color }}
+        aria-hidden
+      />
       {/* Nature annoncée aux lecteurs d'écran, sans ponctuation : celle-ci
           varie d'une langue à l'autre (l'espace insécable avant « : » est une
           règle française) et n'a pas à être codée en dur ici. */}
@@ -206,7 +219,7 @@ export function ModuleBadge({
     <span
       className={cn(
         "inline-flex max-w-full items-center rounded-md border border-dashed font-medium text-muted-foreground",
-        dense ? "gap-1 px-1.5 py-0 text-[10px]" : "gap-1.5 px-2 py-0.5 text-xs",
+        dense ? DENSE_BADGE : ROOMY_BADGE,
       )}
       title={name}
     >

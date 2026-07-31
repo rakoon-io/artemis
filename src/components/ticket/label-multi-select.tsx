@@ -45,11 +45,18 @@ export function LabelMultiSelect({
   selected,
   onChange,
   disabled,
+  compact = false,
 }: {
   labels: LabelOption[];
   selected: string[];
   onChange: (ids: string[]) => void;
   disabled?: boolean;
+  /**
+   * Rendu DENSE, pour une cellule de tableau : le bouton se fond dans la ligne
+   * - ni bordure ni hauteur de champ de formulaire - et n'affiche que les
+   * labels eux-mêmes.
+   */
+  compact?: boolean;
 }) {
   const t = useDict();
   const [query, setQuery] = useState("");
@@ -74,11 +81,14 @@ export function LabelMultiSelect({
       <DropdownMenuTrigger asChild>
         <Button
           type="button"
-          variant="outline"
-          className="h-auto min-h-9 w-full justify-start gap-1.5 py-1 font-normal"
+          variant={compact ? "ghost" : "outline"}
+          className={cn(
+            "h-auto w-full justify-start gap-1.5 font-normal",
+            compact ? "-mx-1 min-h-6 px-1 py-0" : "min-h-9 py-1",
+          )}
           disabled={disabled || labels.length === 0}
         >
-          <Tag className="shrink-0 opacity-60" />
+          {!compact && <Tag className="shrink-0 opacity-60" />}
           {labels.length === 0 ? (
             <span className="text-muted-foreground">
               {t.ticketForm.noLabelsAvailable}
