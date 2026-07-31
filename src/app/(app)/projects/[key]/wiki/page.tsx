@@ -79,18 +79,25 @@ const SECTION_ICON = {
 } as const;
 
 /**
- * INTITULÉ DE SECTION : un filet pleine largeur, à la couleur du projet.
+ * INTITULÉ DE SECTION : la couleur du projet, et rien d'autre.
  *
  * Trois intitulés en petites capitales grises se distinguaient mal des pages
- * qu'ils coiffaient - on lisait une liste continue, pas trois groupes. Le trait
- * court sur toute la largeur du menu, jusque sous les marges intérieures : il
- * ferme la section précédente autant qu'il ouvre la suivante.
+ * qu'ils coiffaient - on lisait une liste continue, pas trois groupes. La
+ * première réponse fut un filet pleine largeur sous chaque intitulé. Elle
+ * séparait, mais mal : trois traits épais empilés dans une colonne de deux cent
+ * cinquante pixels donnaient un formulaire, pas un sommaire.
  *
- * `rounded-b-none` : l'aplat de l'intitulé sélectionné garde ses coins hauts et
- * vient s'asseoir à plat sur le filet, plutôt que de l'entamer de deux arrondis.
+ * C'est la COULEUR qui groupe, maintenant. Elle porte la même information - ces
+ * trois lignes ne sont pas des pages - sans rien ajouter à l'image. Le texte est
+ * déjà en petites capitales grasses ; le teinter suffit à le détacher des titres
+ * de page, qui sont en casse normale et en gris.
+ *
+ * Ce qui remplace le filet comme séparateur : l'espace. `mt-3` avant chaque
+ * section ouvre un blanc plus large que l'interligne des pages, et un blanc se
+ * lit aussi bien qu'un trait sans peser.
  */
 const SECTION_HEADER =
-  "flex items-center gap-2 rounded-md rounded-b-none border-b-2 border-primary/60 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition-colors";
+  "flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-primary transition-colors";
 
 /**
  * PAGE OUVERTE : la couleur du projet, très diluée.
@@ -104,6 +111,16 @@ const SECTION_HEADER =
  * un fond sombre disparaît.
  */
 const SELECTED = "bg-primary/10 text-foreground dark:bg-primary/20";
+
+/**
+ * SECTION OUVERTE : l'aplat, sans toucher au texte.
+ *
+ * `SELECTED` impose `text-foreground` - c'est juste pour une page, dont le titre
+ * est gris au repos et se fonce quand on la lit. Appliqué à un intitulé de
+ * section, il DÉCOLORERAIT précisément celui qu'on regarde : la section ouverte
+ * serait la seule à perdre la couleur du projet. On ne garde donc que le fond.
+ */
+const SECTION_SELECTED = "bg-primary/10 dark:bg-primary/20";
 
 interface WikiListItem {
   id: string;
@@ -616,11 +633,14 @@ export default async function WikiPage({
                 // sous les yeux plutôt que de disparaître dans une catégorie
                 // qui ne la décrit pas.
                 <>
-                  {grouped.map(({ kind, rootPageId, nodes }) => {
+                  {grouped.map(({ kind, rootPageId, nodes }, rang) => {
                     const root = pageById.get(rootPageId);
                     const Icon = SECTION_ICON[kind];
                     return (
-                      <div key={kind} className="mb-1">
+                      // Le blanc remplace le filet : plus large entre deux
+                      // sections qu'entre deux pages. La première n'en a pas
+                      // besoin, elle ouvre déjà la liste.
+                      <div key={kind} className={rang === 0 ? "mb-1" : "mb-1 mt-3"}>
                         <Link
                           href={pageHref(rootPageId)}
                           aria-current={
@@ -629,8 +649,8 @@ export default async function WikiPage({
                           className={cn(
                             SECTION_HEADER,
                             rootPageId === current?.id
-                              ? SELECTED
-                              : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                              ? SECTION_SELECTED
+                              : "hover:bg-accent/50",
                           )}
                         >
                           <Icon className="size-3.5 shrink-0" aria-hidden />
@@ -654,8 +674,14 @@ export default async function WikiPage({
                   })}
 
                   {loose.length > 0 && (
-                    <div className={grouped.length > 0 ? "mt-1" : undefined}>
+                    <div className={grouped.length > 0 ? "mt-3" : undefined}>
                       {grouped.length > 0 && (
+                        /**
+                         * Les pages libres gardent le gris : ce n'est pas une
+                         * section, c'est ce qui n'est entré dans aucune. Leur
+                         * donner la couleur du projet en ferait une quatrième
+                         * rubrique, et rangerait ce qui n'est pas rangé.
+                         */
                         <p
                           className={cn(SECTION_HEADER, "text-muted-foreground")}
                           title={t.wiki.sections.looseHint}
