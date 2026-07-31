@@ -11,7 +11,12 @@ COPY . .
 RUN npx prisma generate
 # Placeholders de build (surchargés au runtime par --env-file).
 ENV DATABASE_URL="postgresql://placeholder:placeholder@db:5432/placeholder?schema=public"
-ENV AUTH_SECRET="build-placeholder-secret-override-at-runtime"
+# Pas de secret d'attente ici : `src/lib/env.ts` refuse en production une valeur
+# publiée dans le dépôt, et `next build` évalue ce module en collectant les
+# routes. Un secret écrit en dur ferait donc échouer la construction, et le
+# neutraliser affaiblirait le contrôle. Le build reçoit un secret ALÉATOIRE,
+# valable le temps de la construction seulement : rien n'en dépend ensuite,
+# puisque le jeton de session est signé au runtime avec le vrai secret.
 ENV AUTH_TRUST_HOST=true
 ENV NODE_ENV=production
 # Identité du code compilé, affichée en pied de page. `.dockerignore` exclut
@@ -29,7 +34,8 @@ ENV ARTEMIS_COMMIT=$ARTEMIS_COMMIT ARTEMIS_COMMIT_DATE=$ARTEMIS_COMMIT_DATE
 ARG ARTEMIS_INSTANCE_LABEL=""
 ARG ARTEMIS_INSTANCE_COLOR=""
 ENV ARTEMIS_INSTANCE_LABEL=$ARTEMIS_INSTANCE_LABEL ARTEMIS_INSTANCE_COLOR=$ARTEMIS_INSTANCE_COLOR
-RUN npm run build
+RUN AUTH_SECRET="$(node -e 'console.log(require("crypto").randomBytes(32).toString("base64"))')" \
+    npm run build
 
 # ---- Runner ----
 FROM node:20-bookworm-slim AS runner
