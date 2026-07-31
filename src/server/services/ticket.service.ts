@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { rankAfter } from "@/lib/rank";
 import { moduleIdForTicket } from "@/lib/effective-module";
+import { forgetObjects } from "./stored-objects.service";
 import {
   checkReportDescription,
   reportRequirementMessage,
@@ -681,6 +682,19 @@ export function moveTicket(ticketId: string, columnId: string, rank: string) {
   });
 }
 
-export function deleteTicket(id: string) {
-  return prisma.ticket.delete({ where: { id } });
+/**
+ * Supprime le ticket, ET les objets de ses pièces jointes.
+ *
+ * `Attachment.ticketId` est en cascade : les lignes partent avec le ticket, côté
+ * base, sans que l'application voie passer leurs clés. Il faut donc les relever
+ * AVANT - après, plus rien ne relie ces objets à quoi que ce soit.
+ */
+export async function deleteTicket(id: string) {
+  const pieces = await prisma.attachment.findMany({
+    where: { ticketId: id },
+    select: { storageKey: true },
+  });
+  const supprime = await prisma.ticket.delete({ where: { id } });
+  await forgetObjects(pieces.map((p) => p.storageKey));
+  return supprime;
 }

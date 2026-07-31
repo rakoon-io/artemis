@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { forgetObjects } from "./stored-objects.service";
 
 /**
  * Service Pièce jointe de PAGE DE WIKI - accès données pur (l'objet lui-même vit
@@ -38,6 +39,9 @@ export function getWikiAttachmentWithProject(id: string) {
   });
 }
 
-export function deleteWikiAttachment(id: string) {
-  return prisma.wikiAttachment.delete({ where: { id } });
+/** Supprime la pièce jointe, ET l'objet qu'elle désigne (cf. `forgetObjects`). */
+export async function deleteWikiAttachment(id: string) {
+  const supprimee = await prisma.wikiAttachment.delete({ where: { id } });
+  await forgetObjects([supprimee.storageKey]);
+  return supprimee;
 }

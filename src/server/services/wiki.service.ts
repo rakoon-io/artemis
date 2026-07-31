@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { forgetObjects, wikiSubtreeKeys } from "./stored-objects.service";
 import { datePrefix, slugForTitle } from "@/lib/slug";
 import {
   buildSearchText,
@@ -427,7 +428,18 @@ export async function deleteWikiPage(id: string) {
       "Cette page est une section du wiki : elle ne peut pas être supprimée. Videz-la ou déplacez son contenu.",
     );
   }
-  return prisma.wikiPage.delete({ where: { id } });
+  /**
+   * Le sous-arbre ENTIER, et relevé avant la suppression.
+   *
+   * `WikiPage.parentId` est en cascade : effacer cette page efface ses enfants
+   * et leurs descendants. Ne regarder que les pièces jointes de la page nommée
+   * laisserait donc en place tous les fichiers des pages emportées avec elle -
+   * et, la base ne les mentionnant plus, sans aucun moyen de les retrouver.
+   */
+  const cles = await wikiSubtreeKeys(id);
+  const supprimee = await prisma.wikiPage.delete({ where: { id } });
+  await forgetObjects(cles);
+  return supprimee;
 }
 
 /**

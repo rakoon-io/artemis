@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { forgetObjects } from "./stored-objects.service";
 
 /** Service Pièce jointe - accès données pur (métadonnées ; l'objet vit dans S3). */
 
@@ -43,6 +44,15 @@ export function getAttachmentWithProject(id: string) {
   });
 }
 
-export function deleteAttachment(id: string) {
-  return prisma.attachment.delete({ where: { id } });
+/**
+ * Supprime la pièce jointe, ET l'objet qu'elle désigne.
+ *
+ * `delete` rend la ligne effacée : sa clé de stockage est donc connue sans
+ * requête supplémentaire, et connue APRÈS coup - donc forcément celle qui vient
+ * de disparaître, et non celle qu'une modification concurrente aurait remplacée.
+ */
+export async function deleteAttachment(id: string) {
+  const supprimee = await prisma.attachment.delete({ where: { id } });
+  await forgetObjects([supprimee.storageKey]);
+  return supprimee;
 }
