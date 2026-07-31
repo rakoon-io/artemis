@@ -44,6 +44,11 @@ export const en: Messages = {
     genericError: "Something went wrong. Please try again.",
     buildLabel: "Version",
   },
+  offline: {
+    title: "No connection",
+    description:
+      "Artemis needs the network to show your tickets. The page will reopen on its own as soon as the connection is back; you can also try again.",
+  },
   userMenu: {
     menuLabel: "User menu",
     roleAdmin: "Administrator",

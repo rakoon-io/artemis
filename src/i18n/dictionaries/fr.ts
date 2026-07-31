@@ -49,6 +49,12 @@ export const fr = {
     // comme un numero de version.
     buildLabel: "Version",
   },
+  // Page de repli servie par le service worker quand le reseau manque.
+  offline: {
+    title: "Pas de connexion",
+    description:
+      "Artemis a besoin du réseau pour afficher vos tickets. La page se rouvrira d'elle-même dès que la connexion reviendra ; vous pouvez aussi réessayer.",
+  },
   userMenu: {
     menuLabel: "Menu utilisateur",
     roleAdmin: "Administrateur",

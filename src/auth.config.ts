@@ -15,6 +15,10 @@ export const authConfig = {
       const path = nextUrl.pathname;
       // Pages publiques (jeton de première connexion, demande de réinitialisation).
       if (path === "/activer" || path === "/reset") return true;
+      // Repli hors ligne : le service worker le met en réserve à l'installation,
+      // souvent AVANT toute connexion. Protégé, il aurait mis en cache une
+      // redirection vers /login - et l'aurait servie à la place, indéfiniment.
+      if (path === "/hors-ligne") return true;
       const isAuthRoute = path === "/login" || path === "/register";
       if (isAuthRoute) {
         if (isLoggedIn) return Response.redirect(new URL("/", nextUrl));
