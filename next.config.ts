@@ -63,14 +63,93 @@ const commitDate =
   process.env.ARTEMIS_COMMIT_DATE?.trim() || git("log", "-1", "--format=%cI");
 
 /**
+ * POLITIQUE DE SÉCURITÉ DU CONTENU, en deux temps.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * CE QU'ON IMPOSE : CE QUI NE PEUT RIEN CASSER
+ *
+ * Ces quatre directives n'autorisent rien qui existait : l'application ne
+ * s'encadre pas elle-même, ne charge aucun greffon, n'écrit pas de `<base>` et
+ * ne poste que chez elle. Les refuser ne retire donc aucune fonction, et ferme
+ * autant de portes - `object-src` en particulier, qu'aucun autre en-tête ne
+ * couvre.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * CE QU'ON OBSERVE : LE RESTE
+ *
+ * `script-src` est le seul qui compte vraiment contre une XSS, et c'est celui
+ * qu'on ne peut pas imposer tel quel : Next émet des scripts en ligne (le flux
+ * RSC), et le sélecteur de thème aussi, pour poser la classe avant le premier
+ * rendu. Il faudrait un jeton à usage unique par requête, posé par le
+ * middleware - un vrai chantier, pas une ligne de configuration.
+ *
+ * En attendant, la politique complète est envoyée en OBSERVATION : le navigateur
+ * signale ce qu'elle bloquerait sans rien bloquer. Sans collecteur configuré,
+ * ces rapports vont dans la console du navigateur : c'est peu, mais c'est déjà
+ * de quoi mesurer.
+ *
+ * CE QUE LA MESURE DIT DÉJÀ. En développement, la politique complète produit des
+ * centaines de signalements, dont un `unsafe-eval` : c'est Turbopack qui évalue
+ * du texte pour le rechargement à chaud. Sur un BUILD DE PRODUCTION servi par
+ * `next start`, la même page n'en produit AUCUN - `unsafe-eval` compris. La
+ * politique est donc imposable telle quelle en production ; ce qui manque n'est
+ * pas la compatibilité, c'est la valeur : tant que `script-src` porte
+ * `unsafe-inline`, il ne protège d'à peu près rien.
+ *
+ * Réserve honnête : cette mesure porte sur `/login`, la seule page atteignable
+ * sans session sur le serveur de production d'essai. Avant d'imposer, parcourir
+ * les pages authentifiées de la même façon.
+ *
+ * `img-src` mérite l'attention : les images d'une page de wiki sont chargées
+ * depuis l'adresse qu'a écrite son auteur. Chacune signale à un tiers l'adresse
+ * IP et l'heure de lecture de chaque lecteur. Le jour où les images seront
+ * relayées par l'application, `img-src 'self' data:` deviendra tenable.
+ */
+const CSP_IMPOSEE = [
+  "frame-ancestors 'none'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join("; ");
+
+const CSP_OBSERVEE = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'none'",
+  "form-action 'self'",
+  // `unsafe-inline` assumé tant qu'il n'y a pas de jeton par requête ; c'est
+  // précisément ce que cette mise en observation sert à préparer.
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data:",
+  "connect-src 'self'",
+  // `upgrade-insecure-requests` est volontairement absent : une politique en
+  // observation l'ignore - le navigateur le dit à chaque page - et l'imposer
+  // sur `http://localhost` casserait le développement.
+].join("; ");
+
+/**
  * En-têtes de sécurité (correctif L1) appliqués à toutes les routes.
- * Pas de Content-Security-Policy ici : trop de risques de casser Next (à cadrer à part).
  */
 const securityHeaders = [
+  { key: "Content-Security-Policy", value: CSP_IMPOSEE },
+  { key: "Content-Security-Policy-Report-Only", value: CSP_OBSERVEE },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  {
+    key: "Permissions-Policy",
+    // Une fonction non listée reste autorisée pour l'origine : les trois
+    // premières ne suffisaient donc pas. On refuse tout ce dont l'application
+    // n'a aucun usage.
+    value: [
+      "camera=()", "microphone=()", "geolocation=()", "payment=()", "usb=()",
+      "serial=()", "bluetooth=()", "midi=()", "display-capture=()",
+      "xr-spatial-tracking=()", "idle-detection=()", "local-fonts=()",
+    ].join(", "),
+  },
   {
     key: "Strict-Transport-Security",
     value: "max-age=63072000; includeSubDomains; preload",
