@@ -32,8 +32,9 @@ import { ProjectNav } from "@/components/project/project-nav";
  *
  * Ce fourre-tout couvre TOUTES les routes de l'espace connecté : il n'existe
  * plus d'URL « sans correspondance », donc plus de bandeau fantôme. C'est ce
- * fichier, et non le routeur, qui décide de ne rien afficher hors projet - et
- * c'est pourquoi il n'y a pas de `default.tsx` à côté : il ne servirait jamais.
+ * fichier, et non le routeur, qui décide de ne rien afficher hors projet. Le
+ * `default.tsx` voisin ne devrait donc jamais servir - Next l'exige néanmoins
+ * dès qu'un autre créneau existe dans l'arbre, et refuse de compiler sans lui.
  *
  * Le fourre-tout est REQUIS (`[...path]`) et non facultatif : facultatif, il
  * couvrirait aussi la racine, qu'une redirection occupe déjà - le routeur

@@ -14,9 +14,15 @@ import { getAccessibleProjectByKey } from "@/server/access";
  */
 export default async function ProjectLayout({
   children,
+  modal,
   params,
 }: {
   children: ReactNode;
+  /**
+   * Créneau de la fiche ouverte au vol : vide partout, sauf lorsqu'on vient de
+   * cliquer sur un ticket depuis une page du projet (cf. `@modal/`).
+   */
+  modal: ReactNode;
   params: Promise<{ key: string }>;
 }) {
   const { key } = await params;
@@ -40,6 +46,7 @@ export default async function ProjectLayout({
       }
     >
       {children}
+      {modal}
     </div>
   );
 }
