@@ -5,6 +5,7 @@ import {
   Role,
   SprintState,
 } from "@prisma/client";
+import { resolveSeedPassword } from "../src/lib/seed-credentials";
 // Type seul : voir project.service.ts (evaluation au chargement du module).
 import type { TicketTemplate } from "@prisma/client";
 import { emptyReport, serializeReport } from "../src/lib/ticket-template";
@@ -178,8 +179,27 @@ const DEFAULT_COLUMNS = [
   { name: "Terminé", wipLimit: null },
 ];
 
+/** Rappelle le mot de passe seulement s'il vient d'être engendré. */
+function montrer(compte: { password: string; generated: boolean }): string {
+  return compte.generated ? ` / ${compte.password}` : "";
+}
+
 async function main() {
   // --- Utilisateurs ---
+  // Les mots de passe viennent de l'environnement (cf. `resolveSeedPassword`) :
+  // rien de tel n'a sa place dans un dépôt, encore moins public.
+  const production = process.env.NODE_ENV === "production";
+  const compteAdmin = resolveSeedPassword(
+    "SEED_ADMIN_PASSWORD",
+    process.env.SEED_ADMIN_PASSWORD,
+    production,
+  );
+  const compteRapporteur = resolveSeedPassword(
+    "SEED_REPORTER_PASSWORD",
+    process.env.SEED_REPORTER_PASSWORD,
+    production,
+  );
+
   const admin = await prisma.user.upsert({
     where: { email: "admin@rakoon.io" },
     update: {},
@@ -187,7 +207,7 @@ async function main() {
       email: "admin@rakoon.io",
       name: "Admin Rakoon",
       role: Role.ADMIN,
-      passwordHash: await bcrypt.hash("***MOT-DE-PASSE-RETIRE***", 12),
+      passwordHash: await bcrypt.hash(compteAdmin.password, 12),
     },
   });
   const reporter = await prisma.user.upsert({
@@ -197,7 +217,7 @@ async function main() {
       email: "rapporteur@rakoon.io",
       name: "Rémy Rapporteur",
       role: Role.REPORTER,
-      passwordHash: await bcrypt.hash("***MOT-DE-PASSE-RETIRE***", 12),
+      passwordHash: await bcrypt.hash(compteRapporteur.password, 12),
     },
   });
   // Compte de service pour l'assistant IA (serveur MCP). Sans mot de passe : il
@@ -743,8 +763,11 @@ async function main() {
     `Seed OK : projet RKN, ${samples.length} tickets, ${DEFAULT_MODULES.length} modules, ` +
       `${DEFAULT_COMPONENTS.length} composants, 3 sprints, ` +
       `3 sections et ${wikiPages.length} pages wiki.\n` +
-      `  Admin      : admin@rakoon.io / ***MOT-DE-PASSE-RETIRE*** (accès à tous les projets)\n` +
-      `  Rapporteur : rapporteur@rakoon.io / ***MOT-DE-PASSE-RETIRE*** (membre de RKN)\n` +
+      // Le mot de passe n'est rappelé que s'il vient d'être ENGENDRÉ : sinon,
+      // c'est l'opérateur qui l'a fourni, et le réafficher ne ferait que le
+      // recopier dans un journal de plus.
+      `  Admin      : admin@rakoon.io${montrer(compteAdmin)} (accès à tous les projets)\n` +
+      `  Rapporteur : rapporteur@rakoon.io${montrer(compteRapporteur)} (membre de RKN)\n` +
       `  Assistant  : bot@rakoon.io (compte de service MCP, membre de RKN)`,
   );
 }

@@ -47,6 +47,11 @@ const schema = z.object({
   MISTRAL_OUTPUT_PRICE_PER_MTOK_USD: z.string().optional(),
   // Mode démo : bannière + identifiants de démo affichés dans l'UI (login + shell app).
   DEMO_MODE: z.string().optional(),
+  // Mots de passe des comptes d'amorçage. Absents = engendrés au hasard hors
+  // production, refus en production (cf. `resolveSeedPassword`). En mode démo,
+  // ce sont eux que la carte de connexion affiche.
+  SEED_ADMIN_PASSWORD: z.string().optional(),
+  SEED_REPORTER_PASSWORD: z.string().optional(),
 });
 
 const parsed = schema.safeParse(process.env);

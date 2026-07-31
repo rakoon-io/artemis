@@ -69,10 +69,13 @@ npm run db:seed              # jeu de donnees de demo (comptes ci-dessous)
 npm run dev                  # demarrer le serveur (http://localhost:3000)
 ```
 
-**Comptes de demo** (crees par le seed) :
+**Comptes de demo** (crees par le seed) : `admin@rakoon.io` (Admin) et
+`rapporteur@rakoon.io` (Rapporteur).
 
-- **Admin** - `admin@rakoon.io` / `***MOT-DE-PASSE-RETIRE***`
-- **Rapporteur** - `rapporteur@rakoon.io` / `***MOT-DE-PASSE-RETIRE***`
+Leurs mots de passe viennent de `SEED_ADMIN_PASSWORD` / `SEED_REPORTER_PASSWORD`.
+Sans ces variables, le seed en engendre au hasard et les **affiche une fois** a
+la fin de son execution - notez-les. En production, il refuse de s'executer sans
+elles : un mot de passe ecrit dans un depot est un mot de passe publie.
 
 ```bash
 # Qualite
