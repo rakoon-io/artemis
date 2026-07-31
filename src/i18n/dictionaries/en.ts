@@ -42,6 +42,7 @@ export const en: Messages = {
     loading: "Loading…",
     search: "Search",
     genericError: "Something went wrong. Please try again.",
+    buildLabel: "Version",
   },
   userMenu: {
     menuLabel: "User menu",

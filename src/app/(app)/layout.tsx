@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
+import { BuildStamp } from "@/components/brand/build-stamp";
 import { GithubLink } from "@/components/brand/github-link";
 import { TrackerMark } from "@/components/brand/tracker-mark";
 import { ThemePicker } from "@/components/theme-picker";
@@ -91,7 +92,9 @@ export default async function AppLayout({
           tableau Kanban - n'a plus à deviner celle du bandeau ni du pied de page.
           Elle se déclare `flex-1`, et ce qui reste lui revient. */}
       <main className="flex w-full min-h-0 flex-1 flex-col">{children}</main>
-      <footer className="flex items-center justify-center gap-2 border-t py-4 text-center text-xs text-muted-foreground">
+      {/* `flex-wrap` : la signature, le dépôt et l'identité du build tiennent sur
+          une ligne au large, et se replient proprement sur un téléphone. */}
+      <footer className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 border-t py-4 text-center text-xs text-muted-foreground">
         <span>Développé par Thomas Broussard</span>
         {isDemo && (
           <>
@@ -100,6 +103,7 @@ export default async function AppLayout({
             <GithubLink />
           </>
         )}
+        <BuildStamp />
       </footer>
     </div>
   );

@@ -45,6 +45,9 @@ export const fr = {
     loading: "Chargement…",
     search: "Rechercher",
     genericError: "Une erreur est survenue. Réessayez.",
+    // Lu a voix haute avant « v0.1.0+46cc1f5 », que rien ne signale autrement
+    // comme un numero de version.
+    buildLabel: "Version",
   },
   userMenu: {
     menuLabel: "Menu utilisateur",

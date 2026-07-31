@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { BuildStamp } from "@/components/brand/build-stamp";
 import { GithubLink } from "@/components/brand/github-link";
 import { TrackerMark } from "@/components/brand/tracker-mark";
 import { env } from "@/lib/env";
@@ -21,7 +22,10 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           <span>Artemis</span>
         </div>
         {children}
-        <p className="flex items-center justify-center gap-2 text-center text-xs text-muted-foreground">
+        {/* La version figure AUSSI avant la connexion : c'est là qu'on la
+            demande à quelqu'un qui n'arrive pas à entrer, et c'est le seul écran
+            qu'il puisse montrer. */}
+        <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-xs text-muted-foreground">
           <span>Développé par Thomas Broussard</span>
           {isDemo && (
             <>
@@ -31,6 +35,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
               <GithubLink />
             </>
           )}
+          <BuildStamp />
         </p>
       </div>
     </div>
