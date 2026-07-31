@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { BuildStamp } from "@/components/brand/build-stamp";
 import { GithubLink } from "@/components/brand/github-link";
+import { InstanceBadge } from "@/components/brand/instance-badge";
 import { TrackerMark } from "@/components/brand/tracker-mark";
 import { env } from "@/lib/env";
 
@@ -20,6 +21,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         <div className="flex items-center justify-center gap-2 text-lg font-semibold">
           <TrackerMark className="size-8 shrink-0 text-primary" />
           <span>Artemis</span>
+          <InstanceBadge />
         </div>
         {children}
         {/* La version figure AUSSI avant la connexion : c'est là qu'on la

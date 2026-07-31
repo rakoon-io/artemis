@@ -78,11 +78,16 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  // Remplacées TEXTUELLEMENT dans le bundle (cf. `src/lib/build-info.ts`).
+  // Remplacées TEXTUELLEMENT dans le bundle (cf. `src/lib/build-info.ts` et
+  // `src/lib/instance.ts`). L'identité de l'instance doit atteindre le
+  // NAVIGATEUR - elle teinte l'interface, pas seulement l'icône engendrée côté
+  // serveur -, ce qu'une variable lue au runtime ne permettrait pas.
   env: {
     ARTEMIS_VERSION: packageVersion(),
     ARTEMIS_COMMIT: commit,
     ARTEMIS_COMMIT_DATE: commitDate,
+    ARTEMIS_INSTANCE_LABEL: process.env.ARTEMIS_INSTANCE_LABEL?.trim() ?? "",
+    ARTEMIS_INSTANCE_COLOR: process.env.ARTEMIS_INSTANCE_COLOR?.trim() ?? "",
   },
   async headers() {
     return [

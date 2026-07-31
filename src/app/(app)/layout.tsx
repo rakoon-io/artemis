@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { BuildStamp } from "@/components/brand/build-stamp";
 import { GithubLink } from "@/components/brand/github-link";
+import { InstanceBadge } from "@/components/brand/instance-badge";
 import { TrackerMark } from "@/components/brand/tracker-mark";
 import { ThemePicker } from "@/components/theme-picker";
 import { UserMenu } from "@/components/user-menu";
@@ -79,6 +80,7 @@ export default async function AppLayout({
             <TrackerMark className="size-7 shrink-0 text-primary" />
             <span>Artemis</span>
           </Link>
+          <InstanceBadge />
           {projectbar}
           {/* Basis nulle : cet écarteur absorbe l'espace LIBRE sans jamais
               disputer le sien à la barre de projet, qui peut donc réclamer la

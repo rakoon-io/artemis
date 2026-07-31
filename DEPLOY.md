@@ -107,6 +107,34 @@ docker build \
 > machine, pas dans le conteneur. En CI, les variables de la forge conviennent
 > telles quelles (`GITHUB_SHA`, `CI_COMMIT_SHA`, `CI_COMMIT_TIMESTAMP`…).
 
+#### Plusieurs déploiements : les distinguer
+
+Chaque origine est déjà une **installation séparée** pour le navigateur. Le
+problème est visuel : trois icônes identiques dans le dock, trois fenêtres
+identiques, et plus de barre d'adresse pour trancher — c'est précisément ce que
+le mode autonome retire. Deux arguments supplémentaires y répondent :
+
+```bash
+docker build \
+  --build-arg ARTEMIS_INSTANCE_LABEL="Recette" \
+  --build-arg ARTEMIS_INSTANCE_COLOR="#c2410c" \
+  … -t artemis:recette <contexte>
+```
+
+Ils teintent l'**icône engendrée** (fond coloré + étiquette peinte dessus), le
+**nom de l'application installée** (« Artemis · Recette ») et une **pastille**
+à côté de la marque, dans l'en-tête comme sur l'écran de connexion.
+
+- **La production ne se déclare pas.** Sans étiquette, l'application est
+  « Artemis » dans sa couleur de marque. Ce sont les autres qui se signalent :
+  l'inverse conduirait à oublier d'étiqueter le seul endroit où l'oubli coûte.
+- Étiquette **courte** — tronquée à 12 caractères, elle est peinte sur une icône
+  de 192 pixels.
+- Couleur **hexadécimale** (`#rgb` ou `#rrggbb`) ; toute autre valeur est
+  ignorée au profit de la couleur de marque, plutôt que d'invalider le manifeste.
+- Ces valeurs sont **scellées au build**, comme l'identité du commit : en
+  changer suppose de reconstruire l'image.
+
 ### 5.4 - Fichier d'environnement `rtr.env`
 ```ini
 NODE_ENV=production

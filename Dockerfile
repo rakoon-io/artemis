@@ -21,6 +21,14 @@ ENV NODE_ENV=production
 ARG ARTEMIS_COMMIT=""
 ARG ARTEMIS_COMMIT_DATE=""
 ENV ARTEMIS_COMMIT=$ARTEMIS_COMMIT ARTEMIS_COMMIT_DATE=$ARTEMIS_COMMIT_DATE
+# Identité de l'instance : teinte l'icône installée, le nom de l'application et
+# la pastille de l'en-tête. À passer ici et non au runtime - l'icône est certes
+# engendrée par le serveur, mais la teinte doit aussi atteindre le navigateur.
+# Sans étiquette, l'image est celle de la production : « Artemis », couleur de
+# marque. Voir DEPLOY.md § 5.3.
+ARG ARTEMIS_INSTANCE_LABEL=""
+ARG ARTEMIS_INSTANCE_COLOR=""
+ENV ARTEMIS_INSTANCE_LABEL=$ARTEMIS_INSTANCE_LABEL ARTEMIS_INSTANCE_COLOR=$ARTEMIS_INSTANCE_COLOR
 RUN npm run build
 
 # ---- Runner ----

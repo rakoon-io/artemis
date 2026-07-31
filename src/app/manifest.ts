@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { instance } from "@/lib/instance";
 
 /**
  * MANIFESTE D'APPLICATION - ce qui rend Artemis installable.
@@ -34,8 +35,12 @@ export default function manifest(): MetadataRoute.Manifest {
     // déduit l'identité de `start_url` : changer un jour la page d'accueil
     // créerait une seconde application au lieu de mettre à jour la première.
     id: "/",
-    name: "Artemis",
-    short_name: "Artemis",
+    // Le nom PORTE l'instance : trois déploiements du même produit se
+    // ressemblaient trait pour trait dans le dock et dans le sélecteur de
+    // fenêtres. « Artemis · Recette » se lit là où l'adresse n'est plus
+    // affichée (cf. `src/lib/instance.ts`).
+    name: instance.name,
+    short_name: instance.name,
     description:
       "Suivi de tickets sobre, moderne et personnalisable pour une méthode agile.",
     // La racine redirige vers les projets, ou vers la connexion : c'est le seul
@@ -44,20 +49,22 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: "/",
     display: "standalone",
     background_color: "#fdfdfd",
-    theme_color: "#5f4ec2",
+    theme_color: instance.color,
     // Langue de référence du produit ; l'interface, elle, suit le choix de
     // chacun - un manifeste ne se traduit pas par utilisateur.
     lang: "fr",
     dir: "ltr",
     orientation: "any",
     categories: ["productivity", "business"],
+    // Icônes ENGENDRÉES, aux couleurs de l'instance : un fichier livré dans le
+    // dépôt ne saurait rien de l'environnement où il sera déployé.
     icons: [
-      { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
-      { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/icons/192", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/icons/512", sizes: "512x512", type: "image/png", purpose: "any" },
       // MASQUABLE : Android rogne l'icône à la forme de son lanceur. Celle-ci
       // est dessinée bord à bord, motif réduit, pour supporter la découpe.
       {
-        src: "/icons/icon-maskable-512.png",
+        src: "/icons/maskable",
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",
