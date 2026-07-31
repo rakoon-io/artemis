@@ -31,21 +31,25 @@ export function ProjectNav({ projectKey, isAdmin }: ProjectNavProps) {
   ];
 
   return (
-    // Six onglets font 493 pixels : plus qu'un téléphone n'en offre. Sans
+    // Sept onglets font 560 pixels : plus qu'un téléphone n'en offre. Sans
     // `overflow-x-auto`, c'est la PAGE ENTIÈRE qui se décalait vers la droite et
     // qu'il fallait faire glisser pour lire la moindre ligne. La barre défile
-    // désormais pour elle seule - et non l'inverse.
-    // `pb-px` : en CSS, dès qu'un axe de débordement vaut autre chose que
-    // `visible`, l'autre bascule de `visible` à `auto`. Le `-mb-px` des onglets
-    // - qui fait chevaucher leur soulignement sur la bordure de la barre - les
-    // faisait dépasser d'un pixel, et ce pixel suffisait à faire naître un
-    // ascenseur VERTICAL sur toute la hauteur de la fenêtre.
+    // désormais pour elle seule - et non l'inverse. `min-w-0` le rend possible :
+    // un élément flexible refuse par défaut de passer sous sa taille minimale de
+    // contenu, et ne déborderait donc jamais... vers l'intérieur.
     //
-    // Un pixel de remplissage bas ABSORBE ce dépassement, plutôt que de le
-    // masquer par `overflow-y-hidden` : rien n'est rogné, le soulignement de
-    // l'onglet actif garde ses deux pixels pleins.
+    // Pas de `flex-1` ici, à dessein : une base nulle ne compte pour RIEN dans
+    // la largeur naturelle du parent, qui cesserait alors de réclamer la place
+    // de ses onglets - ils seraient comprimés là même où l'écran est large.
+    //
+    // L'ascenseur horizontal est masqué : il se poserait sur le soulignement de
+    // l'onglet actif, à un pixel de la bordure de l'en-tête. Le glissement et la
+    // molette horizontale, eux, restent entiers.
+    //
+    // Plus de bordure basse propre : c'est celle de l'en-tête qui sert de ligne
+    // aux onglets, lesquels s'étirent sur toute sa hauteur pour la rejoindre.
     <nav
-      className="flex items-center gap-1 overflow-x-auto border-b pb-px"
+      className="flex min-w-0 items-stretch gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       aria-label={t.settings.nav.ariaLabel}
     >
       {tabs.map((tab) => {
@@ -57,7 +61,7 @@ export function ProjectNav({ projectKey, isAdmin }: ProjectNavProps) {
             href={tab.href}
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "-mb-px shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition-colors",
+              "flex shrink-0 items-center whitespace-nowrap border-b-2 px-3 text-sm font-medium transition-colors",
               isActive
                 ? "border-primary text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground",

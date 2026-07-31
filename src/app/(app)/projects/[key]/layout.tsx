@@ -1,12 +1,17 @@
 import type { CSSProperties, ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
-import { isAdmin } from "@/lib/policies";
 import { getAccessibleProjectByKey } from "@/server/access";
-import { Badge } from "@/components/ui/badge";
-import { ProjectNav } from "@/components/project/project-nav";
 
-/** Layout d'un projet : charge le projet, affiche l'en-tête et les onglets. */
+/**
+ * Layout d'un projet : impose l'accès, et teinte le contenu à sa couleur.
+ *
+ * Le nom du projet et ses onglets ne sont plus ici : ils ont rejoint la barre du
+ * haut (`@projectbar`), qui les affiche sur la même ligne que la marque. Ce
+ * layout garde la GARDE - `notFound()` sur un projet inconnu ou interdit -,
+ * indissociable de la page qu'il protège. Le projet n'est lu qu'une fois : la
+ * mémoïsation de `getAccessibleProjectByKey` couvre les deux branches.
+ */
 export default async function ProjectLayout({
   children,
   params,
@@ -19,11 +24,12 @@ export default async function ProjectLayout({
   const project = await getAccessibleProjectByKey(session?.user, key);
   if (!project) notFound();
 
-  const admin = isAdmin(session?.user);
-
   return (
     <div
-      className="flex min-h-0 flex-1 flex-col gap-4 px-4 py-5 md:px-6"
+      // `flex flex-col` reste indispensable : le tableau Kanban s'y déclare
+      // `flex-1` pour occuper la hauteur restante. L'écart entre blocs, lui, a
+      // disparu avec le bandeau qu'il séparait du contenu.
+      className="flex min-h-0 flex-1 flex-col px-4 py-5 md:px-6"
       style={
         project.accentColor
           ? ({
@@ -33,15 +39,6 @@ export default async function ProjectLayout({
           : undefined
       }
     >
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-3">
-          <Badge variant="secondary">{project.key}</Badge>
-          <h1 className="text-xl font-semibold tracking-tight">
-            {project.name}
-          </h1>
-        </div>
-        <ProjectNav projectKey={project.key} isAdmin={admin} />
-      </div>
       {children}
     </div>
   );

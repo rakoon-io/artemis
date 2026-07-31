@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { assert, canAccessProject, isAdmin, type PolicyUser } from "@/lib/policies";
 import { isProjectMember } from "./services/membership.service";
 import { getProjectByKey } from "./services/project.service";
@@ -10,6 +11,27 @@ import { getProjectByKey } from "./services/project.service";
 
 type MaybeUser = PolicyUser | null | undefined;
 
+/**
+ * Lectures MÉMOÏSÉES le temps d'un rendu.
+ *
+ * La barre de projet et la page qu'elle surmonte sont deux branches parallèles
+ * de l'arbre : elles résolvent le même projet, dans la même requête, sans
+ * pouvoir se passer le résultat. Mesuré sur la liste des tickets, sans
+ * mémoïsation : TROIS lectures du même projet pour un seul affichage - la
+ * barre, le layout, la page. Il n'en reste qu'une.
+ *
+ * `cache()` s'indexe sur les arguments par IDENTITÉ : d'où des clés de type
+ * chaîne, et non l'objet utilisateur, dont `auth()` rend une instance neuve à
+ * chaque appel - la mémoïsation n'y ferait jamais mouche.
+ *
+ * Hors rendu React (le serveur MCP, par exemple), `cache` appelle simplement la
+ * fonction : rien à prévoir de ce côté.
+ */
+const readProject = cache((key: string) => getProjectByKey(key));
+const readMembership = cache((projectId: string, userId: string) =>
+  isProjectMember(projectId, userId),
+);
+
 /** Vrai si l'utilisateur peut accéder au projet (admin, ou membre). */
 export async function canAccess(
   user: MaybeUser,
@@ -17,7 +39,7 @@ export async function canAccess(
 ): Promise<boolean> {
   if (!user) return false;
   if (isAdmin(user)) return true;
-  return canAccessProject(user, await isProjectMember(projectId, user.id));
+  return canAccessProject(user, await readMembership(projectId, user.id));
 }
 
 /** Lève ForbiddenError si l'utilisateur n'a pas accès au projet (usage actions/API). */
@@ -34,7 +56,7 @@ export async function assertProjectAccess(
  * indistinguable d'un projet inexistant - on ne divulgue pas son existence).
  */
 export async function getAccessibleProjectByKey(user: MaybeUser, key: string) {
-  const project = await getProjectByKey(key);
+  const project = await readProject(key);
   if (!project) return null;
   if (!(await canAccess(user, project.id))) return null;
   return project;

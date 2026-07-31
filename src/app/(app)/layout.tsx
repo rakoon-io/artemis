@@ -11,8 +11,18 @@ import { env } from "@/lib/env";
 /** Shell global de l'espace connecté : barre du haut + conteneur principal. */
 export default async function AppLayout({
   children,
+  projectbar,
 }: {
   children: ReactNode;
+  /**
+   * Créneau parallèle : ce qu'une route profonde souhaite voir figurer dans la
+   * barre du haut. Vide partout, sauf sur les pages d'un projet, où il porte
+   * son nom et ses onglets (voir `@projectbar/`).
+   *
+   * La coque n'a rien à savoir de ce contenu : elle lui réserve une place, et
+   * c'est la route qui le remplit - ou non.
+   */
+  projectbar: ReactNode;
 }) {
   const session = await auth();
   if (!session?.user) redirect("/login");
@@ -47,14 +57,31 @@ export default async function AppLayout({
         </div>
       )}
       <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-        <div className="flex h-14 w-full items-center gap-4 px-4 md:px-6">
+        {/**
+         * UNE SEULE BANDE, plutôt que trois empilées.
+         *
+         * Le nom du projet et ses onglets vivaient sous l'en-tête, dans deux
+         * blocs successifs : 172 pixels de décor avant la première ligne utile,
+         * sur un écran qui n'en offre pas mille. Ils tiennent désormais sur la
+         * même ligne que la marque, à droite de celle-ci.
+         *
+         * `min-h-14` et non `h-14` : sous `md`, la barre de projet passe à la
+         * ligne (voir le créneau) et l'en-tête doit pouvoir grandir. Le
+         * remplissage haut n'existe que là - sur une ligne unique, `min-h-14`
+         * centre déjà tout.
+         */}
+        <div className="flex min-h-14 w-full flex-wrap items-center gap-x-4 px-4 pt-2 md:px-6 md:pt-0">
           <Link
             href="/projects"
-            className="flex items-center gap-2 font-semibold transition-opacity hover:opacity-80"
+            className="flex shrink-0 items-center gap-2 font-semibold transition-opacity hover:opacity-80"
           >
             <TrackerMark className="size-7 shrink-0 text-primary" />
             <span>Artemis</span>
           </Link>
+          {projectbar}
+          {/* Basis nulle : cet écarteur absorbe l'espace LIBRE sans jamais
+              disputer le sien à la barre de projet, qui peut donc réclamer la
+              largeur de ses onglets. */}
           <div className="flex-1" />
           <ThemePicker />
           <UserMenu user={user} />
