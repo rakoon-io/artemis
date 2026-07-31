@@ -6,6 +6,7 @@
 export const board = {
   // Colonne / limite WIP
   wipLimit: "Limite WIP : {limit}",
+  olderDone: "Plus anciens ({count})",
   dropHere: "Déposer un ticket ici",
 
   // Ajout rapide

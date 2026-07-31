@@ -62,7 +62,17 @@ export default async function SprintsPage({
           {t.sprints.emptyState}
         </div>
       ) : (
-        <div className="space-y-8">
+        /**
+         * PLANIFIER, C'EST PUISER : les sprints à gauche, la réserve à droite.
+         *
+         * Les deux étaient empilés, et les sprints rangés dans une grille à deux
+         * colonnes - si bien qu'un sprint seul dans son état occupait la moitié
+         * d'une moitié, laissant les trois quarts de l'écran vides. Côte à côte,
+         * on voit ce qu'on remplit ET ce dans quoi on puise, ce qui est le geste
+         * même de cette page.
+         */
+        <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+          <div className="space-y-8">
           {GROUPS.map((group) => {
             const items = sprints.filter((s) => s.state === group.state);
             if (items.length === 0) return null;
@@ -74,7 +84,9 @@ export default async function SprintsPage({
                   </h2>
                   <Badge variant="outline">{items.length}</Badge>
                 </div>
-                <div className="grid gap-4 xl:grid-cols-2">
+                {/* Pleine largeur de la colonne : les tickets d'un sprint se
+                    lisent en lignes, pas en vignettes. */}
+                <div className="space-y-4">
                   {items.map((sprint) => (
                     <SprintCard
                       key={sprint.id}
@@ -88,8 +100,12 @@ export default async function SprintsPage({
               </section>
             );
           })}
+          </div>
 
-          <section className="space-y-3">
+          {/* La réserve reste visible pendant qu'on remplit les sprints - et se
+              range sous eux dès que l'écran ne peut plus les mettre côte à
+              côte. */}
+          <section className="space-y-3 xl:sticky xl:top-4">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 {t.sprints.backlog}
@@ -104,7 +120,7 @@ export default async function SprintsPage({
                 {t.sprints.backlogEmpty}
               </p>
             ) : (
-              <ul className="divide-y rounded-lg border">
+              <ul className="slim-scrollbar max-h-[calc(100dvh-16rem)] divide-y overflow-y-auto rounded-lg border">
                 {backlog.map((ticket) => (
                   <li key={ticket.id}>
                     <SprintTicketItem

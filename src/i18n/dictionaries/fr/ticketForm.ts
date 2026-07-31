@@ -44,6 +44,9 @@ export const ticketForm = {
   updatedToast: "Ticket mis à jour.",
 
   // Selecteur de labels
+  searchLabels: "Rechercher un label…",
+  noLabelMatches: "Aucun label ne correspond.",
+  clearLabels: "Retirer les {count} labels",
   noLabelsAvailable: "Aucun label disponible",
   selectLabels: "Sélectionner des labels…",
   labelsSelectedOne: "{count} label sélectionné",

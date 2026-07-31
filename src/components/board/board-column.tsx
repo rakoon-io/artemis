@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { ChevronRight, Plus } from "lucide-react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 
@@ -26,6 +26,7 @@ export function BoardColumn({
   projectKey,
   currentUser,
   cardOptions,
+  activeSprintId,
   onQuickAdd,
 }: {
   column: BoardColumnData;
@@ -37,12 +38,38 @@ export function BoardColumn({
   currentUser: CurrentUser;
   /** Listes de choix des champs modifiables sur une carte. */
   cardOptions: CardOptions;
+  /**
+   * Sprint en cours. Fourni à la DERNIÈRE colonne seulement - celle des tickets
+   * achevés -, il y sépare le récent de l'ancien. Absent (pas de sprint actif,
+   * ou colonne quelconque), la colonne s'affiche d'un seul tenant.
+   */
+  activeSprintId?: string | null;
   /** Fourni uniquement pour la 1re colonne (ajout rapide). */
   onQuickAdd?: (title: string) => Promise<boolean>;
 }) {
   const t = useDict();
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
   const overLimit = column.wipLimit != null && totalCount > column.wipLimit;
+
+  /**
+   * ACHEVÉS RÉCENTS / PLUS ANCIENS.
+   *
+   * La colonne de fin ne se vide jamais : au bout de trois sprints, ce qu'on a
+   * terminé cette semaine est enseveli sous des mois de travail livré. Le
+   * partage se fait sur le SPRINT EN COURS - ce qui vient d'être achevé est ce
+   * qui appartient à l'itération courante -, et non sur une date arbitraire.
+   *
+   * Le repli n'existe QUE s'il a un sens : sans sprint actif, la notion de
+   * « récent » n'est définie par rien, et la colonne reste entière.
+   */
+  const recent = activeSprintId
+    ? tickets.filter((ticket) => ticket.sprintId === activeSprintId)
+    : tickets;
+  const older = activeSprintId
+    ? tickets.filter((ticket) => ticket.sprintId !== activeSprintId)
+    : [];
+  const [showOlder, setShowOlder] = useState(false);
+  const visible = showOlder ? [...recent, ...older] : recent;
 
   return (
     <section
@@ -78,10 +105,35 @@ export function BoardColumn({
         )}
       >
         <SortableContext
-          items={tickets.map((t) => t.id)}
+          items={visible.map((t) => t.id)}
           strategy={verticalListSortingStrategy}
         >
-          {tickets.map((ticket) => (
+          {recent.map((ticket) => (
+            <TicketCard
+              key={ticket.id}
+              ticket={ticket}
+              projectKey={projectKey}
+              currentUser={currentUser}
+              options={cardOptions}
+            />
+          ))}
+          {/* Le pli. Les cartes repliées ne sont pas rendues : elles ne
+              participent donc pas au tri tant qu'on ne les a pas montrées. */}
+          {older.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowOlder((on) => !on)}
+              aria-expanded={showOlder}
+              className="flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <ChevronRight
+                className={cn("size-3.5 transition-transform", showOlder && "rotate-90")}
+                aria-hidden
+              />
+              {fmt(t.board.olderDone, { count: older.length })}
+            </button>
+          )}
+          {showOlder && older.map((ticket) => (
             <TicketCard
               key={ticket.id}
               ticket={ticket}
@@ -128,13 +180,13 @@ function QuickAdd({ onSubmit }: { onSubmit: (title: string) => Promise<boolean> 
      */
     return (
       <Button
-        size="icon"
-        className="absolute bottom-3 right-3 z-10 size-9 rounded-full shadow-lg"
+        size="sm"
+        className="absolute bottom-3 right-3 z-10 h-8 rounded-full px-3 text-xs shadow-lg"
         title={t.board.addTicket}
-        aria-label={t.board.addTicket}
         onClick={() => setOpen(true)}
       >
         <Plus />
+        {t.board.addTicket}
       </Button>
     );
   }

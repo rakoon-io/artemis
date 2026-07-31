@@ -113,6 +113,7 @@ export function KanbanBoard({
   components,
   modules,
   className,
+  activeSprintId,
   action,
 }: {
   columns: BoardColumnData[];
@@ -127,6 +128,8 @@ export function KanbanBoard({
   /** Modules du projet ; vide = le filtre « Module » n'est pas rendu. */
   modules: ModuleOption[];
   className?: string;
+  /** Sprint en cours, s'il y en a un : la colonne de fin y replie l'ancien. */
+  activeSprintId?: string | null;
   /** Élément affiché à droite de la barre de filtres (ex. « Nouveau ticket »). */
   action?: ReactNode;
 }) {
@@ -427,6 +430,11 @@ export function KanbanBoard({
                 tickets={column.tickets.filter(match)}
                 /* Les mêmes listes que les filtres : elles sont déjà là. */
                 cardOptions={{ types, priorities, members }}
+                /* Seule la DERNIÈRE colonne replie l'ancien : c'est celle où le
+                   travail achevé s'accumule sans jamais en repartir. */
+                activeSprintId={
+                  index === columns.length - 1 ? activeSprintId : null
+                }
                 totalCount={column.tickets.length}
                 projectKey={projectKey}
                 currentUser={currentUser}

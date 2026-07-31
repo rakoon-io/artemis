@@ -7,6 +7,7 @@ import type { BoardDict } from "../fr/board";
 export const board: BoardDict = {
   // Column / WIP limit
   wipLimit: "WIP limit: {limit}",
+  olderDone: "Older ({count})",
   dropHere: "Drop a ticket here",
 
   // Quick add

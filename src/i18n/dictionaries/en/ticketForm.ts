@@ -42,6 +42,9 @@ export const ticketForm: TicketFormDict = {
   updatedToast: "Ticket updated.",
 
   // Label selector
+  searchLabels: "Search a label…",
+  noLabelMatches: "No matching label.",
+  clearLabels: "Remove the {count} labels",
   noLabelsAvailable: "No labels available",
   selectLabels: "Select labels…",
   labelsSelectedOne: "{count} label selected",

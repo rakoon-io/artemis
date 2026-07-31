@@ -69,6 +69,9 @@ export default async function BoardPage({
          sous le pied. */
       className="min-h-0 flex-1"
       columns={columns}
+      /* Le sprint en cours, pour que la colonne de fin distingue ce qui vient
+         d'être achevé de ce qui l'a été il y a trois itérations. */
+      activeSprintId={sprints.find((s) => s.state === "ACTIVE")?.id ?? null}
       projectId={project.id}
       projectKey={project.key}
       currentUser={currentUser}
