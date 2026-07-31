@@ -3,13 +3,14 @@
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { appBaseUrl } from "@/lib/email";
-import { rateLimit } from "@/lib/rate-limit";
+import { headers } from "next/headers";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { setPasswordSchema } from "@/lib/validators";
 import { sendInviteEmail } from "@/server/mailer";
 import { getUserByEmail } from "@/server/services/user.service";
 import {
   issueSetupToken,
-  setPasswordWithToken,
+  consumeSetupToken,
 } from "@/server/services/setup-token.service";
 import { toErrorMessage } from "./helpers";
 import type { ActionResult } from "./types";
@@ -24,8 +25,25 @@ export async function setPasswordAction(
 ): Promise<ActionResult<{ email: string }>> {
   try {
     const data = setPasswordSchema.parse(input);
-    const passwordHash = await bcrypt.hash(data.password, 12);
-    const email = await setPasswordWithToken(data.token, passwordHash);
+    /**
+     * LE JETON D'ABORD, LE HACHAGE ENSUITE.
+     *
+     * L'ordre inverse hachait en bcrypt coût 12 - en JavaScript pur, sur la
+     * boucle d'événements - AVANT de découvrir que le jeton ne valait rien.
+     * Cette action est atteignable sans session (les identifiants d'action sont
+     * publics, et /activer l'est aussi) : quelques dizaines d'appels concurrents
+     * avec un jeton bidon suffisaient à figer le serveur pour tout le monde.
+     *
+     * On paie donc le hachage seulement une fois le jeton reconnu, et la
+     * cadence est bornée par adresse.
+     */
+    const limite = rateLimit(`setpw:${clientIp(await headers())}`, 10, 15 * 60 * 1000);
+    if (!limite.ok) {
+      return { ok: false, error: "Trop de tentatives. Réessayez plus tard." };
+    }
+    const email = await consumeSetupToken(data.token, () =>
+      bcrypt.hash(data.password, 12),
+    );
     if (!email) {
       return {
         ok: false,
@@ -59,7 +77,7 @@ export async function requestPasswordResetAction(
   try {
     const user = await getUserByEmail(email);
     if (user) {
-      const token = await issueSetupToken(user.id);
+      const token = await issueSetupToken(user.id, "reset");
       const url = `${appBaseUrl()}/activer?token=${token}`;
       await sendInviteEmail(user.email, user.name, url, true);
     }

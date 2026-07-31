@@ -1,3 +1,4 @@
+import { contentDisposition, safeServing } from "@/lib/attachments";
 import { NextResponse } from "next/server";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/session";
@@ -41,14 +42,16 @@ export async function GET(
     redirect(url);
   }
 
-  // Repli disque (les types dangereux sont refusés au dépôt → `inline` sûr).
+  // Repli disque : l'application sert les octets depuis sa propre origine, donc
+  // elle décide seule de ce qui s'affiche en place (cf. `safeServing`) - jamais
+  // la chaîne de type choisie au dépôt.
   try {
     const buffer = await readLocal(file.storageKey);
-    const safeName = file.filename.replace(/["\r\n]/g, "");
+    const { type, disposition } = safeServing(file.contentType);
     return new NextResponse(new Uint8Array(buffer), {
       headers: {
-        "Content-Type": file.contentType || "application/octet-stream",
-        "Content-Disposition": `inline; filename="${safeName}"`,
+        "Content-Type": type,
+        "Content-Disposition": contentDisposition(disposition, file.filename),
         "Cache-Control": "private, max-age=60",
       },
     });

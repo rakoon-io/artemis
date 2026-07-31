@@ -67,12 +67,23 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
-  const isFirstUser = (await prisma.user.count()) === 0;
-  const role = isFirstUser ? Role.ADMIN : Role.REPORTER;
 
+  /**
+   * TOUJOURS Rapporteur. Cette route accordait le rôle Administrateur au
+   * PREMIER inscrit, en se fiant à `user.count() === 0`.
+   *
+   * Elle est publique et non authentifiée. Toute fenêtre où la table des
+   * utilisateurs est vide - déploiement neuf, migration vers une nouvelle base,
+   * réinitialisation de la démo - offrait donc l'administration à qui postait le
+   * premier. Le décompte et la création n'étant pas atomiques, deux inscriptions
+   * simultanées pouvaient même l'obtenir toutes les deux.
+   *
+   * Le premier administrateur se crée par l'amorçage ou en ligne de commande,
+   * jamais par un formulaire ouvert sur l'Internet.
+   */
   try {
     await prisma.user.create({
-      data: { name, email, passwordHash, role },
+      data: { name, email, passwordHash, role: Role.REPORTER },
     });
   } catch (error) {
     // Course sur la contrainte d'unicité de l'e-mail.

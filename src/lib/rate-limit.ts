@@ -69,9 +69,28 @@ if (typeof setInterval !== "undefined" && !globalForRateLimit.__rakoonRateLimitS
   (timer as unknown as { unref?: () => void }).unref?.();
 }
 
-/** IP client best-effort à partir des en-têtes (derrière le proxy Traefik). */
+/**
+ * IP client, derrière le proxy Traefik.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * LA DERNIÈRE ENTRÉE, PAS LA PREMIÈRE
+ *
+ * `X-Forwarded-For` s'écrit de gauche à droite, et chaque relais AJOUTE le pair
+ * qu'il voit. La première entrée est donc celle que le client a écrite lui-même :
+ * la lire revenait à laisser l'attaquant choisir sa propre clef de comptage, et
+ * donc à contourner toute limitation en changeant un en-tête à chaque requête -
+ * inscriptions en boucle, et autant de bcrypt à coût 12 offerts.
+ *
+ * La dernière entrée est celle qu'a inscrite le relais le plus proche de nous,
+ * le seul que nous ayons des raisons de croire. Avec un unique relais devant
+ * l'application, c'est l'adresse réelle du client.
+ */
 export function clientIp(headers: Headers): string {
   const xff = headers.get("x-forwarded-for");
-  if (xff) return xff.split(",")[0]?.trim() || "unknown";
+  if (xff) {
+    const chaine = xff.split(",").map((p) => p.trim()).filter(Boolean);
+    const dernier = chaine[chaine.length - 1];
+    if (dernier) return dernier;
+  }
   return headers.get("x-real-ip") ?? "unknown";
 }

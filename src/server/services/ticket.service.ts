@@ -5,7 +5,7 @@ import {
   checkReportDescription,
   reportRequirementMessage,
 } from "@/lib/ticket-template";
-import { Prisma, TicketTemplate } from "@prisma/client";
+import { Prisma, Role, TicketTemplate } from "@prisma/client";
 
 /**
  * Service Ticket - accès données pur (autorisation dans les actions).
@@ -120,7 +120,17 @@ export function createTicket(input: CreateTicketServiceInput, reporterId: string
     assertReportTemplate(type, input.description);
     const typeId = type.id;
 
-    let priorityId = input.priorityId;
+    // Priorité : même règle que le type juste au-dessus. Une priorité d'un autre
+    // projet était acceptée telle quelle - son nom et sa couleur s'affichaient
+    // alors ici, et l'administrateur d'en face ne pouvait plus la supprimer.
+    let priorityId: string | undefined;
+    if (input.priorityId) {
+      const chosen = await tx.ticketPriority.findFirst({
+        where: { id: input.priorityId, projectId: input.projectId },
+        select: { id: true },
+      });
+      priorityId = chosen?.id;
+    }
     if (!priorityId) {
       const firstPriority = await tx.ticketPriority.findFirst({
         where: { projectId: input.projectId },
@@ -175,10 +185,18 @@ export function createTicket(input: CreateTicketServiceInput, reporterId: string
     }
     const moduleId = moduleIdForTicket(componentId, ownModuleId);
 
+    // L'assigné doit pouvoir accéder au projet : sans cela, on notifiait par
+    // courriel un compte étranger avec la clé et le titre du ticket.
     let assigneeId = input.assigneeId ?? null;
     if (assigneeId) {
-      const exists = await tx.user.findUnique({
-        where: { id: assigneeId },
+      const exists = await tx.user.findFirst({
+        where: {
+          id: assigneeId,
+          OR: [
+            { role: Role.ADMIN },
+            { memberships: { some: { projectId: input.projectId } } },
+          ],
+        },
         select: { id: true },
       });
       if (!exists) assigneeId = null;
@@ -464,7 +482,11 @@ export function updateTicket(input: UpdateTicketServiceInput) {
         where: { id: rest.typeId ?? ticket.typeId, projectId },
         select: { name: true, template: true },
       });
-      if (type) assertReportTemplate(type, rest.description);
+      // Le type a déjà été vérifié comme appartenant au projet ; s'il reste
+      // introuvable ici, c'est le ticket qui est incohérent - on refuse plutôt
+      // que de laisser passer une description non conforme au gabarit.
+      if (!type) throw new Error("Type de ticket introuvable pour ce projet.");
+      assertReportTemplate(type, rest.description);
     }
 
     // M3 - cohérence projet : on n'applique sprint/assigné/labels que s'ils sont valides.
@@ -513,10 +535,54 @@ export function updateTicket(input: UpdateTicketServiceInput) {
       componentId !== undefined ? componentId : ticket.componentId;
     const moduleId = moduleIdForTicket(nextComponentId, ownModuleId);
 
+    /**
+     * TYPE ET PRIORITÉ appartiennent au PROJET, comme tout le reste.
+     *
+     * Ces deux-là étaient les seules relations écrites sans vérification, au
+     * milieu de cinq qui l'avaient. Un rapporteur pouvait poser sur son ticket
+     * le type d'un projet voisin : son nom et sa couleur s'affichaient alors
+     * chez lui, et - plus gênant - l'administrateur de l'autre projet ne pouvait
+     * plus supprimer ce type, la suppression refusant de s'exécuter tant qu'un
+     * ticket le porte. Un ticket qu'il ne peut ni voir ni corriger.
+     *
+     * Le contrôle du gabarit se trouvait contourné par le même chemin : il
+     * cherche le type DANS le projet, ne le trouvait pas, et passait son tour -
+     * tandis que l'écriture, elle, avait lieu.
+     */
+    let typeId = rest.typeId;
+    if (typeId) {
+      const type = await tx.ticketType.findFirst({
+        where: { id: typeId, projectId },
+        select: { id: true },
+      });
+      if (!type) typeId = undefined;
+    }
+
+    let priorityId = rest.priorityId;
+    if (priorityId) {
+      const priority = await tx.ticketPriority.findFirst({
+        where: { id: priorityId, projectId },
+        select: { id: true },
+      });
+      if (!priority) priorityId = undefined;
+    }
+
+    /**
+     * L'ASSIGNÉ doit pouvoir accéder au projet.
+     *
+     * Seule l'existence était vérifiée. On pouvait donc assigner un ticket à
+     * n'importe quel compte de l'instance - ce qui lui envoyait un courriel
+     * portant la clé, le titre et l'adresse d'un ticket d'un projet où il n'a
+     * rien à faire. La liste déroulante, elle, se limitait déjà aux membres :
+     * l'interface masquait, le serveur n'imposait pas.
+     */
     let assigneeId = rest.assigneeId;
     if (assigneeId) {
-      const exists = await tx.user.findUnique({
-        where: { id: assigneeId },
+      const exists = await tx.user.findFirst({
+        where: {
+          id: assigneeId,
+          OR: [{ role: Role.ADMIN }, { memberships: { some: { projectId } } }],
+        },
         select: { id: true },
       });
       if (!exists) assigneeId = undefined;
@@ -545,8 +611,8 @@ export function updateTicket(input: UpdateTicketServiceInput) {
       data: {
         ...(rest.title !== undefined ? { title: rest.title } : {}),
         ...(rest.description !== undefined ? { description: rest.description } : {}),
-        ...(rest.typeId !== undefined ? { typeId: rest.typeId } : {}),
-        ...(rest.priorityId !== undefined ? { priorityId: rest.priorityId } : {}),
+        ...(typeId !== undefined ? { typeId } : {}),
+        ...(priorityId !== undefined ? { priorityId } : {}),
         ...(componentId !== undefined ? { componentId } : {}),
         ...(moduleId !== undefined ? { moduleId } : {}),
         ...(assigneeId !== undefined ? { assigneeId } : {}),

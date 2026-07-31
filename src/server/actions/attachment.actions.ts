@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { isDangerousContentType } from "@/lib/attachments";
 import { assert, canEditTicket } from "@/lib/policies";
 import { assertProjectAccess } from "@/server/access";
 import { getTicketOwnership } from "@/server/services/ticket.service";
@@ -37,6 +38,25 @@ export async function confirmAttachmentAction(
 ): Promise<ActionResult<{ id: string }>> {
   return withUser<{ id: string }>(async (user) => {
     const data = confirmAttachmentSchema.parse(input);
+    /**
+     * TYPE DÉCLARÉ, VÉRIFIÉ ICI AUSSI.
+     *
+     * Cette action était la seule des cinq voies d'écriture à ne pas appeler
+     * `isDangerousContentType` - les deux routes de téléversement, la route de
+     * pré-signature et l'action jumelle du wiki le font toutes.
+     *
+     * L'oubli était exploitable : on téléversait la charge sous un type inoffensif,
+     * puis on rappelait CETTE action avec la même clé et `text/html`. La seule
+     * garde portait sur la clé (`attachments/<ticket>/`), satisfaite. La route de
+     * téléchargement sert alors les octets en `inline`, sur l'origine de
+     * l'application - script exécuté dans la session de qui ouvre la pièce jointe.
+     *
+     * Le commentaire de cette route affirmait justement l'invariant que ce
+     * chemin-ci ne tenait pas : « types dangereux déjà refusés à l'upload ».
+     */
+    if (isDangerousContentType(data.contentType)) {
+      return { ok: false, error: "Type de fichier non autorisé." };
+    }
     // M2 - la clé doit être celle émise pour CE ticket (empêche de confirmer un objet S3 arbitraire).
     if (!data.storageKey.startsWith(`attachments/${data.ticketId}/`)) {
       return { ok: false, error: "Clé de stockage invalide." };

@@ -14,3 +14,9 @@ playwright-report
 .idea
 Dockerfile
 .dockerignore
+
+# Fichiers d'environnement : le contexte de build est le répertoire de déploiement,
+# qui contient rtr.env. Sans cette ligne, COPY . . le graverait dans la couche du
+# builder (l'image finale, elle, ne copie que .next/node_modules/public/prisma).
+*.env
+rtr.env

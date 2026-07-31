@@ -92,7 +92,9 @@ export function GET(
 ) {
   return params.then(async ({ variante }) => {
     const instance = await getInstance();
-    const forme = VARIANTES[variante];
+    // `hasOwn` : `/icons/__proto__` rendait sinon `Object.prototype`, truthy,
+    // qui se déstructurait en `undefined` et répondait 500 au lieu de 404.
+    const forme = Object.hasOwn(VARIANTES, variante) ? VARIANTES[variante] : undefined;
     if (!forme) return new Response("Icône inconnue.", { status: 404 });
 
     const { taille, motif, rayon, rognee, etiquetee } = forme;

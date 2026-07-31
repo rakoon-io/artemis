@@ -277,9 +277,14 @@ chaque nuit à **03:00 UTC**, journalisée dans `/opt/deploys/artemis/reset-demo
 pour les rebuilds manuels) ; `/opt/deploys/artemis/` contient aussi la dernière source déployée
 (sync via `rsync`, pas de dépôt Git sur le serveur).
 
-**État actuel (⚠️ secrets - ne pas committer)** :
+**État actuel** :
 - **URL** : https://artemis.apps.rakoon.io
-- **Admin** : `admin@rakoon.io` / `***MOT-DE-PASSE-RETIRE***` ; **Rapporteur** : `rapporteur@rakoon.io` / `***MOT-DE-PASSE-RETIRE***`
+- **Comptes** : les identifiants ne figurent PAS ici. Ce fichier est versionné dans
+  un dépôt public ; l'avertissement « ne pas committer » qui coiffait cette
+  section ne l'a pas empêché, et les mots de passe d'amorçage y sont restés
+  lisibles de tous. Ils vivent dans `/opt/deploys/artemis/rtr.env` sur le
+  serveur, et nulle part ailleurs.
+  Rotation : `npm run db:rotate-passwords`.
 - **IA (Mistral)** : `AI_DAILY_BUDGET_USD=0.30` configuré, mais `MISTRAL_API_KEY` **non fournie** -
   fonctionnalité de génération de tickets par IA désactivée proprement jusqu'à l'ajout d'une clé
   dans `/opt/deploys/artemis/rtr.env` (le plafond s'appliquera automatiquement dès son ajout).

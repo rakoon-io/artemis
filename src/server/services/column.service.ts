@@ -7,6 +7,16 @@ import { rankAfter } from "@/lib/rank";
  * avant de supprimer, en réattribuant des rangs propres.
  */
 
+/**
+ * Projet auquel appartient une colonne, ou `null` si elle n'existe pas.
+ *
+ * Sert aux gardes : une colonne reçue du client n'est acceptable que si elle
+ * relève du même projet que l'objet qu'on y déplace (cf. `moveTicketAction`).
+ */
+export function getColumnProject(id: string) {
+  return prisma.column.findUnique({ where: { id }, select: { projectId: true } });
+}
+
 export function listColumns(projectId: string) {
   return prisma.column.findMany({
     where: { projectId },

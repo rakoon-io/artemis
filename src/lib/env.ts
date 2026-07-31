@@ -63,10 +63,35 @@ export const env = parsed.success ? parsed.data : schema.parse({});
  * Au build, ils sont fournis via des placeholders : pas de throw parasite.
  * En développement, un avertissement suffit (secrets facultatifs en local).
  */
+/** Valeur d'attente écrite dans le Dockerfile, et donc publique. */
+const SECRET_PLACEHOLDER = "build-placeholder-secret-override-at-runtime";
+
 if (process.env.NODE_ENV === "production") {
   if (!env.AUTH_SECRET || !env.DATABASE_URL) {
     throw new Error(
       "Variable d'environnement requise manquante en production : AUTH_SECRET / DATABASE_URL",
+    );
+  }
+  /**
+   * PRÉSENCE NE VAUT PAS SOLIDITÉ.
+   *
+   * Le contrôle ne portait que sur l'existence : un secret d'un caractère, ou
+   * l'exemple recopié du Dockerfile - lisible de tous, le dépôt étant public -
+   * passait sans un mot. Or ce secret signe le jeton de session, lequel PORTE
+   * le rôle : le deviner, c'est se forger une session d'administrateur sans
+   * jamais toucher à un mot de passe.
+   *
+   * Trente-deux caractères, soit ce que produit `openssl rand -base64 32`, la
+   * commande que la documentation donne déjà.
+   */
+  if (env.AUTH_SECRET === SECRET_PLACEHOLDER) {
+    throw new Error(
+      "AUTH_SECRET est la valeur d'attente du Dockerfile, publique : fournissez un vrai secret au runtime (openssl rand -base64 32).",
+    );
+  }
+  if (env.AUTH_SECRET.length < 32) {
+    throw new Error(
+      "AUTH_SECRET trop court (32 caractères minimum) : il signe le jeton de session, qui porte le rôle.",
     );
   }
 } else if (!env.AUTH_SECRET || !env.DATABASE_URL) {

@@ -7,7 +7,16 @@ import type { Role } from "@prisma/client";
  */
 export const authConfig = {
   pages: { signIn: "/login" },
-  session: { strategy: "jwt" },
+  /**
+   * DURÉE DE SESSION EXPLICITE.
+   *
+   * Rien n'était déclaré, donc le défaut d'Auth.js s'appliquait : trente jours,
+   * prolongés à chaque visite. Comme le rôle voyage dans le jeton et n'était
+   * jamais relu (voir `jwt` ci-dessous), un administrateur révoqué le restait
+   * un mois. Huit heures couvrent une journée de travail ; au-delà, on se
+   * reconnecte, et la révocation prend effet.
+   */
+  session: { strategy: "jwt", maxAge: 8 * 60 * 60, updateAge: 60 * 60 },
   providers: [],
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {

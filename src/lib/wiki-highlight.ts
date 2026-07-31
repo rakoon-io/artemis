@@ -121,7 +121,18 @@ export function rehypeWikiHighlight() {
         .toLowerCase();
       if (!declared) return;
 
-      const language = ALIASES[declared] ?? declared;
+      /**
+       * `Object.hasOwn` et non un accès direct : `ALIASES["__proto__"]` rendait
+       * `Object.prototype`, et `ALIASES["constructor"]` la fonction `Object`.
+       * `??` ne garde que `null`/`undefined` - l'objet passait donc jusqu'à
+       * `lowlight.registered()`, qui jetait sur `.toLowerCase()`.
+       *
+       * Conséquence : une clôture de code ```` ```__proto__ ```` enregistrée dans
+       * une page tuait tout affichage de cette page, pour tout le monde, et
+       * l'éditeur n'était plus atteignable pour la réparer. La page rangée en
+       * premier par ordre alphabétique emportait avec elle l'accueil du wiki.
+       */
+      const language = Object.hasOwn(ALIASES, declared) ? ALIASES[declared] : declared;
       if (!lowlight.registered(language)) return;
 
       const result = lowlight.highlight(language, textOf(code)) as HastNode;

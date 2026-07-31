@@ -1,5 +1,6 @@
 "use server";
 
+import { getColumnProject } from "@/server/services/column.service";
 import type { z } from "zod";
 import { assert, canMoveTicket } from "@/lib/policies";
 import { assertProjectAccess } from "@/server/access";
@@ -31,6 +32,20 @@ export async function moveTicketAction(
     if (!ticket) return { ok: false, error: "Ticket introuvable." };
     await assertProjectAccess(user, ticket.projectId);
     assert(canMoveTicket(user, ticket), "Déplacement de ce ticket non autorisé.");
+    /**
+     * LA COLONNE DOIT ÊTRE CELLE DU PROJET DU TICKET.
+     *
+     * Les gardes ci-dessus valident le TICKET, jamais la CIBLE. On pouvait donc
+     * déplacer son propre ticket dans une colonne d'un projet voisin : la clé
+     * étrangère tient - les colonnes vivent dans une table commune -, et le
+     * ticket disparaissait alors du tableau, ne correspondant plus à aucune de
+     * ses colonnes. Invisible ici, irréparable depuis l'interface, et le nom de
+     * la colonne d'en face s'affichait au passage dans les listes.
+     */
+    const column = await getColumnProject(data.columnId);
+    if (column?.projectId !== ticket.projectId) {
+      return { ok: false, error: "Colonne inconnue pour ce projet." };
+    }
     const positioned = data.afterRank != null || data.beforeRank != null;
     const after = positioned
       ? (data.afterRank ?? null)

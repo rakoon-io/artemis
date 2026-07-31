@@ -1,3 +1,4 @@
+import { contentDisposition, safeServing } from "@/lib/attachments";
 import { NextResponse } from "next/server";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/session";
@@ -37,14 +38,22 @@ export async function GET(
     redirect(url);
   }
 
-  // Fallback local (types dangereux déjà refusés à l'upload → `inline` sûr).
+  /**
+   * Repli local : c'est l'APPLICATION qui sert les octets, depuis sa propre
+   * origine. Ce que le navigateur en fait ne peut donc pas dépendre d'une chaîne
+   * choisie par le téléverseur : seules les images matricielles et les PDF
+   * s'affichent en place, tout le reste se télécharge (cf. `safeServing`).
+   *
+   * Le commentaire d'origine se fiait au refus à l'entrée - « types dangereux
+   * déjà refusés à l'upload ». C'était vrai de quatre voies d'écriture sur cinq.
+   */
   try {
     const buffer = await readLocal(attachment.storageKey);
-    const safeName = attachment.filename.replace(/["\r\n]/g, "");
+    const { type, disposition } = safeServing(attachment.contentType);
     return new NextResponse(new Uint8Array(buffer), {
       headers: {
-        "Content-Type": attachment.contentType || "application/octet-stream",
-        "Content-Disposition": `inline; filename="${safeName}"`,
+        "Content-Type": type,
+        "Content-Disposition": contentDisposition(disposition, attachment.filename),
         "Cache-Control": "private, max-age=60",
       },
     });

@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import {
   generateSetupToken,
   hashSetupToken,
+  RESET_TOKEN_TTL_MS,
   SETUP_TOKEN_TTL_MS,
 } from "@/lib/setup-token";
 
@@ -11,10 +12,19 @@ import {
  */
 
 /** Emet (ou remplace) un jeton pour l'utilisateur et renvoie le jeton brut. */
-export async function issueSetupToken(userId: string): Promise<string> {
+export async function issueSetupToken(
+  userId: string,
+  /**
+   * `invite` : premiere connexion, sept jours. `reset` : mot de passe oublie,
+   * une heure. Le meme jeton sert les deux usages, mais pas la meme urgence.
+   */
+  usage: "invite" | "reset" = "invite",
+): Promise<string> {
   const raw = generateSetupToken();
   const tokenHash = hashSetupToken(raw);
-  const expiresAt = new Date(Date.now() + SETUP_TOKEN_TTL_MS);
+  const expiresAt = new Date(
+    Date.now() + (usage === "reset" ? RESET_TOKEN_TTL_MS : SETUP_TOKEN_TTL_MS),
+  );
   await prisma.passwordSetupToken.upsert({
     where: { userId },
     update: { tokenHash, expiresAt },
@@ -45,6 +55,22 @@ export async function setPasswordWithToken(
   raw: string,
   passwordHash: string,
 ): Promise<string | null> {
+  return consumeSetupToken(raw, async () => passwordHash);
+}
+
+/**
+ * Idem, mais le condensat n'est CALCULÉ qu'une fois le jeton reconnu.
+ *
+ * Le hachage bcrypt coûte volontairement cher ; le payer avant de savoir si le
+ * jeton existe offrait à un anonyme un moyen de saturer le processeur du
+ * serveur (cf. `setPasswordAction`). L'appelant passe donc une promesse de
+ * condensat, qu'on ne réclame qu'au dernier moment - à l'intérieur de la
+ * transaction, entre la lecture du jeton et son effacement.
+ */
+export async function consumeSetupToken(
+  raw: string,
+  hacher: () => Promise<string>,
+): Promise<string | null> {
   if (!raw) return null;
   const tokenHash = hashSetupToken(raw);
   try {
@@ -56,7 +82,7 @@ export async function setPasswordWithToken(
       if (!row || row.expiresAt.getTime() <= Date.now()) return null;
       await tx.user.update({
         where: { id: row.userId },
-        data: { passwordHash },
+        data: { passwordHash: await hacher() },
       });
       await tx.passwordSetupToken.delete({ where: { id: row.id } });
       return row.user.email;
