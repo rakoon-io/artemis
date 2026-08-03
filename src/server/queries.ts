@@ -120,6 +120,11 @@ export function getWikiPages(projectId: string) {
   return wikiService.listWikiPages(projectId);
 }
 
+/** Contenu de pages désignées, pour composer un document imprimable. */
+export function getWikiPagesContent(projectId: string, ids: string[]) {
+  return wikiService.getWikiPagesContent(projectId, ids);
+}
+
 /**
  * Racines des sections predefinies du projet. Trois lignes au plus : c'est tout
  * ce qu'il faut pour ranger l'arbre, l'appartenance des pages se calculant

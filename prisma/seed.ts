@@ -13,7 +13,7 @@ import { emptyReport, serializeReport } from "../src/lib/ticket-template";
 // lui-même les slugs, sinon les pages de démo n'auraient pas d'URL lisible.
 import { slugify } from "../src/lib/slug";
 import { buildSearchText } from "../src/lib/search-text";
-import { specSubtree } from "../src/lib/spec-package";
+import { readingOrder } from "../src/lib/wiki-tree";
 import bcrypt from "bcryptjs";
 import { generateNKeysBetween } from "fractional-indexing";
 
@@ -731,7 +731,7 @@ async function main() {
   });
   // L'ordre et les chemins sont calculés par le MÊME module que l'application :
   // la démo produit donc exactement la forme qu'une publication réelle produit.
-  const specEntries = specSubtree(
+  const specEntries = readingOrder(
     wikiPages.map((page) => ({
       id: page.id,
       title: page.title,

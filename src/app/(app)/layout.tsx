@@ -50,15 +50,15 @@ export default async function AppLayout({
      * `:has()` plutôt qu'un drapeau remonté par contexte : la décision appartient
      * à la page, la coque n'a pas à la connaître, et rien ne transite par du JS.
      */
-    <div className="flex min-h-screen flex-col has-[[data-fill-viewport]]:h-dvh has-[[data-fill-viewport]]:overflow-hidden">
+    <div className="flex min-h-screen flex-col has-[[data-fill-viewport]]:h-dvh has-[[data-fill-viewport]]:overflow-hidden print:block print:min-h-0">
       {isDemo && (
-        <div className="border-b bg-amber-100 px-4 py-1.5 text-center text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+        <div className="border-b bg-amber-100 px-4 py-1.5 text-center text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-200 print:hidden">
           Environnement de démonstration — les données sont réinitialisées
           régulièrement au jeu de base.
           {aiBudget && ` Génération IA plafonnée à ${aiBudget} $/jour.`}
         </div>
       )}
-      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 print:hidden">
         {/**
          * UNE SEULE BANDE, plutôt que trois empilées.
          *
@@ -96,7 +96,7 @@ export default async function AppLayout({
       <main className="flex w-full min-h-0 flex-1 flex-col">{children}</main>
       {/* `flex-wrap` : la signature, le dépôt et l'identité du build tiennent sur
           une ligne au large, et se replient proprement sur un téléphone. */}
-      <footer className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 border-t py-4 text-center text-xs text-muted-foreground">
+      <footer className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 border-t py-4 text-center text-xs text-muted-foreground print:hidden">
         <span>Développé par Thomas Broussard</span>
         {isDemo && (
           <>

@@ -24,6 +24,7 @@ export function WikiContent({
   ticketMap,
   ticketHints,
   className,
+  anchorPrefix,
 }: {
   content: string;
   projectKey: string;
@@ -36,6 +37,19 @@ export function WikiContent({
    */
   ticketHints?: Record<string, TicketHint>;
   className?: string;
+  /**
+   * Préfixe des ancres de section, quand PLUSIEURS pages cohabitent dans un même
+   * document (l'export du sous-arbre).
+   *
+   * `anchorFor` ne dédoublonne qu'à l'intérieur d'un document : deux pages
+   * comportant chacune un « ## Contexte » - le cas ordinaire, pas la curiosité -
+   * produisent toutes deux `section-contexte`. Mises bout à bout, elles donnent
+   * deux éléments de même `id` : le HTML est invalide, et tout lien du sommaire
+   * aboutit sur le premier, quelle que soit la page visée.
+   *
+   * Absent, le comportement ne change pas d'un iota.
+   */
+  anchorPrefix?: string;
 }) {
   // Les ENCARTS sont repérés AVANT la liaison des citations : celle-ci ne
   // change aucune ligne, les positions restent donc valables. L'inverse aurait
@@ -57,7 +71,10 @@ export function WikiContent({
   // du sommaire. La liaison n'ajoutant ni ne retirant aucun titre, la
   // correspondance par POSITION reste exacte.
   const anchorByLine = new Map(
-    extractOutline(callouts.content).map((head) => [head.line, head.anchor]),
+    extractOutline(callouts.content).map((head) => [
+      head.line,
+      `${anchorPrefix ?? ""}${head.anchor}`,
+    ]),
   );
   const heading = (level: 1 | 2 | 3 | 4 | 5 | 6) => {
     const Tag = `h${level}` as const;

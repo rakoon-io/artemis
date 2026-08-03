@@ -558,3 +558,81 @@
 .ProseMirror.wiki-prose > :first-child {
   margin-top: 0;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   IMPRESSION
+   ─────────────────────────────────────────────────────────────────────────────
+   Ces règles servent la route `/wiki/imprimer`, qui compose un document destiné
+   au papier - ou, le plus souvent, à « Enregistrer au format PDF ». La coque de
+   l'application (bandeau, en-tête, pied de page) se retire par des classes
+   `print:hidden` posées sur elle ; ce qui suit traite ce qu'une classe utilitaire
+   ne sait pas dire.
+   ────────────────────────────────────────────────────────────────────────── */
+@media print {
+  /* LE PIÈGE DES BLOCS REPLIABLES.
+     Les thèmes d'un compte rendu sont des <details>. Ils s'ouvrent par défaut,
+     mais rien n'empêche de replier un thème AVANT d'imprimer - et le document
+     partirait alors amputé, sans que rien ne le signale. À l'impression, tout
+     est déplié : ce qui a été exporté doit se retrouver dans le papier.
+
+     DEUX RÈGLES, PARCE QUE LES MOTEURS NE REPLIENT PAS DE LA MÊME FAÇON.
+     La seconde a été écrite d'abord, et MESURÉE INSUFFISANTE : un thème replié
+     mesurait encore 34 pixels à l'impression - la hauteur du seul résumé -, son
+     tableau absent du document. Chromium ne masque pas le contenu par
+     `display`, mais par `content-visibility` sur le pseudo-élément
+     `::details-content` : aucune valeur de `display`, fût-elle `!important`, ne
+     porte dessus. La première règle est celle qui agit là.
+     La seconde reste pour les moteurs qui n'implémentent pas encore ce
+     pseudo-élément et masquent, eux, par `display`. */
+  details::details-content {
+    content-visibility: visible !important;
+  }
+  details > *:not(summary) {
+    display: block !important;
+  }
+  details > summary {
+    /* Le chevron « replié / déplié » ne veut plus rien dire sur papier. */
+    list-style: none;
+  }
+  details > summary svg {
+    display: none;
+  }
+
+  /* Une ligne de tableau coupée entre deux feuilles se lit deux fois : une fois
+     tronquée en bas, une fois orpheline en haut. Les points d'un compte rendu
+     sont dans des tableaux, c'est donc le cas courant, pas l'exception. */
+  tr,
+  img,
+  pre,
+  blockquote {
+    break-inside: avoid;
+  }
+  thead {
+    display: table-header-group;
+  }
+
+  /* Un titre en dernière ligne d'une feuille annonce une section qui commence
+     sur la suivante. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    break-after: avoid;
+  }
+
+  /* Les fonds colorés (badges, en-têtes de tableau, encarts) disparaissent par
+     défaut à l'impression : le navigateur économise l'encre. Ici ils PORTENT du
+     sens - la nature d'un point, la teinte d'un encart -, on demande donc leur
+     tracé. L'utilisateur garde le dernier mot dans sa fenêtre d'impression. */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Un lien souligné en bleu sur du papier n'aide personne : l'adresse n'est
+     pas cliquable et le soulignement gêne la lecture. Le texte reste. */
+  a {
+    text-decoration: none;
+    color: inherit;
+  }
+}

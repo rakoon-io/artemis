@@ -6,6 +6,7 @@ import {
   orderedTree,
   parentOptions,
   sectionOfPage,
+  readingOrder,
   type FlatPage,
 } from "./wiki-tree";
 
@@ -183,5 +184,97 @@ describe("sections prédéfinies", () => {
       ...loose.map((n) => n.page.id),
     ];
     expect(new Set(vues)).toEqual(new Set(PAGES.map((p) => p.id)));
+  });
+});
+
+/**
+ * Arborescence de référence. « Spécification » est la racine du paquet ; « Guide »
+ * est une page voisine qui NE doit jamais y entrer, et « Annexe » une page enfant
+ * de Guide - le piège classique d'un parcours qui remonterait trop haut.
+ *
+ *   Guide
+ *   └─ Annexe
+ *   Spécification            <- racine du paquet
+ *   ├─ Authentification
+ *   │  └─ Mot de passe
+ *   └─ Zones
+ */
+const PAGES_SPEC = [
+  { id: "guide", title: "Guide", parentId: null },
+  { id: "annexe", title: "Annexe", parentId: "guide" },
+  { id: "spec", title: "Spécification", parentId: null },
+  { id: "zones", title: "Zones", parentId: "spec" },
+  { id: "auth", title: "Authentification", parentId: "spec" },
+  { id: "mdp", title: "Mot de passe", parentId: "auth" },
+];
+
+describe("readingOrder", () => {
+  it("retient la racine et toutes ses descendantes, et rien d'autre", () => {
+    const ids = readingOrder(PAGES_SPEC, "spec").map((e) => e.page.id);
+    expect(ids).toEqual(["spec", "auth", "mdp", "zones"]);
+    expect(ids).not.toContain("guide");
+    expect(ids).not.toContain("annexe");
+  });
+
+  it("suit l'ordre de LECTURE : profondeur d'abord, frères par ordre alphabétique", () => {
+    // « Authentification » avant « Zones », et « Mot de passe » inséré juste
+    // après son parent - c'est l'ordre du sommaire, donc du document.
+    expect(readingOrder(PAGES_SPEC, "spec").map((e) => e.page.title)).toEqual([
+      "Spécification",
+      "Authentification",
+      "Mot de passe",
+      "Zones",
+    ]);
+  });
+
+  it("numérote les positions sans trou, à partir de zéro", () => {
+    expect(readingOrder(PAGES_SPEC, "spec").map((e) => e.order)).toEqual([0, 1, 2, 3]);
+  });
+
+  it("construit le chemin depuis la racine du paquet, incluse", () => {
+    const byId = new Map(readingOrder(PAGES_SPEC, "spec").map((e) => [e.page.id, e]));
+    expect(byId.get("spec")!.path).toBe("Spécification");
+    expect(byId.get("auth")!.path).toBe("Spécification / Authentification");
+    expect(byId.get("mdp")!.path).toBe(
+      "Spécification / Authentification / Mot de passe",
+    );
+  });
+
+  it("mesure la profondeur relativement à la racine du paquet", () => {
+    const byId = new Map(readingOrder(PAGES_SPEC, "spec").map((e) => [e.page.id, e]));
+    expect(byId.get("spec")!.depth).toBe(0);
+    expect(byId.get("auth")!.depth).toBe(1);
+    expect(byId.get("mdp")!.depth).toBe(2);
+  });
+
+  it("ne renvoie que la racine pour une feuille", () => {
+    expect(readingOrder(PAGES_SPEC, "zones").map((e) => e.page.id)).toEqual(["zones"]);
+  });
+
+  it("accepte un sous-arbre ancré à mi-hauteur", () => {
+    expect(readingOrder(PAGES_SPEC, "auth").map((e) => e.path)).toEqual([
+      "Authentification",
+      "Authentification / Mot de passe",
+    ]);
+  });
+
+  it("renvoie un tableau vide si la racine n'existe pas", () => {
+    expect(readingOrder(PAGES_SPEC, "inconnu")).toEqual([]);
+  });
+
+  it("ne boucle pas sur un cycle parent/enfant", () => {
+    const cycle = [
+      { id: "a", title: "A", parentId: "b" },
+      { id: "b", title: "B", parentId: "a" },
+    ];
+    const ids = readingOrder(cycle, "a").map((e) => e.page.id);
+    expect(ids).toEqual(["a", "b"]);
+  });
+
+  it("est insensible à l'ordre des pages en entrée", () => {
+    const shuffled = [...PAGES_SPEC].reverse();
+    expect(readingOrder(shuffled, "spec").map((e) => e.page.id)).toEqual(
+      readingOrder(PAGES_SPEC, "spec").map((e) => e.page.id),
+    );
   });
 });

@@ -32,6 +32,26 @@ export function listWikiPages(projectId: string) {
   });
 }
 
+/**
+ * Contenu de pages désignées, pour composer un document imprimable.
+ *
+ * EN DEUX TEMPS, et non en une requête qui ramènerait tout : `listWikiPages`
+ * donne l'arborescence sans le texte, on en tire le sous-arbre voulu, puis on ne
+ * lit QUE le contenu de ces pages-là. Imprimer une page d'un wiki qui en compte
+ * trois cents ne doit pas en charger trois cents.
+ *
+ * `projectId` borne la requête bien que les identifiants viennent déjà de
+ * l'arbre du projet : la garde ne coûte rien et interdit qu'un appelant futur,
+ * moins prudent, fasse traverser la frontière à une liste d'identifiants.
+ */
+export function getWikiPagesContent(projectId: string, ids: string[]) {
+  if (ids.length === 0) return Promise.resolve([]);
+  return prisma.wikiPage.findMany({
+    where: { projectId, id: { in: ids } },
+    select: { id: true, content: true },
+  });
+}
+
 /** Nombre de résultats par page. La liste latérale n'en montre pas davantage. */
 export const SEARCH_PAGE_SIZE = 10;
 

@@ -147,6 +147,37 @@ export const wiki: WikiDict = {
     empty: "This page has no sections.",
   },
 
+  // Subpages : the subtree of the page being read. The outline navigates
+  // WITHIN the page, this block navigates BENEATH it.
+  subpages: {
+    title: "Subpages",
+    ariaLabel: "Subpages of this page",
+    count: "({count})",
+  },
+
+  // Export : build a printable document, this page alone or with everything
+  // hanging beneath it.
+  export: {
+    action: "Export",
+    page: "This page only",
+    pageHint: "The text of this page, preceded by its contents.",
+    subtree: "This page and its subpages",
+    subtreeHint:
+      "{count} pages in sequence, with a general table of contents and each page in full.",
+    // « Print » rather than « download » : it is the browser dialog that
+    // opens, and that is where « PDF » is chosen.
+    print: "Print / Save as PDF",
+    printHint:
+      "Pick « Save as PDF » as the destination in the print window.",
+    documentOf: "{project} project wiki",
+    generatedOn: "Document generated on {date}",
+    pagesIncluded: "{count} pages",
+    onePageIncluded: "1 page",
+    backToWiki: "Back to the wiki",
+    tocTitle: "Contents",
+    emptyPage: "(empty page)",
+  },
+
   // Search
   search: {
     placeholder: "Search...",

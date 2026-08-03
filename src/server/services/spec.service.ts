@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
-import { nextVersionNumber, specSubtree } from "@/lib/spec-package";
+import { nextVersionNumber } from "@/lib/spec-package";
+import { readingOrder } from "@/lib/wiki-tree";
 import { listWikiPages } from "./wiki.service";
 
 /**
@@ -64,7 +65,7 @@ export async function findSpecPackageForPage(projectId: string, pageId: string) 
     listWikiPages(projectId),
   ]);
   for (const pack of packages) {
-    if (specSubtree(pages, pack.rootPageId).some((e) => e.page.id === pageId)) {
+    if (readingOrder(pages, pack.rootPageId).some((e) => e.page.id === pageId)) {
       return pack;
     }
   }
@@ -93,14 +94,14 @@ async function assertPackageable(
   }
 
   const candidateSubtree = new Set(
-    specSubtree(pages, rootPageId).map((entry) => entry.page.id),
+    readingOrder(pages, rootPageId).map((entry) => entry.page.id),
   );
   if (candidateSubtree.size === 0) {
     throw new Error("Page introuvable.");
   }
 
   for (const pack of packages) {
-    const existing = specSubtree(pages, pack.rootPageId);
+    const existing = readingOrder(pages, pack.rootPageId);
     if (existing.some((entry) => entry.page.id === rootPageId)) {
       throw new Error(
         `Cette page fait déjà partie de la spécification « ${pack.rootPage.title} ».`,
@@ -170,7 +171,7 @@ export async function publishSpecVersion(input: PublishSpecVersionInput) {
       where: { projectId: pack.projectId },
       select: { id: true, title: true, parentId: true, content: true },
     });
-    const entries = specSubtree(pages, pack.rootPageId);
+    const entries = readingOrder(pages, pack.rootPageId);
     if (entries.length === 0) throw new Error("Spécification introuvable.");
 
     const numbers = await tx.specVersion.findMany({

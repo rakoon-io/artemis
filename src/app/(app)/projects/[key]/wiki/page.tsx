@@ -17,6 +17,7 @@ import {
   groupBySection,
   orderedTree,
   parentOptions,
+  readingOrder,
   sectionOfPage,
 } from "@/lib/wiki-tree";
 import { MAX_REVISIONS_LISTED } from "@/server/services/wiki.service";
@@ -57,6 +58,8 @@ import {
 } from "@/components/wiki/wiki-page-fields";
 import { MeetingView } from "@/components/wiki/meeting-view";
 import { PageOutline } from "@/components/wiki/page-outline";
+import { PageSubpages } from "@/components/wiki/page-subpages";
+import { ExportPageMenu } from "@/components/wiki/export-page-menu";
 import { MeetingSection } from "@/components/wiki/meeting-editor";
 import { SpecVersionView } from "@/components/wiki/spec-version-view";
 import { highlightSegments, type Segment } from "@/lib/search-text";
@@ -201,6 +204,19 @@ export default async function WikiPage({
   const handle = requestedId ?? list[0]?.id;
   const resolved = handle ? await resolveWikiPage(project.id, handle) : null;
   const current = resolved?.page ?? null;
+
+  /**
+   * SOUS-ARBRE de la page lue - la racine retirée.
+   *
+   * `readingOrder` inclut la page elle-même, en tête et à la profondeur zéro :
+   * c'est ce qu'il faut à un DOCUMENT, qui commence par sa page de garde, mais
+   * pas à une LISTE de sous-pages, où elle ferait doublon avec le titre juste
+   * au-dessus. D'où le `slice(1)`, et le décalage d'un cran à l'affichage.
+   *
+   * La même liste sert deux fois : le bloc dépliable, et le décompte annoncé
+   * par le menu d'export. Les deux ne peuvent donc pas se contredire.
+   */
+  const sousPages = current ? readingOrder(allPages, current.id).slice(1) : [];
 
   // Infobulles des citations « RKN-123 », indexées par identifiant : titre et
   // assigné, pour savoir de quoi parle un ticket sans quitter la page.
@@ -940,6 +956,11 @@ export default async function WikiPage({
                       pageId={current.id}
                       meetingDate={current.meetingDate}
                     />
+                    <ExportPageMenu
+                      projectKey={project.key}
+                      handle={current.slug ?? current.id}
+                      subpageCount={sousPages.length}
+                    />
                     {admin && !pack && (
                       <MarkSpecButton
                         projectId={project.id}
@@ -961,6 +982,25 @@ export default async function WikiPage({
                     )}
                   </div>
                 </div>
+
+                {/* SOUS-PAGES : après l'en-tête, avant le texte.
+                    Placé là, le bloc se lit comme la table des matières du
+                    sous-arbre - on sait ce que la page COIFFE avant de la lire.
+                    Volontairement hors de la branche « compte rendu » plus bas :
+                    `MeetingSection` bascule en éditeur et emporterait ses
+                    enfants avec elle. */}
+                <PageSubpages
+                  items={sousPages.map((entree) => ({
+                    id: entree.page.id,
+                    title: entree.page.title,
+                    href: pageHref(entree.page.id),
+                    // `readingOrder` compte la profondeur depuis la racine du
+                    // sous-arbre, laquelle est la page lue : ses enfants
+                    // directs sont donc à 1, et l'indentation part de 0.
+                    depth: Math.max(0, entree.depth - 1),
+                    meetingDate: entree.page.meetingDate,
+                  }))}
+                />
 
                 {isSpecRoot && pack && (
                   <SpecPanel

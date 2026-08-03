@@ -30,15 +30,27 @@ export async function MeetingView({
   projectKey,
   ticketMap,
   ticketHints,
+  anchorPrefix,
 }: {
   content: string;
   projectKey: string;
   ticketMap: Record<string, string>;
   /** Titre et assigné des tickets cités, pour l'infobulle au survol. */
   ticketHints?: Record<string, TicketHint>;
+  /**
+   * Préfixe des ancres, quand plusieurs comptes rendus cohabitent dans un même
+   * document (l'export d'une section « Réunions »).
+   *
+   * `ACTIONS_ANCHOR` est une CONSTANTE : sans préfixe, dix réunions à la suite
+   * portent dix fois le même identifiant, et les dix liens « aller au
+   * récapitulatif » ramènent tous au premier.
+   */
+  anchorPrefix?: string;
 }) {
   const t = await getDictionary();
   const meeting = parseMeeting(content);
+  const prefixe = anchorPrefix ?? "";
+  const ancreActions = `${prefixe}${ACTIONS_ANCHOR}`;
 
   // Page datée mais sans thème : on l'affiche telle quelle, avec un mot pour
   // dire comment la structurer. Inventer des tableaux vides n'aiderait personne.
@@ -79,12 +91,13 @@ export async function MeetingView({
           projectKey={projectKey}
           ticketMap={ticketMap}
           ticketHints={ticketHints}
+          anchorPrefix={anchorPrefix}
         />
       )}
 
       {/* Raccourci vers le récapitulatif : la raison première d'une relecture. */}
       <a
-        href={`#${ACTIONS_ANCHOR}`}
+        href={`#${ancreActions}`}
         className="inline-flex items-center gap-2 rounded-lg border border-dashed px-3 py-2 text-sm font-medium transition-colors hover:bg-muted/60"
       >
         <ListChecks className="size-4 shrink-0" aria-hidden />
@@ -104,7 +117,7 @@ export async function MeetingView({
         // replié : un lien du sommaire aboutit donc toujours quelque part.
         <details
           key={theme.letter}
-          id={themeHeadings[index]?.anchor}
+          id={`${prefixe}${themeHeadings[index]?.anchor ?? ""}`}
           open
           className="group/theme scroll-mt-6 space-y-2"
         >
@@ -130,6 +143,7 @@ export async function MeetingView({
               projectKey={projectKey}
               ticketMap={ticketMap}
               ticketHints={ticketHints}
+              anchorPrefix={anchorPrefix}
             />
           )}
 
@@ -187,12 +201,13 @@ export async function MeetingView({
               projectKey={projectKey}
               ticketMap={ticketMap}
               ticketHints={ticketHints}
+              anchorPrefix={anchorPrefix}
             />
           )}
         </details>
       ))}
 
-      <section id={ACTIONS_ANCHOR} className="space-y-2 scroll-mt-6">
+      <section id={ancreActions} className="space-y-2 scroll-mt-6">
         <h3 className="flex items-center gap-2 text-base font-semibold tracking-tight">
           <ListChecks className="size-4 shrink-0" aria-hidden />
           {t.wiki.meeting.actionsTitle}

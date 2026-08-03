@@ -79,6 +79,78 @@ export function descendantIds(pages: FlatPage[], id: string): Set<string> {
   return out;
 }
 
+/* ─────────────────────────────────────────────────────────────────────────────
+ * SOUS-ARBRE, DANS L'ORDRE DE LECTURE
+ *
+ * Cette fonction s'appelait `specSubtree` et vivait dans `spec-package.ts`.
+ * Elle n'a pourtant jamais rien su des spécifications : elle marche sur des
+ * `FlatPage`, comme tout ce fichier. Le nom venait de son premier appelant.
+ *
+ * Elle en a désormais deux - le gel d'une version publiée, et l'export d'une
+ * page avec ses sous-pages -, et rien n'aurait été plus trompeur qu'un export
+ * de wiki important « specSubtree ». Le déplacement supprime au passage un
+ * comparateur de titres recopié à l'identique dans les deux fichiers : l'ordre
+ * d'un document publié et celui du plan ne peuvent plus diverger, puisqu'il n'y
+ * a plus qu'une comparaison.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+export interface ReadingEntry<T extends FlatPage = FlatPage> {
+  page: T;
+  /** Rang dans l'ordre de lecture, à partir de zéro. */
+  order: number;
+  /** Chemin lisible depuis la racine, incluse (« Spéc / Champs »). */
+  path: string;
+  /** Profondeur relative à la racine (0 pour la racine elle-même). */
+  depth: number;
+}
+
+/** Séparateur de chemin, choisi lisible plutôt que technique. */
+export const PATH_SEPARATOR = " / ";
+
+/**
+ * Pages du sous-arbre ancré sur `rootId`, dans l'ordre de lecture, avec leur
+ * chemin. La RACINE EST INCLUSE, en première position et à la profondeur zéro :
+ * un document commence par sa page de garde.
+ *
+ * Renvoie un tableau vide si la racine n'existe pas.
+ *
+ * Le garde-fou `visited` protège d'un cycle parent/enfant : la base l'interdit
+ * en pratique (l'action anti-cycle du wiki), mais une boucle ferait ici une
+ * récursion infinie au lieu d'un simple résultat tronqué.
+ */
+export function readingOrder<T extends FlatPage>(
+  pages: T[],
+  rootId: string,
+): ReadingEntry<T>[] {
+  const root = pages.find((page) => page.id === rootId);
+  if (!root) return [];
+
+  const childrenOf = new Map<string, T[]>();
+  for (const page of pages) {
+    if (!page.parentId) continue;
+    const siblings = childrenOf.get(page.parentId);
+    if (siblings) siblings.push(page);
+    else childrenOf.set(page.parentId, [page]);
+  }
+  for (const siblings of childrenOf.values()) siblings.sort(byTitle);
+
+  const entries: ReadingEntry<T>[] = [];
+  const visited = new Set<string>();
+
+  const walk = (page: T, depth: number, trail: string[]): void => {
+    if (visited.has(page.id)) return;
+    visited.add(page.id);
+    const path = [...trail, page.title];
+    entries.push({ page, order: entries.length, path: path.join(PATH_SEPARATOR), depth });
+    for (const child of childrenOf.get(page.id) ?? []) {
+      walk(child, depth + 1, path);
+    }
+  };
+
+  walk(root, 0, []);
+  return entries;
+}
+
 /** Chaîne d'ancêtres d'une page, de la racine jusqu'à son parent direct (fil d'Ariane). */
 export function ancestorsOf<T extends FlatPage>(pages: T[], id: string): T[] {
   const byId = new Map(pages.map((p) => [p.id, p]));

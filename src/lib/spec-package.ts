@@ -1,4 +1,4 @@
-import type { FlatPage } from "./wiki-tree";
+import { readingOrder, type FlatPage } from "./wiki-tree";
 
 /**
  * PAQUET DE SPÉCIFICATIONS - logique pure du versionnement (aucun accès base,
@@ -9,87 +9,18 @@ import type { FlatPage } from "./wiki-tree";
  * à figer ce sous-arbre - le contenu de chaque page, son titre, sa place dans
  * l'ordre de lecture et son chemin dans l'arborescence.
  *
- * Ce module répond à la seule question délicate de l'opération : QUELLES pages,
- * DANS QUEL ORDRE, et sous QUEL chemin. Le reste (écrire les lignes) est du
- * ressort du service.
+ * QUELLES pages, DANS QUEL ORDRE et sous QUEL chemin : la réponse est
+ * `readingOrder`, dans `wiki-tree.ts`. Elle vivait ici sous le nom
+ * `specSubtree`, ce qui laissait croire qu'un paquet de spécifications avait
+ * son propre parcours d'arbre. Il n'en a jamais eu : c'est le parcours du wiki,
+ * et l'export d'une page avec ses sous-pages s'en sert désormais aussi.
  *
- * Deux propriétés sont recherchées :
- *  - l'ordre est celui de la LECTURE (parcours en profondeur, frères par ordre
- *    alphabétique), le même que celui du sommaire du wiki : une version publiée
- *    se lit donc comme le document qu'elle archive ;
+ * Deux propriétés en découlent, et méritent d'être dites ici :
+ *  - l'ordre est celui de la LECTURE, le même que celui du plan : une version
+ *    publiée se lit donc comme le document qu'elle archive ;
  *  - le chemin est figé À LA PUBLICATION. Réorganiser le wiki ensuite ne réécrit
  *    pas le passé : une version publiée dit où se trouvait la page ce jour-là.
  */
-
-/** Une page du paquet, à sa place dans le document. */
-export interface SpecEntry<T> {
-  page: T;
-  /** Position dans l'ordre de lecture (0 = la page racine). */
-  order: number;
-  /** Chemin lisible depuis la racine du paquet, incluse (« Spéc / Champs »). */
-  path: string;
-  /** Profondeur relative à la racine (0 pour la racine elle-même). */
-  depth: number;
-}
-
-/** Séparateur de chemin, choisi lisible plutôt que technique. */
-export const PATH_SEPARATOR = " / ";
-
-/**
- * Comparaison des titres, identique à celle de l'arborescence du wiki
- * (`wiki-tree.ts`) : l'ordre d'une version publiée doit être celui que l'on voit
- * dans le sommaire, sans quoi le document archivé serait dans un autre ordre que
- * l'original.
- */
-function byTitle(a: FlatPage, b: FlatPage): number {
-  return a.title.localeCompare(b.title, "fr", { sensitivity: "base" });
-}
-
-/**
- * Pages du paquet ancré sur `rootId`, dans l'ordre de lecture, avec leur chemin.
- * Renvoie un tableau vide si la racine n'existe pas.
- *
- * Le garde-fou `visited` protège d'un cycle parent/enfant : la base l'interdit
- * en pratique (l'action anti-cycle du wiki), mais une boucle ferait ici une
- * récursion infinie au lieu d'un simple résultat tronqué.
- */
-export function specSubtree<T extends FlatPage>(
-  pages: T[],
-  rootId: string,
-): SpecEntry<T>[] {
-  const root = pages.find((page) => page.id === rootId);
-  if (!root) return [];
-
-  const childrenOf = new Map<string, T[]>();
-  for (const page of pages) {
-    if (!page.parentId) continue;
-    const siblings = childrenOf.get(page.parentId);
-    if (siblings) siblings.push(page);
-    else childrenOf.set(page.parentId, [page]);
-  }
-  for (const siblings of childrenOf.values()) siblings.sort(byTitle);
-
-  const entries: SpecEntry<T>[] = [];
-  const visited = new Set<string>();
-
-  const walk = (page: T, depth: number, trail: string[]): void => {
-    if (visited.has(page.id)) return;
-    visited.add(page.id);
-    const path = [...trail, page.title];
-    entries.push({
-      page,
-      order: entries.length,
-      path: path.join(PATH_SEPARATOR),
-      depth,
-    });
-    for (const child of childrenOf.get(page.id) ?? []) {
-      walk(child, depth + 1, path);
-    }
-  };
-
-  walk(root, 0, []);
-  return entries;
-}
 
 /**
  * Numéro de la prochaine version. Se fonde sur le MAXIMUM et non sur le nombre
@@ -122,5 +53,5 @@ export function isInSpecSubtree<T extends FlatPage>(
   rootId: string,
   pageId: string,
 ): boolean {
-  return specSubtree(pages, rootId).some((entry) => entry.page.id === pageId);
+  return readingOrder(pages, rootId).some((entry) => entry.page.id === pageId);
 }

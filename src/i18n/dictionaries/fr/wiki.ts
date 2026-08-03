@@ -149,6 +149,37 @@ export const wiki = {
     empty: "Cette page ne comporte aucune section.",
   },
 
+  // Sous-pages : le sous-arbre de la page lue. Le sommaire navigue DANS la
+  // page, ce bloc navigue SOUS elle.
+  subpages: {
+    title: "Sous-pages",
+    ariaLabel: "Sous-pages de cette page",
+    count: "({count})",
+  },
+
+  // Export : engendrer un document imprimable, la page seule ou avec tout ce
+  // qui pend sous elle.
+  export: {
+    action: "Exporter",
+    page: "Cette page seule",
+    pageHint: "Le texte de cette page, précédé de son sommaire.",
+    subtree: "Cette page et ses sous-pages",
+    subtreeHint:
+      "{count} pages à la suite, avec un sommaire général et le détail de chacune.",
+    // Le mot « imprimer » plutôt que « télécharger » : c'est la boîte de
+    // dialogue du navigateur qui s'ouvre, et c'est là qu'on choisit « PDF ».
+    print: "Imprimer / Enregistrer en PDF",
+    printHint:
+      "Choisissez « Enregistrer au format PDF » comme destination dans la fenêtre d'impression.",
+    documentOf: "Wiki du projet {project}",
+    generatedOn: "Document engendré le {date}",
+    pagesIncluded: "{count} pages",
+    onePageIncluded: "1 page",
+    backToWiki: "Revenir au wiki",
+    tocTitle: "Sommaire",
+    emptyPage: "(page vide)",
+  },
+
   // Recherche
   search: {
     placeholder: "Rechercher...",
