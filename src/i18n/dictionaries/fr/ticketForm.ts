@@ -37,12 +37,6 @@ export const ticketForm = {
   unexpectedResponse: "Réponse inattendue du serveur.",
   createdToast: "Ticket {key} créé.",
 
-  // Dialogue d'edition
-  edit: "Éditer",
-  editTitle: "Éditer le ticket",
-  editDescription: "Modifiez les champs puis enregistrez.",
-  updatedToast: "Ticket mis à jour.",
-
   // Selecteur de labels
   searchLabels: "Rechercher un label…",
   noLabelMatches: "Aucun label ne correspond.",

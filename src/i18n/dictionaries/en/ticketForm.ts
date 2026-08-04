@@ -35,12 +35,6 @@ export const ticketForm: TicketFormDict = {
   unexpectedResponse: "Unexpected server response.",
   createdToast: "Ticket {key} created.",
 
-  // Edit dialog
-  edit: "Edit",
-  editTitle: "Edit ticket",
-  editDescription: "Update the fields, then save.",
-  updatedToast: "Ticket updated.",
-
   // Label selector
   searchLabels: "Search a label…",
   noLabelMatches: "No matching label.",

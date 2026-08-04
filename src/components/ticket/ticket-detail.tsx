@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TicketTemplate } from "@prisma/client";
-import { ArrowLeft, BookOpen, Download, Paperclip } from "lucide-react";
+import { ArrowLeft, BookOpen, Paperclip } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,7 +33,6 @@ import {
 import {
   ColorBadge,
   ComponentBadge,
-  formatBytes,
   LabelChip,
   ModuleBadge,
 } from "@/components/ticket/ticket-fields";
@@ -42,7 +41,6 @@ import { DocumentingPages } from "@/components/wiki/documenting-pages";
 import { CommentForm } from "@/components/ticket/comment-form";
 import { CommentList } from "@/components/ticket/comment-list";
 import { DeleteTicketButton } from "@/components/ticket/delete-ticket-button";
-import { EditTicketDialog } from "@/components/ticket/edit-ticket-dialog";
 import {
   TicketAssigneeInline,
   TicketComponentInline,
@@ -55,6 +53,7 @@ import {
   TicketTypeInline,
 } from "@/components/ticket/ticket-inline-fields";
 import { TicketDescription } from "@/components/ticket/ticket-description";
+import { TicketAttachments } from "@/components/ticket/ticket-attachments";
 import { fmt } from "@/i18n";
 import { getDictionary } from "@/i18n/server";
 
@@ -94,12 +93,6 @@ export async function TicketDetail({
   if (!project || !ticket || ticket.projectId !== project.id) notFound();
 
   // Les images sont présentées en vignettes ; les autres fichiers en liste.
-  const imageAttachments = ticket.attachments.filter((a) =>
-    a.contentType.startsWith("image/"),
-  );
-  const fileAttachments = ticket.attachments.filter(
-    (a) => !a.contentType.startsWith("image/"),
-  );
 
   const canEdit = canEditTicket(user, {
     reporterId: ticket.reporterId,
@@ -253,29 +246,6 @@ export async function TicketDetail({
         </div>
         {(canEdit || canDelete) && (
           <div className="flex items-center gap-2">
-            {canEdit && editData && (
-              <EditTicketDialog
-                ticket={{
-                  id: ticket.id,
-                  title: ticket.title,
-                  description: ticket.description,
-                  typeId: ticket.type.id,
-                  priorityId: ticket.priority.id,
-                  componentId: ticket.componentId,
-                  moduleId: ticket.moduleId,
-                  assigneeId: ticket.assigneeId,
-                  sprintId: ticket.sprintId,
-                  labelIds: ticket.labels.map((l) => l.labelId),
-                }}
-                members={editData.members}
-                sprints={editData.sprints}
-                labels={editData.labels}
-                types={editData.types}
-                priorities={editData.priorities}
-                components={editData.components}
-                modules={editData.modules}
-              />
-            )}
             {canDelete && (
               <DeleteTicketButton
                 ticketId={ticket.id}
@@ -334,59 +304,16 @@ export async function TicketDetail({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {ticket.attachments.length > 0 ? (
-                <div className="space-y-3">
-                  {imageAttachments.length > 0 && (
-                    <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-                      {imageAttachments.map((att) => (
-                        <li key={att.id}>
-                          <a
-                            href={`/api/attachments/${att.id}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            title={`${att.filename} (${formatBytes(att.size)})`}
-                            className="group block overflow-hidden rounded-md border transition-colors hover:border-primary/50"
-                          >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={`/api/attachments/${att.id}`}
-                              alt={att.filename}
-                              loading="lazy"
-                              className="aspect-square w-full bg-muted object-cover transition-transform group-hover:scale-105"
-                            />
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  {fileAttachments.length > 0 && (
-                    <ul className="space-y-2">
-                      {fileAttachments.map((att) => (
-                        <li key={att.id}>
-                          <a
-                            href={`/api/attachments/${att.id}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="flex items-center gap-2 rounded-md border p-2 text-sm transition-colors hover:bg-muted/50"
-                          >
-                            <Download className="size-4 shrink-0 text-muted-foreground" />
-                            <span className="min-w-0 flex-1 truncate font-medium">
-                              {att.filename}
-                            </span>
-                            <span className="shrink-0 text-xs text-muted-foreground">
-                              {formatBytes(att.size)}
-                            </span>
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  {t.ticketDetail.noAttachments}
-                </p>
-              )}
+              <TicketAttachments
+                ticketId={ticket.id}
+                attachments={ticket.attachments.map((att) => ({
+                  id: att.id,
+                  filename: att.filename,
+                  contentType: att.contentType,
+                  size: att.size,
+                }))}
+                canEdit={canEdit}
+              />
             </CardContent>
           </Card>
 

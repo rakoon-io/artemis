@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  useEffect,
   useRef,
   useState,
   type DragEvent as ReactDragEvent,
@@ -23,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { deleteWikiAttachmentAction } from "@/server/actions/wiki-attachment.actions";
 import { uploadWikiFile, wikiFileHref } from "./wiki-file-upload";
+import { useStrayFileDropGuard } from "@/components/file-drop-guard";
 import { useDict } from "@/i18n/provider";
 import { fmt } from "@/i18n";
 
@@ -50,31 +50,6 @@ function readableSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} o`;
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} ko`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
-}
-
-/**
- * Empêche le NAVIGATEUR d'ouvrir un fichier lâché à côté de la zone.
- *
- * Sans cela, un dépôt manqué de quelques pixels remplace l'application par
- * l'image - et emporte au passage la page en cours d'édition. Le geste est
- * neutralisé pour les seuls glissements de FICHIERS : le reste, y compris le
- * déplacement des cartes du tableau ou d'un bloc dans l'éditeur, ne voit rien.
- */
-function useStrayFileDropGuard(active: boolean) {
-  useEffect(() => {
-    if (!active) return;
-    const carriesFiles = (event: DragEvent) =>
-      Array.from(event.dataTransfer?.types ?? []).includes("Files");
-    const swallow = (event: DragEvent) => {
-      if (carriesFiles(event)) event.preventDefault();
-    };
-    window.addEventListener("dragover", swallow);
-    window.addEventListener("drop", swallow);
-    return () => {
-      window.removeEventListener("dragover", swallow);
-      window.removeEventListener("drop", swallow);
-    };
-  }, [active]);
 }
 
 export function WikiAttachments({

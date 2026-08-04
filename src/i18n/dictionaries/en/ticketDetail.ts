@@ -16,6 +16,18 @@ export const ticketDetail: TicketDetailDict = {
     "Describe the request in Markdown: lists, headings, code, tables… Type “@” to reference a ticket.",
   attachments: "Attachments ({count})",
   noAttachments: "No attachments.",
+  // Adding and removing, now on the ticket itself : it was the last thing the
+  // edit dialog could do and it could not.
+  attachmentDropHint: "Drag files here, or paste an image",
+  attachmentBrowse: "Browse…",
+  attachmentUploading: "Uploading…",
+  attachmentUploaded: "Attachment added.",
+  attachmentUploadFailed: "Upload failed.",
+  attachmentRemove: "Remove {name}",
+  attachmentRemoved: "Attachment removed.",
+  attachmentRemoveTitle: "Remove “{name}”?",
+  attachmentRemoveDescription:
+    "The file will be permanently deleted, and the ticket description is not changed: if it references this file, the reference will remain visible and lead nowhere.",
   comments: "Comments ({count})",
   noComments: "No comments yet.",
 

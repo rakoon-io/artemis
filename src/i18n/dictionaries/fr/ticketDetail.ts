@@ -16,6 +16,18 @@ export const ticketDetail = {
     "Décrivez la demande en Markdown : listes, titres, code, tableaux… Tapez « @ » pour citer un ticket.",
   attachments: "Pièces jointes ({count})",
   noAttachments: "Aucune pièce jointe.",
+  // Dépôt et retrait, désormais sur la fiche elle-même : c'était la dernière
+  // chose que la modale d'édition savait faire et pas elle.
+  attachmentDropHint: "Glissez des fichiers ici, ou collez une image",
+  attachmentBrowse: "Parcourir…",
+  attachmentUploading: "Envoi en cours…",
+  attachmentUploaded: "Pièce jointe ajoutée.",
+  attachmentUploadFailed: "L'envoi a échoué.",
+  attachmentRemove: "Retirer {name}",
+  attachmentRemoved: "Pièce jointe retirée.",
+  attachmentRemoveTitle: "Retirer « {name} » ?",
+  attachmentRemoveDescription:
+    "Le fichier sera définitivement supprimé, et la description du ticket n'est pas modifiée : si elle cite ce fichier, la citation restera visible et ne mènera plus nulle part.",
   comments: "Commentaires ({count})",
   noComments: "Aucun commentaire pour l'instant.",
 
