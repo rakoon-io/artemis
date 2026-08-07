@@ -326,9 +326,17 @@ export async function TicketDetail({
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <CommentList comments={ticket.comments} />
+              <CommentList
+                comments={ticket.comments}
+                projectKey={key}
+                tickets={ticketRefs}
+              />
               <Separator />
-              <CommentForm ticketId={ticket.id} />
+              <CommentForm
+                ticketId={ticket.id}
+                projectKey={key}
+                tickets={ticketRefs}
+              />
             </CardContent>
           </Card>
         </div>

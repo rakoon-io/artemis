@@ -1,12 +1,30 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { WikiContent } from "@/components/wiki/wiki-content";
 import { formatDateTime, initials } from "@/lib/utils";
+import { ticketHintsOf, ticketMapOf, type TicketRef } from "@/lib/wiki-mentions";
 import { getDictionary } from "@/i18n/server";
 import type { TicketDetail } from "./ticket-fields";
 
 type CommentItem = TicketDetail["comments"][number];
 
-/** Liste des commentaires d'un ticket (présentationnel, rendu serveur). */
-export async function CommentList({ comments }: { comments: CommentItem[] }) {
+/**
+ * Liste des commentaires d'un ticket (présentationnel, rendu serveur).
+ *
+ * Le corps est rendu comme le reste des textes riches de l'application : ce qui
+ * s'écrit en gras dans l'éditeur se lit en gras ici, et une citation « RKN-12 »
+ * devient un lien. Sans cela, la mise en forme saisie s'afficherait telle
+ * qu'écrite, étoiles comprises.
+ */
+export async function CommentList({
+  comments,
+  projectKey,
+  tickets,
+}: {
+  comments: CommentItem[];
+  projectKey: string;
+  /** Tickets du projet : résolution des citations en liens et infobulles. */
+  tickets: TicketRef[];
+}) {
   const t = await getDictionary();
   if (comments.length === 0) {
     return (
@@ -15,6 +33,9 @@ export async function CommentList({ comments }: { comments: CommentItem[] }) {
       </p>
     );
   }
+
+  const ticketMap = ticketMapOf(tickets);
+  const ticketHints = ticketHintsOf(tickets);
 
   return (
     <ul className="space-y-4">
@@ -34,9 +55,13 @@ export async function CommentList({ comments }: { comments: CommentItem[] }) {
                 {formatDateTime(comment.createdAt)}
               </span>
             </div>
-            <p className="mt-1 whitespace-pre-wrap break-words text-sm">
-              {comment.body}
-            </p>
+            <WikiContent
+              className="mt-1 text-sm"
+              content={comment.body}
+              projectKey={projectKey}
+              ticketMap={ticketMap}
+              ticketHints={ticketHints}
+            />
           </div>
         </li>
       ))}

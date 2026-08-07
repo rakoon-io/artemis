@@ -33,6 +33,35 @@ export function detectMention(
 }
 
 /** Découpe une clé ou une requête en préfixe alphabétique + numéro (« rkn-3 » -> {alpha:"rkn", num:"3"}). */
+/**
+ * Table des clés de ticket (en MAJUSCULES) vers leur identifiant : c'est elle
+ * qui transforme « RKN-12 » en lien lors du rendu.
+ */
+export function ticketMapOf(tickets: TicketRef[]): Record<string, string> {
+  return Object.fromEntries(
+    tickets.map((ticket) => [ticket.key.toUpperCase(), ticket.id]),
+  );
+}
+
+/**
+ * Ce que dit l'infobulle d'une citation, indexé par IDENTIFIANT (c'est lui que
+ * porte le lien) : de quoi parle le ticket cité, et qui s'en occupe.
+ */
+export function ticketHintsOf(
+  tickets: TicketRef[],
+): Record<string, { key: string; title: string; assignee: string | null }> {
+  return Object.fromEntries(
+    tickets.map((ticket) => [
+      ticket.id,
+      {
+        key: ticket.key,
+        title: ticket.title,
+        assignee: ticket.assignee?.name ?? ticket.assignee?.email ?? null,
+      },
+    ]),
+  );
+}
+
 export function splitKey(s: string): { alpha: string; num: string } {
   const m = s.toLowerCase().match(/^([a-z]*)[^a-z0-9]*(\d*)$/);
   return { alpha: m?.[1] ?? "", num: m?.[2] ?? "" };

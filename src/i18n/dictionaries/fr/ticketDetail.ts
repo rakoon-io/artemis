@@ -51,6 +51,8 @@ export const ticketDetail = {
   addComment: "Ajouter un commentaire",
   commentPlaceholder: "Votre message…",
   submitComment: "Commenter",
+  // Le raccourci resterait introuvable sans être écrit quelque part.
+  commentShortcut: "⌘/Ctrl + Entrée pour publier",
   emptyComment: "Le commentaire est vide.",
   commentAdded: "Commentaire ajouté.",
 

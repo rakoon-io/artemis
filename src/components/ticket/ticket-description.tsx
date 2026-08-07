@@ -7,7 +7,11 @@ import { Loader2, Maximize2, Minimize2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MarkdownEditor } from "@/components/markdown/markdown-editor";
 import { WikiContent } from "@/components/wiki/wiki-content";
-import type { TicketRef } from "@/lib/wiki-mentions";
+import {
+  ticketHintsOf,
+  ticketMapOf,
+  type TicketRef,
+} from "@/lib/wiki-mentions";
 import {
   emptyReport,
   missingReportSections,
@@ -95,22 +99,11 @@ export function TicketDescription({
     setDraft(canonical);
   }
 
-  const ticketMap: Record<string, string> = Object.fromEntries(
-    tickets.map((ticket) => [ticket.key.toUpperCase(), ticket.id]),
-  );
+  const ticketMap = ticketMapOf(tickets);
 
   // Un ticket cite volontiers d'autres tickets : la même infobulle que dans le
   // wiki évite d'ouvrir un onglet pour savoir de quoi « RKN-12 » retourne.
-  const ticketHints = Object.fromEntries(
-    tickets.map((ticket) => [
-      ticket.id,
-      {
-        key: ticket.key,
-        title: ticket.title,
-        assignee: ticket.assignee?.name ?? ticket.assignee?.email ?? null,
-      },
-    ]),
-  );
+  const ticketHints = ticketHintsOf(tickets);
 
   const editAria = fmt(t.common.inline.editAria, {
     field: t.ticketForm.descriptionLabel,
