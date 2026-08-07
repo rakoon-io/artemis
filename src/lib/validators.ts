@@ -372,6 +372,11 @@ export const createCommentSchema = z.object({
   body: z.string().min(1, "Commentaire vide").max(5000),
 });
 
+export const updateCommentSchema = z.object({
+  id: z.string().min(1),
+  body: z.string().min(1, "Commentaire vide").max(5000),
+});
+
 export const presignSchema = z.object({
   ticketId: z.string().min(1).optional(),
   filename: z.string().min(1).max(255),

@@ -1,29 +1,28 @@
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { WikiContent } from "@/components/wiki/wiki-content";
-import { formatDateTime, initials } from "@/lib/utils";
-import { ticketHintsOf, ticketMapOf, type TicketRef } from "@/lib/wiki-mentions";
+import { CommentItem } from "@/components/ticket/comment-item";
+import { formatDateTime } from "@/lib/utils";
+import { ticketHintsOf, type TicketRef } from "@/lib/wiki-mentions";
 import { getDictionary } from "@/i18n/server";
 import type { TicketDetail } from "./ticket-fields";
 
-type CommentItem = TicketDetail["comments"][number];
+type CommentItemData = TicketDetail["comments"][number];
 
 /**
- * Liste des commentaires d'un ticket (présentationnel, rendu serveur).
- *
- * Le corps est rendu comme le reste des textes riches de l'application : ce qui
- * s'écrit en gras dans l'éditeur se lit en gras ici, et une citation « RKN-12 »
- * devient un lien. Sans cela, la mise en forme saisie s'afficherait telle
- * qu'écrite, étoiles comprises.
+ * Liste des commentaires d'un ticket (rendu serveur). Chaque entrée délègue son
+ * affichage et sa retouche à `CommentItem` : le corps est du texte riche, et
+ * son auteur peut le corriger sur place.
  */
 export async function CommentList({
   comments,
   projectKey,
   tickets,
+  currentUserId,
 }: {
-  comments: CommentItem[];
+  comments: CommentItemData[];
   projectKey: string;
   /** Tickets du projet : résolution des citations en liens et infobulles. */
   tickets: TicketRef[];
+  /** Qui lit : seul l'auteur d'un commentaire peut le retoucher. */
+  currentUserId: string | null;
 }) {
   const t = await getDictionary();
   if (comments.length === 0) {
@@ -34,36 +33,27 @@ export async function CommentList({
     );
   }
 
-  const ticketMap = ticketMapOf(tickets);
   const ticketHints = ticketHintsOf(tickets);
 
   return (
     <ul className="space-y-4">
       {comments.map((comment) => (
-        <li key={comment.id} className="flex gap-3">
-          <Avatar className="size-8">
-            <AvatarFallback className="text-xs">
-              {initials(comment.author.name ?? comment.author.email)}
-            </AvatarFallback>
-          </Avatar>
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-              <span className="text-sm font-medium">
-                {comment.author.name ?? comment.author.email}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {formatDateTime(comment.createdAt)}
-              </span>
-            </div>
-            <WikiContent
-              className="mt-1 text-sm"
-              content={comment.body}
-              projectKey={projectKey}
-              ticketMap={ticketMap}
-              ticketHints={ticketHints}
-            />
-          </div>
-        </li>
+        <CommentItem
+          key={comment.id}
+          comment={{
+            id: comment.id,
+            body: comment.body,
+            editedAt: comment.editedAt,
+          }}
+          projectKey={projectKey}
+          tickets={tickets}
+          ticketHints={ticketHints}
+          canEdit={!!currentUserId && comment.authorId === currentUserId}
+          formattedDate={{
+            author: comment.author.name ?? comment.author.email,
+            created: formatDateTime(comment.createdAt),
+          }}
+        />
       ))}
     </ul>
   );

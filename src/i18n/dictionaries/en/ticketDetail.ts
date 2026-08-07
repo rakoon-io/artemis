@@ -54,6 +54,8 @@ export const ticketDetail: TicketDetailDict = {
   commentShortcut: "⌘/Ctrl + Enter to post",
   emptyComment: "The comment is empty.",
   commentAdded: "Comment added.",
+  commentEdited: "edited",
+  commentField: "the comment",
 
   // Ticket deletion
   deleteTitle: "Delete this ticket?",

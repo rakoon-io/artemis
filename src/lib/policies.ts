@@ -73,6 +73,20 @@ export function canComment(user: PolicyUser | null | undefined): boolean {
   return !!user;
 }
 
+/**
+ * Retoucher un commentaire : SON AUTEUR, et lui seul - l'administrateur non
+ * plus. Corriger la parole d'autrui n'est pas administrer le projet, c'est lui
+ * faire dire autre chose. Un propos à retirer se supprime ; il ne se réécrit pas
+ * au nom de quelqu'un d'autre.
+ */
+export function canEditComment(
+  user: PolicyUser | null | undefined,
+  comment: { authorId: string },
+): boolean {
+  if (!user) return false;
+  return comment.authorId === user.id;
+}
+
 /** Admin édite tout ; le Rapporteur uniquement ses tickets (rapporteur ou assigné). */
 export function canEditTicket(
   user: PolicyUser | null | undefined,

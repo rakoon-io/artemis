@@ -330,6 +330,7 @@ export async function TicketDetail({
                 comments={ticket.comments}
                 projectKey={key}
                 tickets={ticketRefs}
+                currentUserId={user?.id ?? null}
               />
               <Separator />
               <CommentForm

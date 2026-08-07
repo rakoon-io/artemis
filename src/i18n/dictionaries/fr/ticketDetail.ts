@@ -55,6 +55,10 @@ export const ticketDetail = {
   commentShortcut: "⌘/Ctrl + Entrée pour publier",
   emptyComment: "Le commentaire est vide.",
   commentAdded: "Commentaire ajouté.",
+  // Ce qui se lit n'est plus ce qui avait été écrit : le fil doit le dire.
+  commentEdited: "modifié",
+  // Interpolé dans « Modifier {field} » (libellé du bouton de retouche).
+  commentField: "le commentaire",
 
   // Suppression du ticket
   deleteTitle: "Supprimer ce ticket ?",

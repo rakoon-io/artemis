@@ -5,6 +5,7 @@ import {
   can,
   canAccessProject,
   canCreateTicket,
+  canEditComment,
   canEditTicket,
   canMoveTicket,
   canProposeTaxonomy,
@@ -79,5 +80,17 @@ describe("policies (RBAC)", () => {
       expect(can(reporter, action)).toBe(false);
       expect(can(null, action)).toBe(false);
     }
+  });
+
+  it("un commentaire ne se retouche que par son auteur, l'Admin compris", () => {
+    const mine = { authorId: reporter.id };
+    expect(canEditComment(reporter, mine)).toBe(true);
+
+    // Le point de la règle : retoucher la parole d'autrui n'est pas une
+    // prérogative d'administration, c'est lui faire dire autre chose.
+    expect(canEditComment(admin, mine)).toBe(false);
+    expect(canEditComment(other, mine)).toBe(false);
+    expect(canEditComment(null, mine)).toBe(false);
+    expect(canEditComment(undefined, mine)).toBe(false);
   });
 });

@@ -421,6 +421,10 @@ model Comment {
   author    User     @relation(fields: [authorId], references: [id])
   body      String
   createdAt DateTime @default(now())
+  // Date de la derniere retouche, `null` tant qu'il n'y en a pas eu. Un fil de
+  // discussion se relit : que la parole d'hier ait ete reecrite depuis doit se
+  // voir. Nullable a dessein - `@updatedAt` marquerait « modifie » l'existant.
+  editedAt  DateTime?
 
   @@index([ticketId])
 }
