@@ -13,7 +13,7 @@ export const ticketDetail = {
   description: "Description",
   noDescription: "Aucune description.",
   descriptionPlaceholder:
-    "Décrivez la demande en Markdown : listes, titres, code, tableaux… Tapez « @ » pour citer un ticket.",
+    "Décrivez la demande en Markdown : listes, titres, code, tableaux… Tapez « @ » pour citer un ticket ou une personne.",
   attachments: "Pièces jointes ({count})",
   noAttachments: "Aucune pièce jointe.",
   // Dépôt et retrait, désormais sur la fiche elle-même : c'était la dernière

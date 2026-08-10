@@ -11,7 +11,7 @@ import { WikiContent } from "@/components/wiki/wiki-content";
 import type { TicketHint } from "@/components/wiki/ticket-hover-link";
 import { updateCommentAction } from "@/server/actions/comment.actions";
 import { initials } from "@/lib/utils";
-import { ticketMapOf, type TicketRef } from "@/lib/wiki-mentions";
+import { ticketMapOf, type TicketRef, type UserRef } from "@/lib/wiki-mentions";
 import { fmt } from "@/i18n";
 import { useDict } from "@/i18n/provider";
 
@@ -25,6 +25,7 @@ export function CommentItem({
   comment,
   projectKey,
   tickets,
+  users = [],
   ticketHints,
   canEdit,
   formattedDate,
@@ -32,6 +33,8 @@ export function CommentItem({
   comment: { id: string; body: string; editedAt: Date | null };
   projectKey: string;
   tickets: TicketRef[];
+  /** Personnes citables par « @ ». Vide : seules les tâches sont proposées. */
+  users?: UserRef[];
   ticketHints: Record<string, TicketHint>;
   /** L'utilisateur courant est-il l'auteur ? Le serveur l'impose de son côté. */
   canEdit: boolean;
@@ -126,6 +129,7 @@ export function CommentItem({
               value={draft}
               onChange={setDraft}
               tickets={tickets}
+              users={users}
               projectKey={projectKey}
               ticketMap={ticketMapOf(tickets)}
               rows={5}

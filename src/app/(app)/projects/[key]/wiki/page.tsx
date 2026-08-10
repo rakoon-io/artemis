@@ -31,6 +31,7 @@ import {
   getComponents,
   getModules,
   getTicketKeys,
+  getAssignableUsers,
   getTicketRefs,
   getWikiAttachments,
   getWikiPageSubjects,
@@ -300,16 +301,20 @@ export default async function WikiPage({
    * l'endroit d'où l'on clique disait déjà.
    */
   const askedParent =
-    sp.parent && allPages.some((page) => page.id === sp.parent) ? sp.parent : null;
+    sp.parent && allPages.some((page) => page.id === sp.parent)
+      ? sp.parent
+      : null;
   const sectionRootHere = currentSection
     ? (wikiSections.find((s) => s.kind === currentSection)?.rootPageId ?? null)
     : null;
   const newParentId = askedParent ?? sectionRootHere;
 
   // Les références de tickets servent en ÉDITION EN PLACE autant qu'à la
-  // création : l'autocomplétion « @ » existe des deux côtés.
-  const [ticketRefs, wikiFiles] = await Promise.all([
+  // création : l'autocomplétion « @ » existe des deux côtés. Les PERSONNES du
+  // projet nourrissent la même liste : « @ » cite une tâche ou quelqu'un.
+  const [ticketRefs, mentionUsers, wikiFiles] = await Promise.all([
     getTicketRefs(project.id),
+    getAssignableUsers(project.id),
     // Les pièces jointes ne concernent que la page LUE, jamais une révision
     // figée : celle-ci décrit un état passé, où le fichier d'aujourd'hui n'a
     // pas sa place.
@@ -326,7 +331,8 @@ export default async function WikiPage({
   /** Adresse d'une page en mode formulaire, sans perdre la recherche en cours. */
   const formHref = (mode: "page" | "new", parentId?: string | null) => {
     const params = new URLSearchParams();
-    if (current && mode === "page") params.set("page", current.slug ?? current.id);
+    if (current && mode === "page")
+      params.set("page", current.slug ?? current.id);
     params.set("edit", mode);
     if (mode === "new" && parentId) params.set("parent", parentId);
     return `/projects/${project.key}/wiki?${params.toString()}`;
@@ -360,7 +366,9 @@ export default async function WikiPage({
         title={page.title}
         className={cn(
           "group/page flex items-stretch text-sm transition-colors",
-          active ? "text-foreground" : "text-foreground/75 hover:text-foreground",
+          active
+            ? "text-foreground"
+            : "text-foreground/75 hover:text-foreground",
         )}
       >
         {Array.from({ length: depth }, (_, level) => (
@@ -409,7 +417,8 @@ export default async function WikiPage({
     kind: string,
     nodes: ReturnType<typeof orderedTree<(typeof allPages)[number]>>,
   ) => {
-    if (kind !== "MEETING" || nodes.some((node) => node.depth > 0)) return nodes;
+    if (kind !== "MEETING" || nodes.some((node) => node.depth > 0))
+      return nodes;
     return [...nodes].sort((a, b) => {
       const da = pageById.get(a.page.id)?.meetingDate;
       const db = pageById.get(b.page.id)?.meetingDate;
@@ -451,7 +460,8 @@ export default async function WikiPage({
       kind === "MEETING" &&
       ordered.length > MEETINGS_SHOWN + 1 &&
       !ordered.some((node) => node.depth > 0);
-    if (!foldable) return ordered.map((node) => pageLink(node.page, node.depth));
+    if (!foldable)
+      return ordered.map((node) => pageLink(node.page, node.depth));
 
     const older = ordered.slice(MEETINGS_SHOWN);
     return (
@@ -604,7 +614,9 @@ export default async function WikiPage({
                       <span
                         className={cn(
                           "block",
-                          p.id === current?.id ? "font-semibold" : "font-medium",
+                          p.id === current?.id
+                            ? "font-semibold"
+                            : "font-medium",
                         )}
                       >
                         {p.title}
@@ -656,7 +668,10 @@ export default async function WikiPage({
                       // Le blanc remplace le filet : plus large entre deux
                       // sections qu'entre deux pages. La première n'en a pas
                       // besoin, elle ouvre déjà la liste.
-                      <div key={kind} className={rang === 0 ? "mb-1" : "mb-1 mt-3"}>
+                      <div
+                        key={kind}
+                        className={rang === 0 ? "mb-1" : "mb-1 mt-3"}
+                      >
                         <Link
                           href={pageHref(rootPageId)}
                           aria-current={
@@ -699,7 +714,10 @@ export default async function WikiPage({
                          * rubrique, et rangerait ce qui n'est pas rangé.
                          */
                         <p
-                          className={cn(SECTION_HEADER, "text-muted-foreground")}
+                          className={cn(
+                            SECTION_HEADER,
+                            "text-muted-foreground",
+                          )}
                           title={t.wiki.sections.looseHint}
                         >
                           {t.wiki.sections.loose}
@@ -753,7 +771,6 @@ export default async function WikiPage({
                 <StructureWikiButton projectId={project.id} />
               </div>
             )}
-
           </aside>
 
           <div className="min-w-0 flex-1">
@@ -789,6 +806,7 @@ export default async function WikiPage({
                   projectId={project.id}
                   projectKey={project.key}
                   tickets={ticketRefs}
+                  users={mentionUsers}
                   parents={parents}
                   defaultParentId={newParentId}
                   backHref={
@@ -835,7 +853,9 @@ export default async function WikiPage({
                         </span>
                       ))}
                       {frozen ? (
-                        trail.length > 0 && <span>{trail[trail.length - 1].title}</span>
+                        trail.length > 0 && (
+                          <span>{trail[trail.length - 1].title}</span>
+                        )
                       ) : (
                         <WikiParentInline
                           pageId={current.id}
@@ -928,7 +948,9 @@ export default async function WikiPage({
                             color: c.color,
                             moduleId: c.moduleId,
                           }))}
-                          selectedModuleIds={subjects[0].map((s) => s.module.id)}
+                          selectedModuleIds={subjects[0].map(
+                            (s) => s.module.id,
+                          )}
                           selectedComponentIds={subjects[1].map(
                             (s) => s.component.id,
                           )}
@@ -945,9 +967,7 @@ export default async function WikiPage({
                       en glissant l'écran de côté. */}
                   <div className="flex flex-wrap items-center gap-2">
                     <Button asChild variant="outline" size="sm">
-                      <Link
-                        href={formHref("new", current.id)}
-                      >
+                      <Link href={formHref("new", current.id)}>
                         <Plus />
                         {t.wiki.index.subpage}
                       </Link>
@@ -1074,6 +1094,7 @@ export default async function WikiPage({
                     content={current.content}
                     projectKey={project.key}
                     tickets={ticketRefs}
+                    users={mentionUsers}
                     ticketMap={ticketMap}
                     canEdit
                     aiEnabled={isMistralConfigured()}
@@ -1096,6 +1117,7 @@ export default async function WikiPage({
                     value={current.content}
                     projectKey={project.key}
                     tickets={ticketRefs}
+                    users={mentionUsers}
                     ticketMap={ticketMap}
                     ticketHints={ticketHints}
                     canEdit

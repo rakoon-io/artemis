@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { MarkdownEditor } from "@/components/markdown/markdown-editor";
 import { WikiContent } from "@/components/wiki/wiki-content";
 import type { TicketHint } from "@/components/wiki/ticket-hover-link";
-import type { TicketRef } from "@/lib/wiki-mentions";
+import type { TicketRef, UserRef } from "@/lib/wiki-mentions";
 import { updateWikiPageAction } from "@/server/actions/wiki.actions";
 import { uploadWikiFile, wikiFileHref } from "./wiki-file-upload";
 import { useDict } from "@/i18n/provider";
@@ -49,6 +49,7 @@ export function WikiPageContent({
   value,
   projectKey,
   tickets,
+  users = [],
   ticketMap,
   ticketHints,
   canEdit,
@@ -59,6 +60,8 @@ export function WikiPageContent({
   value: string;
   projectKey: string;
   tickets: TicketRef[];
+  /** Personnes citables par « @ ». Vide : seules les tâches sont proposées. */
+  users?: UserRef[];
   ticketMap: Record<string, string>;
   ticketHints?: Record<string, TicketHint>;
   canEdit: boolean;
@@ -100,6 +103,7 @@ export function WikiPageContent({
           value={draft}
           onChange={setDraft}
           tickets={tickets}
+          users={users}
           projectKey={projectKey}
           ticketMap={ticketMap}
           placeholder={t.wiki.form.contentPlaceholder}
@@ -139,7 +143,12 @@ export function WikiPageContent({
           >
             {t.common.cancel}
           </Button>
-          <Button type="button" size="sm" disabled={saving} onClick={() => void save()}>
+          <Button
+            type="button"
+            size="sm"
+            disabled={saving}
+            onClick={() => void save()}
+          >
             {saving && <Loader2 className="animate-spin" />}
             {t.common.save}
           </Button>
@@ -170,7 +179,8 @@ export function WikiPageContent({
           mener au ticket, pas ouvrir l'éditeur. */}
       <div
         onClick={(event) => {
-          if ((event.target as HTMLElement).closest("a,button,input,summary")) return;
+          if ((event.target as HTMLElement).closest("a,button,input,summary"))
+            return;
           open();
         }}
         className="cursor-text"

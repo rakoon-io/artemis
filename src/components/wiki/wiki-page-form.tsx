@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { MarkdownEditor } from "@/components/markdown/markdown-editor";
-import type { TicketRef } from "@/lib/wiki-mentions";
+import type { TicketRef, UserRef } from "@/lib/wiki-mentions";
 import {
   createWikiPageAction,
   updateWikiPageAction,
@@ -52,6 +52,7 @@ export function WikiPageForm({
   projectId,
   projectKey,
   tickets,
+  users = [],
   parents,
   defaultParentId,
   page,
@@ -60,9 +61,16 @@ export function WikiPageForm({
   projectId: string;
   projectKey: string;
   tickets: TicketRef[];
+  /** Personnes citables par « @ ». Vide : seules les tâches sont proposées. */
+  users?: UserRef[];
   parents: ParentOption[];
   defaultParentId?: string | null;
-  page?: { id: string; title: string; content: string; parentId: string | null };
+  page?: {
+    id: string;
+    title: string;
+    content: string;
+    parentId: string | null;
+  };
   /** Où mène « Annuler ». Par défaut la racine du wiki. */
   backHref?: string;
 }) {
@@ -92,8 +100,18 @@ export function WikiPageForm({
     }
     setSubmitting(true);
     const res = isEdit
-      ? await updateWikiPageAction({ id: page!.id, title: trimmed, content, parentId })
-      : await createWikiPageAction({ projectId, title: trimmed, content, parentId });
+      ? await updateWikiPageAction({
+          id: page!.id,
+          title: trimmed,
+          content,
+          parentId,
+        })
+      : await createWikiPageAction({
+          projectId,
+          title: trimmed,
+          content,
+          parentId,
+        });
     if (!res.ok) {
       setSubmitting(false);
       toast.error(res.error);
@@ -156,6 +174,7 @@ export function WikiPageForm({
           value={content}
           onChange={setContent}
           tickets={tickets}
+          users={users}
           projectKey={projectKey}
           ticketMap={ticketMap}
           placeholder={t.wiki.form.contentPlaceholder}

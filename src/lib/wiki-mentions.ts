@@ -18,6 +18,57 @@ export interface MentionState {
   query: string;
 }
 
+/**
+ * Personne citable. Le nom peut manquer (compte créé sans nom) : l'adresse, elle,
+ * ne manque jamais, et sert alors d'étiquette.
+ */
+export interface UserRef {
+  id: string;
+  name: string | null;
+  email: string;
+}
+
+/**
+ * Ce qu'une mention « @ » peut désigner. Deux natures, une seule liste : le
+ * rédacteur tape « @ » et cherche, sans avoir à décider d'abord s'il vise une
+ * tâche ou quelqu'un.
+ */
+export type MentionTarget =
+  | { kind: "ticket"; id: string; ticket: TicketRef }
+  | { kind: "user"; id: string; user: UserRef };
+
+/** Étiquette d'une personne : son nom, ou à défaut la partie utile de l'adresse. */
+export function userLabel(user: UserRef): string {
+  const nom = user.name?.trim();
+  return nom || user.email.split("@")[0];
+}
+
+/**
+ * Markdown d'une mention de personne.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * POURQUOI UN LIEN `mailto:` ET NON UN IDENTIFIANT
+ *
+ * Une mention de TÂCHE s'écrit « @RKN-12 » et se résout à l'affichage contre le
+ * catalogue du projet : la clef suffit, elle est courte et parlante. Pour une
+ * personne, il n'existe pas d'équivalent court et stable - un identifiant de
+ * base serait illisible dans le Markdown, et un simple nom serait ambigu.
+ *
+ * La mention se suffit donc à elle-même : elle porte le nom affiché ET
+ * l'adresse. Trois conséquences qui valaient le choix - elle reste lisible dans
+ * le Markdown brut, elle s'affiche partout où du Markdown est rendu sans qu'un
+ * seul appelant ait à transmettre une table de correspondance, et elle ne se
+ * change pas en texte mort le jour où le compte est supprimé.
+ */
+export function userMentionMarkdown(user: UserRef): string {
+  return `[@${escapeLabel(userLabel(user))}](mailto:${user.email})`;
+}
+
+/** Neutralise ce qui refermerait l'étiquette du lien avant l'heure. */
+function escapeLabel(s: string): string {
+  return s.replace(/([\\\[\]])/g, "\\$1");
+}
+
 /** Détecte une mention « @… » en cours de frappe autour du curseur. */
 export function detectMention(
   value: string,
@@ -93,7 +144,8 @@ export function rankTickets(
 
     if (qNum) {
       // Un numéro est saisi : on filtre par numéro (préfixe de projet optionnel).
-      if (alphaOk && kNum === qNum) score = 0; // numéro exact
+      if (alphaOk && kNum === qNum)
+        score = 0; // numéro exact
       else if (alphaOk && kNum.startsWith(qNum)) score = 1; // préfixe de numéro
     } else if (qAlpha && kAlpha.startsWith(qAlpha)) {
       score = 10; // seulement des lettres : préfixe de projet
@@ -110,3 +162,90 @@ export function rankTickets(
   scored.sort((a, b) => a.score - b.score || b.num - a.num);
   return scored.slice(0, SUGGEST_LIMIT).map((s) => s.t);
 }
+
+/**
+ * Classe ENSEMBLE les tâches et les personnes pour la requête « @… ».
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * UNE SEULE LISTE, UNE SEULE ÉCHELLE DE SCORE
+ *
+ * Deux listes séparées auraient obligé le rédacteur à choisir sa cible avant de
+ * chercher. On mélange donc, en plaçant les deux natures sur la MÊME échelle,
+ * dont l'ordre traduit une intention :
+ *
+ *   0-1   une tâche désignée par son numéro       (« @QUA-5 »)
+ *   5     une personne dont le nom commence ainsi (« @Van »)
+ *   10    une tâche du projet cherché             (« @QUA »)
+ *   20+   ce que la recherche libre ramène        (titre, adresse)
+ *
+ * Le nom d'une personne passe donc avant un titre de tâche qui contiendrait le
+ * même mot, mais après une clef de tâche explicite : taper « @QUA » cherche des
+ * tâches, taper « @Van » cherche quelqu'un, et personne n'a rien eu à déclarer.
+ */
+export function rankMentions(
+  tickets: TicketRef[],
+  users: UserRef[],
+  rawQuery: string,
+): MentionTarget[] {
+  const q = rawQuery.trim().toLowerCase();
+
+  // Sans requête, la liste doit faire DÉCOUVRIR les deux natures : quelques
+  // personnes puis les tâches récentes. N'afficher que des tâches laisserait
+  // croire qu'on ne peut citer qu'elles.
+  if (!q) {
+    const debutUsers = users.slice(0, 3).map(asUserTarget);
+    return [
+      ...debutUsers,
+      ...rankTickets(tickets, "")
+        .slice(0, SUGGEST_LIMIT - debutUsers.length)
+        .map(asTicketTarget),
+    ];
+  }
+
+  const scored: { target: MentionTarget; score: number; tie: number }[] = [];
+
+  // Tâches : on réutilise le classement existant, dont l'ordre porte déjà le
+  // score. Le rang dans la liste sert de départage.
+  rankTickets(tickets, rawQuery).forEach((ticket, rang) => {
+    const { alpha: qAlpha, num: qNum } = splitKey(q);
+    const { num: kNum } = splitKey(ticket.key);
+    const score = qNum
+      ? kNum === qNum
+        ? 0
+        : 1
+      : qAlpha && ticket.key.toLowerCase().startsWith(qAlpha)
+        ? 10
+        : 20;
+    scored.push({ target: asTicketTarget(ticket), score, tie: rang });
+  });
+
+  users.forEach((user, rang) => {
+    const label = userLabel(user).toLowerCase();
+    const email = user.email.toLowerCase();
+    // Début d'un MOT du nom, et non début du nom seul : on cherche « Silva »
+    // aussi souvent que « Vanessa ».
+    const prefixe =
+      label.split(/[\s.\-_]+/).some((mot) => mot.startsWith(q)) ||
+      email.split(/[\s.\-_@]+/).some((mot) => mot.startsWith(q));
+    if (prefixe)
+      scored.push({ target: asUserTarget(user), score: 5, tie: rang });
+    else if (label.includes(q) || email.includes(q)) {
+      scored.push({ target: asUserTarget(user), score: 22, tie: rang });
+    }
+  });
+
+  scored.sort((a, b) => a.score - b.score || a.tie - b.tie);
+  return scored.slice(0, SUGGEST_LIMIT).map((s) => s.target);
+}
+
+const asTicketTarget = (ticket: TicketRef): MentionTarget => ({
+  kind: "ticket",
+  id: ticket.id,
+  ticket,
+});
+
+const asUserTarget = (user: UserRef): MentionTarget => ({
+  kind: "user",
+  id: user.id,
+  user,
+});

@@ -15,7 +15,8 @@ import { CalloutTitle } from "./callout-title";
 /**
  * Rend le contenu d'une page de wiki en **Markdown étendu** (GFM : titres, gras,
  * listes, tâches, tableaux, code, citations, liens...). Les citations de tickets
- * (RKN-123) deviennent des liens vers le ticket. Le HTML brut n'est pas interprété
+ * (RKN-123) deviennent des liens vers le ticket, et les mentions de personnes
+ * (« [@Nom](mailto:…) ») des pastilles. Le HTML brut n'est pas interprété
  * (react-markdown échappe le HTML) : aucun risque XSS.
  */
 export function WikiContent({
@@ -154,6 +155,25 @@ export function WikiContent({
           );
         }
         return <Link href={url}>{children}</Link>;
+      }
+      /**
+       * MENTION D'UNE PERSONNE. Elle s'écrit « [@Nom](mailto:adresse) » et se
+       * reconnaît donc à son schéma, sans table de correspondance : c'est ce
+       * qui lui permet de s'afficher partout où du Markdown est rendu - page,
+       * révision figée, impression, export - sans qu'un seul appelant ait à
+       * transmettre la liste des membres.
+       *
+       * Elle reste un lien, et pas seulement une pastille décorative : écrire à
+       * quelqu'un est le geste qui suit naturellement le fait de le citer.
+       * `target` absent : un client de messagerie n'a pas à s'ouvrir dans un
+       * onglet vide qui resterait là.
+       */
+      if (url.startsWith("mailto:")) {
+        return (
+          <a href={url} className="wiki-mention" title={url.slice(7)}>
+            {children}
+          </a>
+        );
       }
       return (
         <a href={url} target="_blank" rel="noopener noreferrer">

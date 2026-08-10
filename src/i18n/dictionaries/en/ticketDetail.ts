@@ -13,7 +13,7 @@ export const ticketDetail: TicketDetailDict = {
   description: "Description",
   noDescription: "No description.",
   descriptionPlaceholder:
-    "Describe the request in Markdown: lists, headings, code, tables… Type “@” to reference a ticket.",
+    "Describe the request in Markdown: lists, headings, code, tables… Type “@” to reference a ticket or a person.",
   attachments: "Attachments ({count})",
   noAttachments: "No attachments.",
   // Adding and removing, now on the ticket itself : it was the last thing the

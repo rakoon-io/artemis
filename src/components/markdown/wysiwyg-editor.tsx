@@ -49,7 +49,12 @@ import {
   wrapInOrderedListCommand,
 } from "@milkdown/kit/preset/commonmark";
 import { toggleStrikethroughCommand } from "@milkdown/kit/preset/gfm";
-import { Milkdown, MilkdownProvider, useEditor, useInstance } from "@milkdown/react";
+import {
+  Milkdown,
+  MilkdownProvider,
+  useEditor,
+  useInstance,
+} from "@milkdown/react";
 import type { CmdKey } from "@milkdown/kit/core";
 import { Button } from "@/components/ui/button";
 import { MENTION_LIST_WIDTH, MentionList } from "./mention-list";
@@ -64,8 +69,11 @@ import { stripEditorArtifacts } from "@/lib/markdown-artifacts";
 import { imageResizeNodeView, imageWithWidth } from "./image-resize";
 import {
   detectMention,
-  rankTickets,
+  rankMentions,
+  userLabel,
+  type MentionTarget,
   type TicketRef,
+  type UserRef,
 } from "@/lib/wiki-mentions";
 import { useDict } from "@/i18n/provider";
 import "@milkdown/kit/prose/view/style/prosemirror.css";
@@ -156,7 +164,10 @@ function calloutBlockquote(labels: Record<CalloutKind, string>) {
         },
       ],
       toDOM: (node: ProseNode) => {
-        const attrs = ctx.get(blockquoteAttr.key)(node) as Record<string, string>;
+        const attrs = ctx.get(blockquoteAttr.key)(node) as Record<
+          string,
+          string
+        >;
         const kind = calloutKindOf(node);
         if (!kind) return ["blockquote", attrs, 0];
         return [
@@ -179,7 +190,9 @@ function calloutBlockquote(labels: Record<CalloutKind, string>) {
         runner: (state, node, type) => {
           const split = splitCalloutMarker(asMarkdownNodes(node.children));
           state.openNode(type, split ? { kind: split.kind } : undefined);
-          state.next((split ? split.body : asMarkdownNodes(node.children)) as never);
+          state.next(
+            (split ? split.body : asMarkdownNodes(node.children)) as never,
+          );
           state.closeNode();
         },
       },
@@ -279,20 +292,36 @@ function Toolbar({
 
   const actions = [
     { icon: Bold, label: t.wiki.form.tools.bold, cmd: toggleStrongCommand.key },
-    { icon: Italic, label: t.wiki.form.tools.italic, cmd: toggleEmphasisCommand.key },
+    {
+      icon: Italic,
+      label: t.wiki.form.tools.italic,
+      cmd: toggleEmphasisCommand.key,
+    },
     {
       icon: Strikethrough,
       label: t.wiki.form.tools.strike,
       cmd: toggleStrikethroughCommand.key,
     },
-    { icon: List, label: t.wiki.form.tools.list, cmd: wrapInBulletListCommand.key },
+    {
+      icon: List,
+      label: t.wiki.form.tools.list,
+      cmd: wrapInBulletListCommand.key,
+    },
     {
       icon: ListOrdered,
       label: t.wiki.form.tools.orderedList,
       cmd: wrapInOrderedListCommand.key,
     },
-    { icon: Quote, label: t.wiki.form.tools.quote, cmd: wrapInBlockquoteCommand.key },
-    { icon: Code, label: t.wiki.form.tools.code, cmd: toggleInlineCodeCommand.key },
+    {
+      icon: Quote,
+      label: t.wiki.form.tools.quote,
+      cmd: wrapInBlockquoteCommand.key,
+    },
+    {
+      icon: Code,
+      label: t.wiki.form.tools.code,
+      cmd: toggleInlineCodeCommand.key,
+    },
   ] as const;
 
   return (
@@ -388,6 +417,7 @@ function EditorSurface({
   disabled,
   placeholder,
   tickets,
+  users,
   onPasteImage,
   anchorRef,
   onMentionChange,
@@ -401,18 +431,19 @@ function EditorSurface({
   disabled?: boolean;
   placeholder?: string;
   tickets: TicketRef[];
+  users: UserRef[];
   onPasteImage?: (file: File) => Promise<{ src: string; alt: string } | null>;
   /** Boîte de référence pour positionner la liste (le conteneur `relative`). */
   anchorRef: React.RefObject<HTMLDivElement | null>;
   onMentionChange: (
     mention: RichMention | null,
-    results: TicketRef[],
+    results: MentionTarget[],
     activeIndex: number,
   ) => void;
   /** Expose à la barre d'outils les deux gestes qui ont besoin de la vue. */
   register: (api: {
     trigger: () => void;
-    pick: (ticket: TicketRef) => void;
+    pick: (target: MentionTarget) => void;
   }) => void;
 }) {
   /**
@@ -424,16 +455,18 @@ function EditorSurface({
    * y écrire rendrait le composant impur, et le compilateur React le refuse.
    */
   const mentionRef = useRef<RichMention | null>(null);
-  const resultsRef = useRef<TicketRef[]>([]);
+  const resultsRef = useRef<MentionTarget[]>([]);
   const indexRef = useRef(0);
   const viewRef = useRef<EditorView | null>(null);
   const ticketsRef = useRef(tickets);
+  const usersRef = useRef(users);
   const notifyRef = useRef(onMentionChange);
   const pasteRef = useRef(onPasteImage);
   const changeRef = useRef(onChange);
   const emptyRef = useRef(onEmptyChange);
   useEffect(() => {
     ticketsRef.current = tickets;
+    usersRef.current = users;
     notifyRef.current = onMentionChange;
     pasteRef.current = onPasteImage;
     changeRef.current = onChange;
@@ -470,14 +503,61 @@ function EditorSurface({
     notifyRef.current(null, [], 0);
   }, []);
 
+  /**
+   * Insère la proposition retenue.
+   *
+   * Une TÂCHE s'écrit en clair : « @RKN-12 » est du texte, que la lecture
+   * transformera en lien contre le catalogue du projet.
+   *
+   * Une PERSONNE, elle, ne peut pas s'écrire en clair. Sa mention est un lien
+   * Markdown, et « [@Nom](mailto:…) » inséré comme du TEXTE dans un document
+   * ProseMirror ressortirait échappé à la sérialisation - « \[@Nom\]\(…\) »,
+   * soit la syntaxe en toutes lettres au lieu du lien. On pose donc un vrai
+   * texte marqué d'un lien, exactement comme le collage d'image insère un vrai
+   * nœud image plutôt que sa syntaxe.
+   *
+   * L'espace final est écrit SANS la marque, et la marque mémorisée est retirée :
+   * sans cela, tout ce que l'on tape ensuite continuerait le lien.
+   */
   const pick = useCallback(
-    (ticket: TicketRef) => {
+    (target: MentionTarget) => {
       const view = viewRef.current;
       const mention = mentionRef.current;
       if (!view || !mention) return;
-      view.dispatch(
-        view.state.tr.insertText(`@${ticket.key} `, mention.from, mention.to),
+
+      if (target.kind === "ticket") {
+        view.dispatch(
+          view.state.tr.insertText(
+            `@${target.ticket.key} `,
+            mention.from,
+            mention.to,
+          ),
+        );
+        view.focus();
+        clear();
+        return;
+      }
+
+      const etiquette = `@${userLabel(target.user)}`;
+      const lien = view.state.schema.marks.link;
+      // L'espace est écrit AVEC l'étiquette, et la marque posée ENSUITE sur la
+      // seule étiquette. Insérer l'espace après coup, à la frontière du lien,
+      // le ferait hériter de la marque : la mention s'étendrait alors au mot
+      // suivant, et de proche en proche à la fin de la phrase.
+      const tr = view.state.tr.insertText(
+        `${etiquette} `,
+        mention.from,
+        mention.to,
       );
+      if (lien) {
+        tr.addMark(
+          mention.from,
+          mention.from + etiquette.length,
+          lien.create({ href: `mailto:${target.user.email}` }),
+        );
+        tr.removeStoredMark(lien);
+      }
+      view.dispatch(tr);
       view.focus();
       clear();
     },
@@ -507,7 +587,11 @@ function EditorSurface({
       const found = detectMention(textBefore, textBefore.length);
       if (!found) return clear();
 
-      const results = rankTickets(ticketsRef.current, found.query);
+      const results = rankMentions(
+        ticketsRef.current,
+        usersRef.current,
+        found.query,
+      );
       if (results.length === 0) return clear();
 
       const from = $from.pos - ($from.parentOffset - found.start);
@@ -634,8 +718,8 @@ function EditorSurface({
              */
             handleDrop: (view: EditorView, event: DragEvent) => {
               const upload = pasteRef.current;
-              const images = Array.from(event.dataTransfer?.files ?? []).filter((f) =>
-                f.type.startsWith("image/"),
+              const images = Array.from(event.dataTransfer?.files ?? []).filter(
+                (f) => f.type.startsWith("image/"),
               );
               if (!upload || images.length === 0) return false;
               event.preventDefault();
@@ -734,7 +818,9 @@ function EditorSurface({
               (plugin) =>
                 !(blockquoteSchema as readonly unknown[]).includes(plugin) &&
                 !(imageSchema as readonly unknown[]).includes(plugin) &&
-                !(remarkPreserveEmptyLinePlugin as readonly unknown[]).includes(plugin),
+                !(remarkPreserveEmptyLinePlugin as readonly unknown[]).includes(
+                  plugin,
+                ),
             )
             .concat(calloutBlockquote(calloutLabels))
             // L'IMAGE porte sa largeur, et se laisse tirer par le coin.
@@ -803,6 +889,7 @@ export function WysiwygEditor({
   disabled,
   placeholder,
   tickets = [],
+  users = [],
   onPasteImage,
 }: {
   /**
@@ -822,17 +909,19 @@ export function WysiwygEditor({
    * une surface qui n'a rien à citer ne doit pas en proposer le geste.
    */
   tickets?: TicketRef[];
+  /** Personnes citables par « @ », au même titre que les tâches. */
+  users?: UserRef[];
 }) {
   const t = useDict();
   const [empty, setEmpty] = useState(() => !value.trim());
   const [mention, setMention] = useState<RichMention | null>(null);
-  const [results, setResults] = useState<TicketRef[]>([]);
+  const [results, setResults] = useState<MentionTarget[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const anchorRef = useRef<HTMLDivElement | null>(null);
   /** Gestes exposés par la surface une fois l'éditeur construit. */
   const api = useRef<{
     trigger: () => void;
-    pick: (ticket: TicketRef) => void;
+    pick: (target: MentionTarget) => void;
   } | null>(null);
 
   return (
@@ -849,7 +938,9 @@ export function WysiwygEditor({
         <Toolbar
           disabled={disabled}
           onMention={
-            tickets.length > 0 ? () => api.current?.trigger() : undefined
+            tickets.length + users.length > 0
+              ? () => api.current?.trigger()
+              : undefined
           }
         />
         <EditorSurface
@@ -860,6 +951,7 @@ export function WysiwygEditor({
           disabled={disabled}
           placeholder={placeholder}
           tickets={tickets}
+          users={users}
           onPasteImage={onPasteImage}
           anchorRef={anchorRef}
           onMentionChange={(next, list, index) => {
@@ -877,7 +969,7 @@ export function WysiwygEditor({
             activeIndex={activeIndex}
             label={t.wiki.form.tools.mention}
             style={{ top: mention.top, left: mention.left }}
-            onPick={(ticket) => api.current?.pick(ticket)}
+            onPick={(target) => api.current?.pick(target)}
           />
         )}
       </div>

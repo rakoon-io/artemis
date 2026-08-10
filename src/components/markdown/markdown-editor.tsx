@@ -25,12 +25,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import dynamic from "next/dynamic";
 import { WikiContent } from "@/components/wiki/wiki-content";
+import { MENTION_LIST_WIDTH, MentionList } from "./mention-list";
 import { calloutTemplate } from "@/lib/wiki-callouts";
 import {
   detectMention,
-  rankTickets,
+  rankMentions,
+  userMentionMarkdown,
   type MentionState,
+  type MentionTarget,
   type TicketRef,
+  type UserRef,
 } from "@/lib/wiki-mentions";
 import { useDict } from "@/i18n/provider";
 
@@ -56,6 +60,12 @@ export interface MarkdownEditorProps {
   onChange: (value: string) => void;
   /** Tickets citables via « @ » (autocomplétion). */
   tickets: TicketRef[];
+  /**
+   * Personnes citables via le même « @ ». Vide par défaut : une surface qui ne
+   * connaît pas les membres du projet continue de ne proposer que des tâches,
+   * au lieu de proposer une liste vide de gens.
+   */
+  users?: UserRef[];
   /** Clé du projet et table des clés, pour l'aperçu et les liens de citation. */
   projectKey: string;
   ticketMap: Record<string, string>;
@@ -87,12 +97,32 @@ export interface MarkdownEditorProps {
 
 // Propriétés à copier sur le div miroir pour retrouver la position du curseur.
 const CARET_PROPS = [
-  "box-sizing", "width", "height", "overflow-x", "overflow-y",
-  "border-top-width", "border-right-width", "border-bottom-width", "border-left-width",
-  "padding-top", "padding-right", "padding-bottom", "padding-left",
-  "font-style", "font-variant", "font-weight", "font-stretch", "font-size",
-  "font-family", "line-height", "letter-spacing", "word-spacing", "tab-size",
-  "text-indent", "text-transform", "white-space",
+  "box-sizing",
+  "width",
+  "height",
+  "overflow-x",
+  "overflow-y",
+  "border-top-width",
+  "border-right-width",
+  "border-bottom-width",
+  "border-left-width",
+  "padding-top",
+  "padding-right",
+  "padding-bottom",
+  "padding-left",
+  "font-style",
+  "font-variant",
+  "font-weight",
+  "font-stretch",
+  "font-size",
+  "font-family",
+  "line-height",
+  "letter-spacing",
+  "word-spacing",
+  "tab-size",
+  "text-indent",
+  "text-transform",
+  "white-space",
 ];
 
 /** Position (px, relative au textarea) d'un index de caractère, via un div miroir. */
@@ -144,6 +174,7 @@ export function MarkdownEditor({
   value,
   onChange,
   tickets,
+  users = [],
   projectKey,
   ticketMap,
   placeholder,
@@ -160,7 +191,9 @@ export function MarkdownEditor({
   const [mentionIndex, setMentionIndex] = useState(0);
   const [mentionPos, setMentionPos] = useState({ top: 0, left: 0 });
 
-  const mentionResults = mention ? rankTickets(tickets, mention.query) : [];
+  const mentionResults = mention
+    ? rankMentions(tickets, users, mention.query)
+    : [];
 
   function editor(): HTMLTextAreaElement | null {
     return taRef.current;
@@ -172,7 +205,9 @@ export function MarkdownEditor({
     const start = ta.selectionStart;
     const end = ta.selectionEnd;
     const selected = value.slice(start, end);
-    onChange(value.slice(0, start) + before + selected + after + value.slice(end));
+    onChange(
+      value.slice(0, start) + before + selected + after + value.slice(end),
+    );
     const from = start + before.length;
     requestAnimationFrame(() => {
       ta.focus();
@@ -193,7 +228,7 @@ export function MarkdownEditor({
     });
   }
 
-  /** Insère « @ » et ouvre la liste des tickets. */
+  /** Insère « @ » et ouvre la liste des propositions. */
   function triggerMention() {
     const ta = editor();
     if (!ta) return;
@@ -211,14 +246,20 @@ export function MarkdownEditor({
     });
   }
 
-  /** Remplace la mention en cours par « @RKN-123 ». */
-  function insertMention(ticket: TicketRef) {
+  /**
+   * Remplace la mention en cours par « @RKN-123 » ou, pour une personne, par le
+   * lien Markdown qui la désigne (cf. `userMentionMarkdown`).
+   */
+  function insertMention(target: MentionTarget) {
     const ta = editor();
     if (!ta || !mention) return;
     const caret = ta.selectionStart;
     const before = value.slice(0, mention.start);
     const after = value.slice(caret);
-    const inserted = `@${ticket.key} `;
+    const inserted =
+      target.kind === "ticket"
+        ? `@${target.ticket.key} `
+        : `${userMentionMarkdown(target.user)} `;
     onChange(before + inserted + after);
     setMention(null);
     const pos = before.length + inserted.length;
@@ -267,7 +308,7 @@ export function MarkdownEditor({
     setMentionIndex(0);
     if (m) {
       const c = caretPosition(ta, m.start);
-      const width = 288;
+      const width = MENTION_LIST_WIDTH;
       setMentionPos({
         top: c.top - ta.scrollTop + c.height + 4,
         left: Math.max(0, Math.min(c.left, ta.clientWidth - width)),
@@ -286,12 +327,16 @@ export function MarkdownEditor({
       }
       if (event.key === "ArrowUp") {
         event.preventDefault();
-        setMentionIndex((i) => (i - 1 + mentionResults.length) % mentionResults.length);
+        setMentionIndex(
+          (i) => (i - 1 + mentionResults.length) % mentionResults.length,
+        );
         return;
       }
       if (event.key === "Enter" || event.key === "Tab") {
         event.preventDefault();
-        insertMention(mentionResults[Math.min(mentionIndex, mentionResults.length - 1)]);
+        insertMention(
+          mentionResults[Math.min(mentionIndex, mentionResults.length - 1)],
+        );
         return;
       }
       if (event.key === "Escape") {
@@ -311,7 +356,8 @@ export function MarkdownEditor({
     // Une ligne vide avant, si l'on n'est pas déjà en début de bloc : sans elle
     // l'encart se collerait au paragraphe précédent et n'en serait plus un.
     const prefix = lineStart > 0 && value[lineStart - 2] !== "\n" ? "\n" : "";
-    const next = value.slice(0, lineStart) + prefix + markdown + value.slice(lineStart);
+    const next =
+      value.slice(0, lineStart) + prefix + markdown + value.slice(lineStart);
     onChange(next);
     const caret = lineStart + prefix.length + markdown.length;
     requestAnimationFrame(() => {
@@ -323,15 +369,43 @@ export function MarkdownEditor({
   const tools = [
     { icon: Bold, label: t.wiki.form.tools.bold, run: () => wrap("**") },
     { icon: Italic, label: t.wiki.form.tools.italic, run: () => wrap("_") },
-    { icon: Heading1, label: t.wiki.form.tools.h1, run: () => prefixLine("# ") },
-    { icon: Heading2, label: t.wiki.form.tools.h2, run: () => prefixLine("## ") },
-    { icon: Heading3, label: t.wiki.form.tools.h3, run: () => prefixLine("### ") },
-    { icon: Heading4, label: t.wiki.form.tools.h4, run: () => prefixLine("#### ") },
+    {
+      icon: Heading1,
+      label: t.wiki.form.tools.h1,
+      run: () => prefixLine("# "),
+    },
+    {
+      icon: Heading2,
+      label: t.wiki.form.tools.h2,
+      run: () => prefixLine("## "),
+    },
+    {
+      icon: Heading3,
+      label: t.wiki.form.tools.h3,
+      run: () => prefixLine("### "),
+    },
+    {
+      icon: Heading4,
+      label: t.wiki.form.tools.h4,
+      run: () => prefixLine("#### "),
+    },
     { icon: List, label: t.wiki.form.tools.list, run: () => prefixLine("- ") },
-    { icon: ListChecks, label: t.wiki.form.tools.checkbox, run: () => prefixLine("- [ ] ") },
-    { icon: Quote, label: t.wiki.form.tools.quote, run: () => prefixLine("> ") },
+    {
+      icon: ListChecks,
+      label: t.wiki.form.tools.checkbox,
+      run: () => prefixLine("- [ ] "),
+    },
+    {
+      icon: Quote,
+      label: t.wiki.form.tools.quote,
+      run: () => prefixLine("> "),
+    },
     { icon: Code, label: t.wiki.form.tools.code, run: () => wrap("`") },
-    { icon: Link2, label: t.wiki.form.tools.link, run: () => wrap("[", "](url)") },
+    {
+      icon: Link2,
+      label: t.wiki.form.tools.link,
+      run: () => wrap("[", "](url)"),
+    },
     { icon: AtSign, label: t.wiki.form.tools.mention, run: triggerMention },
     {
       icon: Info,
@@ -358,7 +432,11 @@ export function MarkdownEditor({
   const [richKey, setRichKey] = useState(0);
 
   const modeSwitch = (
-    <div className="flex items-center gap-1" role="group" aria-label={t.wiki.form.modeAria}>
+    <div
+      className="flex items-center gap-1"
+      role="group"
+      aria-label={t.wiki.form.modeAria}
+    >
       <Button
         type="button"
         size="sm"
@@ -411,6 +489,7 @@ export function MarkdownEditor({
           // classement passent par le même module, les deux modes proposent
           // donc exactement la même liste dans le même ordre.
           tickets={tickets}
+          users={users}
           onPasteImage={onPasteImage}
           // L'invite du mode brut parle de MARKDOWN, ce qui n'a pas cours ici.
           // La citation par « @ », elle, fonctionne désormais des deux côtés -
@@ -473,36 +552,17 @@ export function MarkdownEditor({
             disabled={disabled}
             className={cn("resize-y font-mono text-sm", textareaClassName)}
           />
-          {mention && mentionResults.length > 0 && (
-            <div
-              className="absolute z-20 max-h-56 w-72 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
+          {/* La MÊME liste qu'en mise en forme. Elle était recopiée ici, et les
+              deux copies rendaient déjà des choses différentes dès qu'une
+              proposition cessait d'être une tâche. */}
+          {mention && (
+            <MentionList
+              results={mentionResults}
+              activeIndex={mentionIndex}
+              label={t.wiki.form.tools.mention}
               style={{ top: mentionPos.top, left: mentionPos.left }}
-            >
-              <p className="px-2 py-1 text-xs text-muted-foreground">
-                {t.wiki.form.tools.mention}
-              </p>
-              {mentionResults.map((ticket, i) => (
-                <button
-                  key={ticket.id}
-                  type="button"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    insertMention(ticket);
-                  }}
-                  className={cn(
-                    "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm",
-                    i === mentionIndex
-                      ? "bg-accent text-accent-foreground"
-                      : "hover:bg-accent/50",
-                  )}
-                >
-                  <span className="shrink-0 font-mono text-xs text-muted-foreground">
-                    {ticket.key}
-                  </span>
-                  <span className="truncate">{ticket.title}</span>
-                </button>
-              ))}
-            </div>
+              onPick={insertMention}
+            />
           )}
         </div>
         <p className="text-xs text-muted-foreground">

@@ -5,12 +5,7 @@ import { ArrowLeft, BookOpen, Link2, Paperclip } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { DialogTitle } from "@/components/ui/dialog";
 import { currentUser } from "@/lib/session";
@@ -119,7 +114,13 @@ export async function TicketDetail({
   // Références de tickets du projet : elles servent en LECTURE (résolution des
   // citations « RKN-123 » en liens) autant qu'en édition (autocomplétion « @ »),
   // donc chargées quels que soient les droits.
-  const ticketRefs = await getTicketRefs(ticket.projectId);
+  // Les PERSONNES du projet alimentent la même autocomplétion « @ » que les
+  // tâches, et sont chargées quels que soient les droits : commenter est ouvert
+  // à tout membre, citer quelqu'un doit l'être aussi.
+  const [ticketRefs, mentionUsers] = await Promise.all([
+    getTicketRefs(ticket.projectId),
+    getAssignableUsers(ticket.projectId),
+  ]);
 
   // DOCUMENTATION DE CE SUR QUOI L'ON TRAVAILLE. On part du module effectif et
   // du composant du ticket, et l'on remonte aux pages du wiki qui les décrivent.
@@ -150,18 +151,16 @@ export async function TicketDetail({
     },
   }));
 
-  let editData:
-    | {
-        members: Awaited<ReturnType<typeof getAssignableUsers>>;
-        sprints: Awaited<ReturnType<typeof getSprints>>;
-        labels: Awaited<ReturnType<typeof getLabels>>;
-        types: Awaited<ReturnType<typeof getTicketTypes>>;
-        priorities: Awaited<ReturnType<typeof getTicketPriorities>>;
-        components: Awaited<ReturnType<typeof getComponents>>;
-        modules: Awaited<ReturnType<typeof getModules>>;
-        releases: Awaited<ReturnType<typeof getReleases>>;
-      }
-    | null = null;
+  let editData: {
+    members: Awaited<ReturnType<typeof getAssignableUsers>>;
+    sprints: Awaited<ReturnType<typeof getSprints>>;
+    labels: Awaited<ReturnType<typeof getLabels>>;
+    types: Awaited<ReturnType<typeof getTicketTypes>>;
+    priorities: Awaited<ReturnType<typeof getTicketPriorities>>;
+    components: Awaited<ReturnType<typeof getComponents>>;
+    modules: Awaited<ReturnType<typeof getModules>>;
+    releases: Awaited<ReturnType<typeof getReleases>>;
+  } | null = null;
   if (canEdit) {
     const [
       members,
@@ -173,15 +172,15 @@ export async function TicketDetail({
       modules,
       releases,
     ] = await Promise.all([
-        getAssignableUsers(ticket.projectId),
-        getSprints(ticket.projectId),
-        getLabels(ticket.projectId),
-        getTicketTypes(ticket.projectId),
-        getTicketPriorities(ticket.projectId),
-        getComponents(ticket.projectId),
-        getModules(ticket.projectId),
-        getReleases(ticket.projectId),
-      ]);
+      getAssignableUsers(ticket.projectId),
+      getSprints(ticket.projectId),
+      getLabels(ticket.projectId),
+      getTicketTypes(ticket.projectId),
+      getTicketPriorities(ticket.projectId),
+      getComponents(ticket.projectId),
+      getModules(ticket.projectId),
+      getReleases(ticket.projectId),
+    ]);
     editData = {
       members,
       sprints,
@@ -229,7 +228,9 @@ export async function TicketDetail({
         )}
       >
         <div className="space-y-2">
-          <p className="font-mono text-sm text-muted-foreground">{ticket.key}</p>
+          <p className="font-mono text-sm text-muted-foreground">
+            {ticket.key}
+          </p>
           {/* Titre éditable en place : le `<h1>` garde la sémantique, la
               primitive porte l'apparence et l'interaction. */}
           <h1>
@@ -264,7 +265,10 @@ export async function TicketDetail({
               </TicketPriorityInline>
             </span>
             {ticketModule && (
-              <ModuleBadge name={ticketModule.name} color={ticketModule.color} />
+              <ModuleBadge
+                name={ticketModule.name}
+                color={ticketModule.color}
+              />
             )}
             {ticket.component && (
               <ComponentBadge
@@ -304,6 +308,7 @@ export async function TicketDetail({
                 value={ticket.description}
                 projectKey={project.key}
                 tickets={ticketRefs}
+                users={mentionUsers}
                 canEdit={canEdit}
                 requiresReport={ticket.type.template === TicketTemplate.REPORT}
               />
@@ -386,6 +391,7 @@ export async function TicketDetail({
                 comments={ticket.comments}
                 projectKey={key}
                 tickets={ticketRefs}
+                users={mentionUsers}
                 currentUserId={user?.id ?? null}
               />
               <Separator />
@@ -393,6 +399,7 @@ export async function TicketDetail({
                 ticketId={ticket.id}
                 projectKey={key}
                 tickets={ticketRefs}
+                users={mentionUsers}
               />
             </CardContent>
           </Card>
@@ -484,7 +491,9 @@ export async function TicketDetail({
                       name={ticket.component.name}
                       kind={ticket.component.kind}
                       color={ticket.component.color}
-                      kindLabel={t.taxonomy.componentKinds[ticket.component.kind]}
+                      kindLabel={
+                        t.taxonomy.componentKinds[ticket.component.kind]
+                      }
                     />
                   ) : (
                     <span className="text-muted-foreground">

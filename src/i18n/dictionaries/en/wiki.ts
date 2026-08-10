@@ -41,10 +41,10 @@ export const wiki: WikiDict = {
     tabWrite: "Write",
     tabPreview: "Preview",
     contentPlaceholder:
-      "Write in Markdown. Type @ to mention a task (e.g. @RKN-3).",
+      "Write in Markdown. Type @ to mention a task or a person (e.g. @RKN-3).",
     markdownHelpBefore:
       "Extended Markdown (GFM): headings, bold, lists, checkboxes, tables, code. Type ",
-    markdownHelpAfter: " to mention a task (it becomes a link).",
+    markdownHelpAfter: " to mention a task or a person.",
     nothingToPreview: "Nothing to preview yet.",
     createSubmit: "Create page",
     clickToWrite: "This page is empty. Click here to write it.",
@@ -57,7 +57,7 @@ export const wiki: WikiDict = {
     modeAria: "Input mode",
     richPlaceholder: "Write your text. The buttons above format it.",
     richHint:
-      "Formatting shows as you type. The text is still stored as Markdown. Type @ to mention a task.",
+      "Formatting shows as you type. The text is still stored as Markdown. Type @ to mention a task or a person.",
     loadingEditor: "Loading the editor…",
     titleRequired: "The title is required.",
     created: "Page created.",
@@ -75,7 +75,7 @@ export const wiki: WikiDict = {
       quote: "Quote",
       code: "Code",
       link: "Link",
-      mention: "Mention a task",
+      mention: "Mention a task or a person",
       strike: "Strikethrough",
       orderedList: "Numbered list",
       resizeImage: "Drag to resize; double-click for the original size",

@@ -27,7 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { AutoTextarea } from "@/components/ui/auto-textarea";
 import { MarkdownEditor } from "@/components/markdown/markdown-editor";
 import { uploadWikiFile, wikiFileHref } from "./wiki-file-upload";
-import type { TicketRef } from "@/lib/wiki-mentions";
+import type { TicketRef, UserRef } from "@/lib/wiki-mentions";
 import {
   Dialog,
   DialogClose,
@@ -118,7 +118,11 @@ function toDraft(parsed: ReturnType<typeof meetingDraft>): DraftTheme[] {
  * position : elles ne sont jamais portées par le brouillon, qui ne pourrait que
  * les laisser diverger de ce que l'écran affiche.
  */
-function toMarkdown(preamble: string, themes: DraftTheme[], headingLevel: number) {
+function toMarkdown(
+  preamble: string,
+  themes: DraftTheme[],
+  headingLevel: number,
+) {
   return serializeMeeting({
     preamble,
     headingLevel,
@@ -161,6 +165,7 @@ export function MeetingEditor({
   content,
   projectKey,
   tickets,
+  users = [],
   ticketMap,
   aiEnabled = false,
   onDone,
@@ -177,6 +182,8 @@ export function MeetingEditor({
   /** De quoi citer une tâche et l'afficher dans l'en-tête, comme ailleurs. */
   projectKey: string;
   tickets: TicketRef[];
+  /** Personnes citables par « @ ». Vide : seules les tâches sont proposées. */
+  users?: UserRef[];
   ticketMap: Record<string, string>;
   /** L'IA est-elle configurée sur ce serveur ? Décidé côté serveur. */
   aiEnabled?: boolean;
@@ -216,7 +223,10 @@ export function MeetingEditor({
   const markdown = toMarkdown(preamble, themes, headingLevel);
   const dirty = markdown !== pristine;
 
-  const itemCount = themes.reduce((total, theme) => total + theme.items.length, 0);
+  const itemCount = themes.reduce(
+    (total, theme) => total + theme.items.length,
+    0,
+  );
   const actionCount = themes.reduce(
     (total, theme) =>
       total + theme.items.filter((item) => item.kind === "action").length,
@@ -260,7 +270,11 @@ export function MeetingEditor({
     );
   }
 
-  function patchItem(themeIndex: number, itemIndex: number, patch: Partial<DraftItem>) {
+  function patchItem(
+    themeIndex: number,
+    itemIndex: number,
+    patch: Partial<DraftItem>,
+  ) {
     setThemes((prev) =>
       prev.map((theme, i) =>
         i === themeIndex
@@ -297,7 +311,11 @@ export function MeetingEditor({
     focusNext.current = `${themeIndex}-${at}`;
   }
 
-  function removeItem(themeIndex: number, itemIndex: number, keepFocus = false) {
+  function removeItem(
+    themeIndex: number,
+    itemIndex: number,
+    keepFocus = false,
+  ) {
     setThemes((prev) =>
       prev.map((theme, i) =>
         i === themeIndex
@@ -305,7 +323,8 @@ export function MeetingEditor({
           : theme,
       ),
     );
-    if (keepFocus && itemIndex > 0) focusNext.current = `${themeIndex}-${itemIndex - 1}`;
+    if (keepFocus && itemIndex > 0)
+      focusNext.current = `${themeIndex}-${itemIndex - 1}`;
   }
 
   function moveItem(themeIndex: number, itemIndex: number, direction: -1 | 1) {
@@ -338,7 +357,10 @@ export function MeetingEditor({
       insertItem(themeIndex, itemIndex + 1);
       return;
     }
-    if (event.altKey && (event.key === "ArrowUp" || event.key === "ArrowDown")) {
+    if (
+      event.altKey &&
+      (event.key === "ArrowUp" || event.key === "ArrowDown")
+    ) {
       event.preventDefault();
       moveItem(themeIndex, itemIndex, event.key === "ArrowUp" ? -1 : 1);
       return;
@@ -358,7 +380,12 @@ export function MeetingEditor({
   function addTheme() {
     setThemes((prev) => [
       ...prev,
-      { title: "", items: [{ kind: "info", text: "" }], notesBefore: "", notesAfter: "" },
+      {
+        title: "",
+        items: [{ kind: "info", text: "" }],
+        notesBefore: "",
+        notesAfter: "",
+      },
     ]);
   }
 
@@ -420,6 +447,7 @@ export function MeetingEditor({
           value={preamble}
           onChange={setPreamble}
           tickets={tickets}
+          users={users}
           projectKey={projectKey}
           ticketMap={ticketMap}
           placeholder={t.wiki.meeting.preamblePlaceholder}
@@ -446,7 +474,12 @@ export function MeetingEditor({
           </p>
           <div className="flex flex-wrap items-center justify-center gap-2">
             {ai}
-            <Button type="button" variant="outline" disabled={pending} onClick={addTheme}>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={pending}
+              onClick={addTheme}
+            >
               <Plus />
               {t.wiki.meeting.addTheme}
             </Button>
@@ -489,20 +522,26 @@ export function MeetingEditor({
                   className="h-8 min-w-40 flex-1 font-medium"
                 />
                 <Badge variant="secondary" className="shrink-0 font-normal">
-                  {fmt(t.wiki.meeting.itemsCount, { count: theme.items.length })}
+                  {fmt(t.wiki.meeting.itemsCount, {
+                    count: theme.items.length,
+                  })}
                 </Badge>
                 <span className={REVEAL}>
                   <IconButton
                     label={fmt(t.wiki.meeting.moveThemeUp, { letter })}
                     disabled={pending || themeIndex === 0}
-                    onClick={() => setThemes((prev) => move(prev, themeIndex, -1))}
+                    onClick={() =>
+                      setThemes((prev) => move(prev, themeIndex, -1))
+                    }
                   >
                     <ArrowUp />
                   </IconButton>
                   <IconButton
                     label={fmt(t.wiki.meeting.moveThemeDown, { letter })}
                     disabled={pending || themeIndex === themes.length - 1}
-                    onClick={() => setThemes((prev) => move(prev, themeIndex, 1))}
+                    onClick={() =>
+                      setThemes((prev) => move(prev, themeIndex, 1))
+                    }
                   >
                     <ArrowDown />
                   </IconButton>
@@ -511,7 +550,9 @@ export function MeetingEditor({
                     destructive
                     disabled={pending}
                     onClick={() =>
-                      setThemes((prev) => prev.filter((_, i) => i !== themeIndex))
+                      setThemes((prev) =>
+                        prev.filter((_, i) => i !== themeIndex),
+                      )
                     }
                   >
                     <Trash2 />
@@ -580,7 +621,12 @@ export function MeetingEditor({
                         aria-label={fmt(t.wiki.meeting.itemAria, { ref })}
                         className="order-4 w-full @xl:order-3 @xl:w-auto @xl:min-w-40 @xl:flex-1"
                       />
-                      <span className={cn(REVEAL, "order-3 ml-auto @xl:order-4 @xl:ml-0 @xl:pt-1")}>
+                      <span
+                        className={cn(
+                          REVEAL,
+                          "order-3 ml-auto @xl:order-4 @xl:ml-0 @xl:pt-1",
+                        )}
+                      >
                         <IconButton
                           label={fmt(t.wiki.meeting.moveItemUp, { ref })}
                           disabled={pending || itemIndex === 0}
@@ -590,7 +636,9 @@ export function MeetingEditor({
                         </IconButton>
                         <IconButton
                           label={fmt(t.wiki.meeting.moveItemDown, { ref })}
-                          disabled={pending || itemIndex === theme.items.length - 1}
+                          disabled={
+                            pending || itemIndex === theme.items.length - 1
+                          }
                           onClick={() => moveItem(themeIndex, itemIndex, 1)}
                         >
                           <ArrowDown />
@@ -633,7 +681,12 @@ export function MeetingEditor({
 
       {themes.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <Button type="button" variant="outline" disabled={pending} onClick={addTheme}>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={pending}
+            onClick={addTheme}
+          >
             <Plus />
             {t.wiki.meeting.addTheme}
           </Button>
@@ -696,7 +749,12 @@ function CancelButton({
 
   if (!dirty) {
     return (
-      <Button type="button" variant="outline" disabled={disabled} onClick={onConfirm}>
+      <Button
+        type="button"
+        variant="outline"
+        disabled={disabled}
+        onClick={onConfirm}
+      >
         {t.common.cancel}
       </Button>
     );
@@ -712,7 +770,9 @@ function CancelButton({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{t.wiki.meeting.discardTitle}</DialogTitle>
-          <DialogDescription>{t.wiki.meeting.discardDescription}</DialogDescription>
+          <DialogDescription>
+            {t.wiki.meeting.discardDescription}
+          </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <DialogClose asChild>
@@ -871,6 +931,7 @@ export function MeetingSection({
   content,
   projectKey,
   tickets,
+  users = [],
   ticketMap,
   canEdit,
   aiEnabled,
@@ -883,6 +944,8 @@ export function MeetingSection({
   content: string;
   projectKey: string;
   tickets: TicketRef[];
+  /** Personnes citables par « @ ». Vide : seules les tâches sont proposées. */
+  users?: UserRef[];
   ticketMap: Record<string, string>;
   canEdit: boolean;
   aiEnabled?: boolean;
@@ -908,6 +971,7 @@ export function MeetingSection({
         content={content}
         projectKey={projectKey}
         tickets={tickets}
+        users={users}
         ticketMap={ticketMap}
         aiEnabled={aiEnabled}
         onDone={() => setEditing(false)}

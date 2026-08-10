@@ -1,6 +1,10 @@
 import { CommentItem } from "@/components/ticket/comment-item";
 import { formatDateTime } from "@/lib/utils";
-import { ticketHintsOf, type TicketRef } from "@/lib/wiki-mentions";
+import {
+  ticketHintsOf,
+  type TicketRef,
+  type UserRef,
+} from "@/lib/wiki-mentions";
 import { getDictionary } from "@/i18n/server";
 import type { TicketDetail } from "./ticket-fields";
 
@@ -15,12 +19,15 @@ export async function CommentList({
   comments,
   projectKey,
   tickets,
+  users = [],
   currentUserId,
 }: {
   comments: CommentItemData[];
   projectKey: string;
   /** Tickets du projet : résolution des citations en liens et infobulles. */
   tickets: TicketRef[];
+  /** Personnes citables par « @ ». Vide : seules les tâches sont proposées. */
+  users?: UserRef[];
   /** Qui lit : seul l'auteur d'un commentaire peut le retoucher. */
   currentUserId: string | null;
 }) {
@@ -47,6 +54,7 @@ export async function CommentList({
           }}
           projectKey={projectKey}
           tickets={tickets}
+          users={users}
           ticketHints={ticketHints}
           canEdit={!!currentUserId && comment.authorId === currentUserId}
           formattedDate={{

@@ -1,84 +1,82 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-  detectMention,
-  splitKey,
-  rankTickets,
+  rankMentions,
+  userLabel,
+  userMentionMarkdown,
   type TicketRef,
+  type UserRef,
 } from "./wiki-mentions";
 
-const t = (key: string, title = ""): TicketRef => ({ id: key, key, title });
+const t = (key: string, title: string): TicketRef => ({ id: key, key, title });
+const u = (name: string | null, email: string): UserRef => ({ id: email, name, email });
 
-// Jeu de tickets avec des numéros ambigus (RKN-3 vs RKN-30 vs RKN-13).
-const TICKETS: TicketRef[] = [
-  t("RKN-1", "Mise en place"),
-  t("RKN-3", "Limite de WIP par colonne"),
-  t("RKN-13", "Bug Firefox"),
-  t("RKN-30", "Migration Prisma"),
-  t("RKN-31", "Configurer MinIO"),
-  t("ART-3", "Autre projet"),
+const TICKETS = [
+  t("QUA-50", "Obtenir les listes de référence EDC"),
+  t("QUA-5", "Permettre la saisie de plusieurs diplômes"),
+  t("QUA-12", "Éditer le contrat sans perdre Vanessa"),
+];
+const USERS = [
+  u("Vanessa Silva", "vanessa.silva@edcparis.edu"),
+  u("Thomas Broussard", "t.broussard@way-up.io"),
+  u(null, "gaelle.brune@edcparis.edu"),
 ];
 
-describe("detectMention", () => {
-  it("détecte la mention et sa requête autour du curseur", () => {
-    const value = "voir @RKN-3 pour le detail";
-    const caret = "voir @RKN-3".length;
-    expect(detectMention(value, caret)).toEqual({ start: 5, query: "RKN-3" });
+describe("userLabel", () => {
+  it("prend le nom quand il existe", () => {
+    expect(userLabel(USERS[0])).toBe("Vanessa Silva");
   });
 
-  it("ne détecte rien sans « @ » ou au milieu d'un mot", () => {
-    expect(detectMention("email@RKN", 9)).toBeNull();
-    expect(detectMention("voir RKN-3", 10)).toBeNull();
-  });
-
-  it("détecte une mention vide juste après « @ »", () => {
-    expect(detectMention("voir @", 6)).toEqual({ start: 5, query: "" });
+  it("retombe sur la partie utile de l'adresse", () => {
+    expect(userLabel(USERS[2])).toBe("gaelle.brune");
   });
 });
 
-describe("splitKey", () => {
-  it("sépare préfixe et numéro", () => {
-    expect(splitKey("rkn-3")).toEqual({ alpha: "rkn", num: "3" });
-    expect(splitKey("RKN-30")).toEqual({ alpha: "rkn", num: "30" });
-    expect(splitKey("rkn")).toEqual({ alpha: "rkn", num: "" });
-    expect(splitKey("3")).toEqual({ alpha: "", num: "3" });
+describe("userMentionMarkdown", () => {
+  it("produit un lien qui se suffit à lui-même", () => {
+    expect(userMentionMarkdown(USERS[0])).toBe(
+      "[@Vanessa Silva](mailto:vanessa.silva@edcparis.edu)",
+    );
+  });
+
+  it("échappe ce qui refermerait l'étiquette avant l'heure", () => {
+    // Sans cela, le lien s'arrêterait au premier crochet et le reste du nom
+    // s'afficherait en toutes lettres, syntaxe comprise.
+    const brut = u("Ana [DSI]", "ana@x.io");
+    expect(userMentionMarkdown(brut)).toBe("[@Ana \\[DSI\\]](mailto:ana@x.io)");
   });
 });
 
-describe("rankTickets (l'autocomplétion s'affine avec le numéro)", () => {
-  it("place le numéro exact avant le préfixe de numéro (RKN-3 avant RKN-30/RKN-31)", () => {
-    const keys = rankTickets(TICKETS, "RKN-3").map((x) => x.key);
-    expect(keys[0]).toBe("RKN-3");
-    // RKN-30 et RKN-31 suivent (préfixe « 3 »), RKN-13 est exclu.
-    expect(keys).toEqual(["RKN-3", "RKN-31", "RKN-30"]);
-    expect(keys).not.toContain("RKN-13");
+describe("rankMentions", () => {
+  it("fait découvrir les deux natures quand rien n'est tapé", () => {
+    const r = rankMentions(TICKETS, USERS, "");
+    expect(r.slice(0, 3).every((m) => m.kind === "user")).toBe(true);
+    expect(r.some((m) => m.kind === "ticket")).toBe(true);
   });
 
-  it("s'affine chiffre par chiffre : « 3 » puis « 30 »", () => {
-    expect(rankTickets(TICKETS, "RKN-3").map((x) => x.key)).toContain("RKN-30");
-    const step2 = rankTickets(TICKETS, "RKN-30").map((x) => x.key);
-    expect(step2).toEqual(["RKN-30"]);
+  it("place une personne avant un titre de tâche qui contient le même mot", () => {
+    // « Vanessa » figure dans le titre de QUA-12 : le nom doit primer.
+    const r = rankMentions(TICKETS, USERS, "vanessa");
+    expect(r[0].kind).toBe("user");
   });
 
-  it("accepte le numéro seul après « @ » (ex. « 3 »)", () => {
-    const keys = rankTickets(TICKETS, "3").map((x) => x.key);
-    // Numéro exact d'abord (RKN-3 et ART-3), puis préfixes (RKN-30, RKN-31).
-    expect(keys.slice(0, 2).sort()).toEqual(["ART-3", "RKN-3"]);
-    expect(keys).toContain("RKN-30");
-    expect(keys).not.toContain("RKN-13");
+  it("laisse la clef de tâche l'emporter", () => {
+    const r = rankMentions(TICKETS, USERS, "qua-5");
+    expect(r[0]).toMatchObject({ kind: "ticket" });
+    expect(r[0].kind === "ticket" && r[0].ticket.key).toBe("QUA-5");
   });
 
-  it("filtre par préfixe de projet quand seules des lettres sont saisies", () => {
-    const keys = rankTickets(TICKETS, "art").map((x) => x.key);
-    expect(keys).toEqual(["ART-3"]);
+  it("trouve une personne par un mot du milieu de son nom", () => {
+    const r = rankMentions(TICKETS, USERS, "silva");
+    expect(r[0].kind === "user" && r[0].user.email).toBe("vanessa.silva@edcparis.edu");
   });
 
-  it("recherche aussi dans le titre", () => {
-    const keys = rankTickets(TICKETS, "firefox").map((x) => x.key);
-    expect(keys).toEqual(["RKN-13"]);
+  it("trouve une personne sans nom par son adresse", () => {
+    const r = rankMentions(TICKETS, USERS, "gaelle");
+    expect(r[0].kind === "user" && r[0].user.email).toBe("gaelle.brune@edcparis.edu");
   });
 
-  it("sans requête, renvoie la liste récente (numéro décroissant d'origine)", () => {
-    const keys = rankTickets(TICKETS, "").map((x) => x.key);
-    expect(keys[0]).toBe("RKN-1");
+  it("ne propose personne quand aucune personne n'est fournie", () => {
+    const r = rankMentions(TICKETS, [], "vanessa");
+    expect(r.every((m) => m.kind === "ticket")).toBe(true);
   });
 });

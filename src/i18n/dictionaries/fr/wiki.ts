@@ -42,10 +42,10 @@ export const wiki = {
     tabWrite: "Écrire",
     tabPreview: "Aperçu",
     contentPlaceholder:
-      "Écrivez en Markdown. Tapez @ pour citer une tâche (ex. @RKN-3).",
+      "Écrivez en Markdown. Tapez @ pour citer une tâche ou une personne (ex. @RKN-3).",
     markdownHelpBefore:
       "Markdown étendu (GFM) : titres, gras, listes, cases à cocher, tableaux, code. Tapez ",
-    markdownHelpAfter: " pour citer une tâche (elle devient un lien).",
+    markdownHelpAfter: " pour citer une tâche ou une personne.",
     nothingToPreview: "Rien à prévisualiser pour l'instant.",
     createSubmit: "Créer la page",
     clickToWrite: "Cette page est vide. Cliquez ici pour l'écrire.",
@@ -59,7 +59,7 @@ export const wiki = {
     richPlaceholder:
       "Écrivez votre texte. Les boutons ci-dessus le mettent en forme.",
     richHint:
-      "La mise en forme s'affiche pendant la saisie. Le texte reste enregistré en Markdown. Tapez @ pour citer une tâche.",
+      "La mise en forme s'affiche pendant la saisie. Le texte reste enregistré en Markdown. Tapez @ pour citer une tâche ou une personne.",
     loadingEditor: "Chargement de l'éditeur…",
     titleRequired: "Le titre est requis.",
     created: "Page créée.",
@@ -77,7 +77,7 @@ export const wiki = {
       quote: "Citation",
       code: "Code",
       link: "Lien",
-      mention: "Citer une tâche",
+      mention: "Citer une tâche ou une personne",
       strike: "Barré",
       orderedList: "Liste numérotée",
       resizeImage: "Faire glisser pour redimensionner ; double-clic pour la taille d'origine",

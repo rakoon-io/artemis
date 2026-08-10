@@ -636,3 +636,36 @@
     color: inherit;
   }
 }
+
+/**
+ * MENTION D'UNE PERSONNE dans du Markdown rendu (« [@Nom](mailto:…) »).
+ *
+ * Traitée comme une pastille et non comme un lien ordinaire : dans une ligne de
+ * compte rendu, « Présents : @Vanessa Silva / @Thomas Broussard » doit se lire
+ * comme deux noms, pas comme deux liens soulignés qui appellent le clic. Le
+ * geste reste possible - c'est bien un lien -, il cesse seulement de crier.
+ */
+.wiki-prose .wiki-mention {
+  display: inline-block;
+  padding: 0 0.3rem;
+  border-radius: 0.375rem;
+  background: color-mix(in oklab, var(--primary) 12%, transparent);
+  color: color-mix(in oklab, var(--primary) 80%, var(--foreground));
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.wiki-prose .wiki-mention:hover {
+  background: color-mix(in oklab, var(--primary) 20%, transparent);
+}
+
+/* À l'impression, la couleur de fond disparaît souvent : le nom doit rester
+   lisible sans elle, et ne pas se distinguer du texte par un simple gris. */
+@media print {
+  .wiki-prose .wiki-mention {
+    background: none;
+    color: inherit;
+    font-weight: 600;
+  }
+}

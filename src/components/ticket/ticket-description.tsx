@@ -11,6 +11,7 @@ import {
   ticketHintsOf,
   ticketMapOf,
   type TicketRef,
+  type UserRef,
 } from "@/lib/wiki-mentions";
 import {
   emptyReport,
@@ -67,6 +68,7 @@ export function TicketDescription({
   value,
   projectKey,
   tickets,
+  users = [],
   canEdit,
   requiresReport = false,
 }: {
@@ -75,6 +77,8 @@ export function TicketDescription({
   projectKey: string;
   /** Tickets du projet : citations « @ » et résolution des liens en lecture. */
   tickets: TicketRef[];
+  /** Personnes citables par « @ ». Vide : seules les tâches sont proposées. */
+  users?: UserRef[];
   canEdit: boolean;
   /** Le type du ticket impose-t-il les rubriques du rapport ? */
   requiresReport?: boolean;
@@ -171,8 +175,7 @@ export function TicketDescription({
     // Repasser au formulaire suppose que le Markdown courant se relise ; sinon
     // le bouton reste inerte plutôt que de proposer une conversion approximative.
     const reparsed = structured ? null : parseReport(draft);
-    const canStructure =
-      requiresReport && (reparsed !== null || !draft.trim());
+    const canStructure = requiresReport && (reparsed !== null || !draft.trim());
 
     const modeSwitch = requiresReport ? (
       <Button
@@ -194,7 +197,9 @@ export function TicketDescription({
           setStructured(true);
         }}
       >
-        {structured ? t.ticketTemplate.freeformTab : t.ticketTemplate.structuredTab}
+        {structured
+          ? t.ticketTemplate.freeformTab
+          : t.ticketTemplate.structuredTab}
       </Button>
     ) : null;
 
@@ -215,7 +220,12 @@ export function TicketDescription({
 
     const footer = (
       <div className="flex items-center justify-end gap-2">
-        <Button type="button" variant="outline" onClick={cancel} disabled={pending}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={cancel}
+          disabled={pending}
+        >
           {t.common.cancel}
         </Button>
         <Button type="button" onClick={() => void save()} disabled={pending}>
@@ -261,6 +271,7 @@ export function TicketDescription({
           value={draft}
           onChange={setDraft}
           tickets={tickets}
+          users={users}
           projectKey={projectKey}
           ticketMap={ticketMap}
           placeholder={t.ticketDetail.descriptionPlaceholder}
@@ -297,7 +308,9 @@ export function TicketDescription({
       ticketHints={ticketHints}
     />
   ) : (
-    <p className="text-sm text-muted-foreground">{t.ticketDetail.noDescription}</p>
+    <p className="text-sm text-muted-foreground">
+      {t.ticketDetail.noDescription}
+    </p>
   );
 
   if (!canEdit) return body;
@@ -324,7 +337,9 @@ export function TicketDescription({
         onClick={(event) => {
           // Un clic sur un lien, un bouton ou une case à cocher du Markdown rendu
           // doit garder son sens : on n'entre en édition que sur du texte inerte.
-          if ((event.target as HTMLElement).closest("a, button, input, textarea")) {
+          if (
+            (event.target as HTMLElement).closest("a, button, input, textarea")
+          ) {
             return;
           }
           beginEdit();
