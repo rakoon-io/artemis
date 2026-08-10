@@ -566,7 +566,19 @@ export default async function WikiPage({
           {createButton}
         </div>
       ) : (
-        <div className="flex flex-col gap-6 md:flex-row">
+        <div className="flex flex-col gap-6 md:flex-row md:items-start">
+          {/* `md:items-start` : chaque colonne s'arrête à SON contenu.
+
+              Sans lui, une rangée flex étire ses colonnes à la hauteur de la
+              plus haute. La navigation de gauche liste toutes les pages du wiki
+              et dépasse souvent le texte lu : le cadre de l'article s'étirait
+              alors pour la rejoindre, et l'on voyait plusieurs hauteurs d'écran
+              de vide encadré sous la dernière ligne.
+
+              Réservé à `md` : en dessous, la rangée est une COLONNE, et
+              l'étirement y joue sur la largeur - c'est lui qui donne aux deux
+              cartes toute la largeur de l'écran. La fiche d'un ticket fait déjà
+              exactement cela (`lg:items-start`), seule cette page l'oubliait. */}
           {/* Le PLAN est une zone, pas une marge. Sans surface propre, ses
               titres flottaient sur le même fond que l'article et l'œil ne
               savait plus où finissait la navigation ni où commençait le texte.
