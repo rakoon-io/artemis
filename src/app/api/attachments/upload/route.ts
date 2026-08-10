@@ -1,4 +1,4 @@
-import { declaredTooLarge, keyLooksIssued, localUploadDisabled } from "@/lib/upload-guard";
+import { declaredTooLarge, keyLooksIssued } from "@/lib/upload-guard";
 import { clientIp, isRateLimited, recordFailure } from "@/lib/rate-limit";
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/session";
@@ -7,13 +7,14 @@ import { canAccess } from "@/server/access";
 import { getTicketOwnership } from "@/server/services/ticket.service";
 import { createAttachment } from "@/server/services/attachment.service";
 import { isDangerousContentType } from "@/lib/attachments";
-import { writeLocal } from "@/lib/storage";
+import { writeStored } from "@/lib/storage";
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10 Mo
 
 /**
  * PUT /api/attachments/upload?key=&filename=&contentType= - réception d'une pièce
- * jointe en **stockage local** (fallback quand S3/MinIO n'est pas configuré).
+ * jointe. C'est le SERVEUR qui écrit dans le stockage, MinIO en production,
+ * disque en développement : le navigateur ne joint jamais le stockage.
  *
  * Cette route fait tout en un seul appel : écriture disque **et** enregistrement des
  * métadonnées (pas de round-trip `confirm` séparé). Les contrôles restent identiques
@@ -26,14 +27,6 @@ export async function PUT(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
-  // Repli DISQUE uniquement : avec un stockage objet configuré, cette route
-  // n'a plus de raison d'être et ne doit pas offrir une seconde écriture.
-  if (localUploadDisabled()) {
-    return NextResponse.json(
-      { error: "Dépôt local désactivé (stockage objet configuré)." },
-      { status: 400 },
-    );
-  }
 
   // La taille ANNONCÉE suffit à refuser : lire le corps d'abord, c'est le
   // charger entier en mémoire avant de découvrir qu'il fait quatre gigaoctets.
@@ -98,7 +91,7 @@ export async function PUT(request: Request): Promise<NextResponse> {
     );
   }
 
-  await writeLocal(key, bytes);
+  await writeStored(key, bytes, contentType);
   // `size` = octets réellement reçus (fiable, ≤ 10 Mo), pas la valeur annoncée par le client.
   const attachment = await createAttachment({
     ticketId,

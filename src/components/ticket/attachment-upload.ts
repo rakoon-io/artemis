@@ -1,12 +1,11 @@
 "use client";
 
 import { toast } from "sonner";
-import { confirmAttachmentAction } from "@/server/actions/attachment.actions";
 
 /**
  * Logique partagée d'ajout de pièces jointes (dialogues de création ET d'édition).
  * Centralise la capture d'images du presse-papier et le téléversement
- * (presign → PUT → confirm S3), pour éviter toute divergence de sécurité.
+ * (demande d'adresse → PUT vers l'application), pour éviter toute divergence de sécurité.
  */
 
 export type PendingKind = "image" | "file" | "text";
@@ -36,8 +35,9 @@ export function collectImages(data: DataTransfer): File[] {
 }
 
 /**
- * Téléverse un fichier sur un ticket : presign → PUT → (S3 : `confirm` ; local :
- * enregistré par la route d'upload). Renvoie `true` si la pièce jointe est bien créée.
+ * Téléverse un fichier sur un ticket : demande d'adresse, puis PUT vers la route
+ * de dépôt de l'application, qui écrit dans le stockage ET crée la pièce jointe.
+ * Renvoie `true` si la pièce jointe est bien créée.
  */
 export async function uploadFileToTicket(
   ticketId: string,
@@ -62,11 +62,7 @@ export async function uploadFileToTicket(
   }
   if (!presignRes.ok) return false;
 
-  const { url, storageKey, mode } = (await presignRes.json()) as {
-    url: string;
-    storageKey: string;
-    mode: "s3" | "local";
-  };
+  const { url } = (await presignRes.json()) as { url: string };
 
   try {
     const put = await fetch(url, {
@@ -79,20 +75,7 @@ export async function uploadFileToTicket(
     return false;
   }
 
-  // Local : la route d'upload a déjà créé la pièce jointe (pas de round-trip confirm).
-  if (mode === "s3") {
-    const confirmed = await confirmAttachmentAction({
-      ticketId,
-      filename: file.name,
-      contentType,
-      size: file.size,
-      storageKey,
-    });
-    if (!confirmed.ok) {
-      toast.error(confirmed.error);
-      return false;
-    }
-  }
+  // La route de dépôt a créé la pièce jointe : rien à confirmer.
   return true;
 }
 

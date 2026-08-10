@@ -1,26 +1,11 @@
-import { isStorageConfigured } from "@/lib/storage";
-
 /**
- * GARDES COMMUNES AUX DEUX ROUTES DE DÉPÔT LOCAL.
+ * GARDES COMMUNES AUX DEUX ROUTES DE DÉPÔT.
  *
  * Un module partagé, et non deux copies : la faille la plus grave de cet audit
  * venait précisément de là - cinq voies d'écriture, quatre qui vérifiaient le
  * type déclaré, une qui l'avait oublié. Ce qui est écrit une fois ne peut pas
  * diverger.
  */
-
-/**
- * La route de dépôt local doit-elle refuser de servir ?
- *
- * Ces routes sont le REPLI d'un déploiement sans stockage objet. Elles restaient
- * pourtant ouvertes quand S3 est configuré : n'importe quel utilisateur pouvait
- * y écrire, faisant grossir le disque d'un conteneur qui n'a pas de volume, et
- * créant des lignes dont l'objet n'existera jamais côté S3 - donc des pièces
- * jointes définitivement introuvables.
- */
-export function localUploadDisabled(): boolean {
-  return isStorageConfigured();
-}
 
 /** Taille maximale annoncée dépassée, avant même d'avoir lu le corps ? */
 export function declaredTooLarge(request: Request, maxBytes: number): boolean {

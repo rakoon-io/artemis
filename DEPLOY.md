@@ -268,7 +268,9 @@ CI/CD en place.
 
 ## 10. Sécurité & secrets
 - `.env*` et `rtr.env` **jamais commités** (gitignore).
-- Pièces jointes servies via **URLs presignées à durée limitée** (droits vérifiés avant émission).
+- Pièces jointes **déposées et servies par l'application**, jamais par le stockage : droits vérifiés
+  à chaque appel, et MinIO n'a pas à être joignable depuis Internet (`S3_ENDPOINT` reste un nom du
+  réseau interne).
 - Secrets côté serveur / gestionnaire de secrets Dokploy - **jamais dans le dépôt**.
 
 ### Politique de sécurité du contenu

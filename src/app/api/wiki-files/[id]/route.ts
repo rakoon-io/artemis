@@ -1,10 +1,9 @@
 import { contentDisposition, safeServing } from "@/lib/attachments";
 import { NextResponse } from "next/server";
-import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/session";
 import { canAccess } from "@/server/access";
 import { getWikiAttachmentWithProject } from "@/server/services/wiki-attachment.service";
-import { isStorageConfigured, presignDownload, readLocal } from "@/lib/storage";
+import { readStored } from "@/lib/storage";
 
 /**
  * GET /api/wiki-files/[id] - sert une pièce jointe de page de wiki.
@@ -36,17 +35,12 @@ export async function GET(
     return NextResponse.json({ error: "Non autorisé." }, { status: 403 });
   }
 
-  if (isStorageConfigured()) {
-    const url = await presignDownload(file.storageKey);
-    // `redirect` lève NEXT_REDIRECT (307) - hors de tout try/catch pour propager.
-    redirect(url);
-  }
 
   // Repli disque : l'application sert les octets depuis sa propre origine, donc
   // elle décide seule de ce qui s'affiche en place (cf. `safeServing`) - jamais
   // la chaîne de type choisie au dépôt.
   try {
-    const buffer = await readLocal(file.storageKey);
+    const buffer = await readStored(file.storageKey);
     const { type, disposition } = safeServing(file.contentType);
     return new NextResponse(new Uint8Array(buffer), {
       headers: {

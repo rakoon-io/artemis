@@ -1,10 +1,9 @@
 import { contentDisposition, safeServing } from "@/lib/attachments";
 import { NextResponse } from "next/server";
-import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/session";
 import { canAccess } from "@/server/access";
 import { getAttachmentWithProject } from "@/server/services/attachment.service";
-import { isStorageConfigured, presignDownload, readLocal } from "@/lib/storage";
+import { readStored } from "@/lib/storage";
 
 /**
  * GET /api/attachments/[id] - sert la pièce jointe.
@@ -32,11 +31,6 @@ export async function GET(
     return NextResponse.json({ error: "Non autorisé." }, { status: 403 });
   }
 
-  if (isStorageConfigured()) {
-    const url = await presignDownload(attachment.storageKey);
-    // `redirect` lève NEXT_REDIRECT (307) - hors de tout try/catch pour propager.
-    redirect(url);
-  }
 
   /**
    * Repli local : c'est l'APPLICATION qui sert les octets, depuis sa propre
@@ -48,7 +42,7 @@ export async function GET(
    * déjà refusés à l'upload ». C'était vrai de quatre voies d'écriture sur cinq.
    */
   try {
-    const buffer = await readLocal(attachment.storageKey);
+    const buffer = await readStored(attachment.storageKey);
     const { type, disposition } = safeServing(attachment.contentType);
     return new NextResponse(new Uint8Array(buffer), {
       headers: {

@@ -4,7 +4,7 @@ import { canAccess } from "@/server/access";
 import { getWikiPage } from "@/server/services/wiki.service";
 import { wikiPresignSchema } from "@/lib/validators";
 import { isDangerousContentType } from "@/lib/attachments";
-import { isStorageConfigured, presignUpload, wikiFileKey } from "@/lib/storage";
+import { wikiFileKey } from "@/lib/storage";
 
 /**
  * POST /api/wiki-files/presign - prépare le dépôt d'une pièce jointe de page.
@@ -14,8 +14,8 @@ import { isStorageConfigured, presignUpload, wikiFileKey } from "@/lib/storage";
  * jamais reçue du client. « L'UI masque, le serveur impose. »
  *
  * Réponse : `{ url, storageKey, mode }`.
- *  - `mode: "s3"`    → PUT direct vers le stockage, puis confirmation ;
- *  - `mode: "local"` → PUT vers `/api/wiki-files/upload`, qui enregistre tout
+ *  - `mode: "proxy"` → PUT vers la route de dépôt de l'application ;
+ *  - `mode: "proxy"` → PUT vers `/api/wiki-files/upload`, qui enregistre tout
  *    d'un coup (pas d'aller-retour de confirmation).
  */
 export async function POST(request: Request): Promise<NextResponse> {
@@ -52,14 +52,10 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   const storageKey = wikiFileKey(pageId, filename);
-  if (isStorageConfigured()) {
-    const url = await presignUpload(storageKey, contentType);
-    return NextResponse.json({ url, storageKey, mode: "s3" });
-  }
   const params = new URLSearchParams({ key: storageKey, filename, contentType });
   return NextResponse.json({
     url: `/api/wiki-files/upload?${params.toString()}`,
     storageKey,
-    mode: "local",
+    mode: "proxy",
   });
 }

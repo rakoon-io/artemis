@@ -1,4 +1,4 @@
-import { declaredTooLarge, keyLooksIssued, localUploadDisabled } from "@/lib/upload-guard";
+import { declaredTooLarge, keyLooksIssued } from "@/lib/upload-guard";
 import { clientIp, isRateLimited, recordFailure } from "@/lib/rate-limit";
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/session";
@@ -6,13 +6,14 @@ import { canAccess } from "@/server/access";
 import { getWikiPage } from "@/server/services/wiki.service";
 import { createWikiAttachment } from "@/server/services/wiki-attachment.service";
 import { isDangerousContentType } from "@/lib/attachments";
-import { writeLocal } from "@/lib/storage";
+import { writeStored } from "@/lib/storage";
 
 const MAX_SIZE = 20 * 1024 * 1024; // 20 Mo
 
 /**
- * PUT /api/wiki-files/upload?key=&filename=&contentType= - réception en
- * STOCKAGE LOCAL (repli quand S3/MinIO n'est pas configuré).
+ * PUT /api/wiki-files/upload?key=&filename=&contentType= - réception d'un fichier
+ * de page de wiki. C'est le SERVEUR qui écrit dans le stockage, MinIO en
+ * production, disque en développement.
  *
  * Écrit le fichier ET enregistre ses métadonnées en un seul appel. Les contrôles
  * sont identiques à ceux du dépôt S3 suivi de sa confirmation : authentification,
@@ -26,14 +27,6 @@ export async function PUT(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
-  // Repli DISQUE uniquement : avec un stockage objet configuré, cette route
-  // n'a plus de raison d'être et ne doit pas offrir une seconde écriture.
-  if (localUploadDisabled()) {
-    return NextResponse.json(
-      { error: "Dépôt local désactivé (stockage objet configuré)." },
-      { status: 400 },
-    );
-  }
 
   // La taille ANNONCÉE suffit à refuser : lire le corps d'abord, c'est le
   // charger entier en mémoire avant de découvrir qu'il fait quatre gigaoctets.
@@ -85,7 +78,7 @@ export async function PUT(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Fichier trop volumineux." }, { status: 413 });
   }
 
-  await writeLocal(key, body);
+  await writeStored(key, new Uint8Array(body), contentType);
   const created = await createWikiAttachment({
     pageId: page.id,
     filename,

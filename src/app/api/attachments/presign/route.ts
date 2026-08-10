@@ -7,8 +7,6 @@ import { presignSchema } from "@/lib/validators";
 import { isDangerousContentType } from "@/lib/attachments";
 import {
   attachmentKey,
-  isStorageConfigured,
-  presignUpload,
 } from "@/lib/storage";
 
 /**
@@ -17,7 +15,8 @@ import {
  * l'entrée AVANT d'émettre l'URL. La clé de stockage est liée au ticket ciblé.
  *
  * Réponse : `{ url, storageKey, mode }`.
- * - `mode: "s3"`   → PUT direct vers S3 (URL presignée), puis `confirmAttachmentAction`.
+ * Renvoie l'adresse de la route de dépôt de l'application (`mode: "proxy"`) :
+ * le serveur écrit dans le stockage et crée la pièce jointe en un seul appel.
  * - `mode: "local"`→ PUT vers notre route `/api/attachments/upload`, qui **enregistre
  *   elle-même** la pièce jointe (pas de round-trip `confirm`). filename/contentType
  *   sont encodés dans l'URL pour éviter un aller-retour supplémentaire.
@@ -69,16 +68,13 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   const key = attachmentKey(ticketId, filename);
-  if (isStorageConfigured()) {
-    const url = await presignUpload(key, contentType);
-    return NextResponse.json({ url, storageKey: key, mode: "s3" });
-  }
-  // Fallback local (dev sans MinIO) : upload + enregistrement via notre route dédiée.
-  // filename/contentType voyagent dans l'URL ; la route les revalide (défense en profondeur).
+  // Le dépôt passe TOUJOURS par notre route : c'est le serveur qui écrit dans le
+  // stockage. `filename` et `contentType` voyagent dans l'URL, et la route les
+  // revalide - défense en profondeur, elle est appelable directement.
   const params = new URLSearchParams({ key, filename, contentType });
   return NextResponse.json({
     url: `/api/attachments/upload?${params.toString()}`,
     storageKey: key,
-    mode: "local",
+    mode: "proxy",
   });
 }

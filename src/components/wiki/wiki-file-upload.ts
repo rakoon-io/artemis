@@ -1,6 +1,5 @@
 "use client";
 
-import { confirmWikiAttachmentAction } from "@/server/actions/wiki-attachment.actions";
 
 /**
  * Dépôt d'un fichier sur une PAGE DE WIKI : préparation → PUT → (S3 :
@@ -73,11 +72,7 @@ export async function uploadWikiFile(
     }),
   });
   if (!presign.ok) return null;
-  const { url, storageKey, mode } = (await presign.json()) as {
-    url: string;
-    storageKey: string;
-    mode: "s3" | "local";
-  };
+  const { url } = (await presign.json()) as { url: string };
 
   const put = await fetch(url, {
     method: "PUT",
@@ -89,19 +84,8 @@ export async function uploadWikiFile(
   const filename = file.name || "fichier";
   const contentType = file.type || "application/octet-stream";
 
-  if (mode === "local") {
-    // La route locale a déjà tout enregistré : elle rend l'identifiant.
-    const { id } = (await put.json()) as { id: string };
-    return { id, filename, contentType };
-  }
-
-  const res = await confirmWikiAttachmentAction({
-    pageId,
-    filename,
-    contentType,
-    size: file.size,
-    storageKey,
-  });
-  if (!res.ok || !res.data) return null;
-  return { id: res.data.id, filename, contentType };
+  // La route de dépôt a écrit dans le stockage ET enregistré la pièce jointe :
+  // elle rend l'identifiant, il n'y a rien à confirmer.
+  const { id } = (await put.json()) as { id: string };
+  return { id, filename, contentType };
 }
