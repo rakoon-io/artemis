@@ -69,6 +69,21 @@ enum WikiSectionKind {
   IMPLEMENTATION
 }
 
+// Nature d'un lien entre deux tickets (cf. model TicketLink).
+//
+// Chaque lien est ORIENTÉ et n'est stocké QU'UNE FOIS : c'est ce qui permet de
+// dire « A bloque B » d'un côté et « B est bloqué par A » de l'autre sans jamais
+// avoir deux lignes à tenir d'accord. `RELATES` est symétrique : son libellé est
+// le même dans les deux sens, seule la lecture change de bout.
+//   BLOCKS     - la source empêche la cible d'avancer ;
+//   DUPLICATES - la source décrit la même demande que la cible ;
+//   RELATES    - simple voisinage, sans dépendance.
+enum TicketLinkType {
+  BLOCKS
+  DUPLICATES
+  RELATES
+}
+
 // Nature d'un composant applicatif (cf. model Component).
 //   PAGE    - un écran / une route de l'application ;
 //   SHARED  - un composant réutilisable (design system, widget partagé) ;
@@ -105,6 +120,7 @@ model User {
   wikiRevisions      WikiRevision[]
   wikiAttachments    WikiAttachment[]
   specVersions       SpecVersion[]
+  ticketLinks        TicketLink[]
 }
 
 // Jeton de premiere connexion / reinitialisation : lien a usage unique et date
@@ -322,6 +338,10 @@ model Ticket {
   labels      LabelOnTicket[]
   attachments Attachment[]
   comments    Comment[]
+  // Liens SORTANTS et ENTRANTS. Les deux sont nécessaires : une ligne unique
+  // décrit le lien, mais il se lit depuis ses deux extrémités.
+  linksOut    TicketLink[]    @relation("linkSource")
+  linksIn     TicketLink[]    @relation("linkTarget")
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
@@ -333,6 +353,39 @@ model Ticket {
   @@index([priorityId])
   @@index([componentId])
   @@index([moduleId])
+}
+
+// LIEN ENTRE DEUX TICKETS - « bloque », « doublon de », « lié à ».
+//
+// ─────────────────────────────────────────────────────────────────────────────
+// UNE SEULE LIGNE PAR LIEN
+//
+// Le lien est orienté et n'est écrit qu'une fois. La fiche de la source lit ses
+// `linksOut`, celle de la cible ses `linksIn`, et chacune affiche le libellé de
+// SON côté (« bloque » / « est bloqué par »). Écrire les deux sens aurait exigé
+// de les créer et de les supprimer ensemble, à jamais, sous peine d'une moitié
+// de dépendance affichée d'un seul bord.
+//
+// `onDelete: Cascade` des deux côtés : supprimer un ticket emporte ses liens.
+// Un lien vers un ticket disparu ne renseignerait plus rien.
+//
+// L'unicité porte sur (source, cible) SANS le type : deux tickets n'entretiennent
+// qu'une relation à la fois. Vouloir la changer, c'est remplacer l'existante, et
+// non en empiler une seconde qui contredirait la première.
+model TicketLink {
+  id          String         @id @default(cuid())
+  sourceId    String
+  source      Ticket         @relation("linkSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  targetId    String
+  target      Ticket         @relation("linkTarget", fields: [targetId], references: [id], onDelete: Cascade)
+  type        TicketLinkType
+  createdById String
+  createdBy   User           @relation(fields: [createdById], references: [id])
+  createdAt   DateTime       @default(now())
+
+  @@unique([sourceId, targetId])
+  @@index([sourceId])
+  @@index([targetId])
 }
 
 model Sprint {

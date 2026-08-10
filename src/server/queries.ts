@@ -10,6 +10,7 @@ import * as moduleService from "./services/module.service";
 import * as projectService from "./services/project.service";
 import * as sprintService from "./services/sprint.service";
 import * as ticketService from "./services/ticket.service";
+import * as ticketLinkService from "./services/ticket-link.service";
 import * as ticketPriorityService from "./services/ticketpriority.service";
 import * as ticketTypeService from "./services/tickettype.service";
 import * as userService from "./services/user.service";
@@ -94,6 +95,16 @@ export function getTicketsList(projectId: string, filters: TicketFilters = {}) {
 
 export function getTicketDetail(id: string) {
   return ticketService.getTicketById(id);
+}
+
+/** Liens d'un ticket, sortants et entrants confondus (cf. `resolveLinks`). */
+export function getTicketLinks(ticketId: string) {
+  return ticketLinkService.listLinksForTicket(ticketId);
+}
+
+/** Tickets du projet auxquels se lier : ni celui-ci, ni ceux déjà liés. */
+export function getLinkCandidates(projectId: string, ticketId: string) {
+  return ticketLinkService.listLinkCandidates(projectId, ticketId);
 }
 
 export function getSprints(projectId: string) {

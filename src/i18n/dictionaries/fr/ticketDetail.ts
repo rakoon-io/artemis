@@ -60,6 +60,27 @@ export const ticketDetail = {
   // Interpolé dans « Modifier {field} » (libellé du bouton de retouche).
   commentField: "le commentaire",
 
+  // ── Tickets liés ───────────────────────────────────────────────────────────
+  // Les libellés se lisent APRÈS la clef du ticket courant : « QUA-5 est bloqué
+  // par QUA-50 ». D'où la forme conjuguée plutôt que nominale.
+  links: {
+    title: "Tickets liés ({count})",
+    labels: {
+      blocks: "bloque",
+      blockedBy: "est bloqué par",
+      duplicates: "doublon de",
+      duplicatedBy: "a pour doublon",
+      relates: "lié à",
+    },
+    typeLabel: "Nature du lien",
+    searchPlaceholder: "Chercher un ticket (clef ou titre)…",
+    noMatch: "Aucun ticket ne correspond.",
+    empty: "Aucun ticket lié.",
+    remove: "Retirer ce lien",
+    added: "Lien ajouté.",
+    removed: "Lien retiré.",
+  },
+
   // Suppression du ticket
   deleteTitle: "Supprimer ce ticket ?",
   deleteDescription:

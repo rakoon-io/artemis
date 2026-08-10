@@ -499,3 +499,18 @@ export const instanceSettingsSchema = z.object({
     .regex(/^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}))?$/, "Couleur hexadécimale attendue (ex. #c2410c).")
     .optional(),
 });
+
+/**
+ * Lien entre deux tickets. Le type est validé contre l'énumération Prisma :
+ * une valeur inconnue arrivant du client doit être refusée ici, pas découverte
+ * par la contrainte de la base.
+ */
+export const createTicketLinkSchema = z.object({
+  sourceId: z.string().min(1),
+  targetId: z.string().min(1, "Choisissez le ticket à lier."),
+  type: z.enum(["BLOCKS", "DUPLICATES", "RELATES"]),
+});
+
+export const deleteTicketLinkSchema = z.object({
+  id: z.string().min(1),
+});

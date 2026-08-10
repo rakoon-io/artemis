@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TicketTemplate } from "@prisma/client";
-import { ArrowLeft, BookOpen, Paperclip } from "lucide-react";
+import { ArrowLeft, BookOpen, Link2, Paperclip } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,9 @@ import {
   getModules,
   getReleases,
   getSprints,
+  getLinkCandidates,
   getTicketDetail,
+  getTicketLinks,
   getTicketPriorities,
   getPagesDocumenting,
   getTicketRefs,
@@ -59,6 +61,8 @@ import {
 } from "@/components/ticket/ticket-inline-fields";
 import { TicketDescription } from "@/components/ticket/ticket-description";
 import { TicketAttachments } from "@/components/ticket/ticket-attachments";
+import { TicketLinks } from "@/components/ticket/ticket-links";
+import { resolveLinks } from "@/lib/ticket-links";
 import { fmt } from "@/i18n";
 import { getDictionary } from "@/i18n/server";
 
@@ -125,6 +129,26 @@ export async function TicketDetail({
     moduleIds: ticketModule ? [ticketModule.id] : [],
     componentIds: ticket.component ? [ticket.component.id] : [],
   });
+
+  // TICKETS LIÉS. Les liens se lisent des deux bouts ; `resolveLinks` les
+  // retourne déjà vus depuis CE ticket, l'affichage n'a donc pas à savoir de
+  // quel côté la ligne a été écrite. Les candidats ne sont chargés que si l'on
+  // peut lier : les proposer à qui ne peut rien en faire serait une liste morte.
+  const [storedLinks, linkCandidates] = await Promise.all([
+    getTicketLinks(ticket.id),
+    canEdit ? getLinkCandidates(ticket.projectId, ticket.id) : [],
+  ]);
+  const links = resolveLinks(ticket.id, storedLinks).map((l) => ({
+    id: l.id,
+    labelKey: l.labelKey,
+    blocking: l.blocking,
+    other: {
+      id: l.other.id,
+      key: l.other.key,
+      title: l.other.title,
+      columnName: l.other.column.name,
+    },
+  }));
 
   let editData:
     | {
@@ -299,6 +323,28 @@ export async function TicketDetail({
               </CardHeader>
               <CardContent>
                 <DocumentingPages pages={docs} projectKey={project.key} />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Les liens n'apparaissent que s'il y en a, ou si l'on peut en poser :
+              une carte vide sur chaque ticket serait du bruit permanent. */}
+          {(links.length > 0 || canEdit) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Link2 className="size-4" />
+                  {fmt(t.ticketDetail.links.title, { count: links.length })}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TicketLinks
+                  ticketId={ticket.id}
+                  projectKey={project.key}
+                  links={links}
+                  candidates={linkCandidates}
+                  canEdit={canEdit}
+                />
               </CardContent>
             </Card>
           )}

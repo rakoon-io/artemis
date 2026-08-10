@@ -57,6 +57,25 @@ export const ticketDetail: TicketDetailDict = {
   commentEdited: "edited",
   commentField: "the comment",
 
+  // ── Linked tickets ─────────────────────────────────────────────────────────
+  links: {
+    title: "Linked tickets ({count})",
+    labels: {
+      blocks: "blocks",
+      blockedBy: "is blocked by",
+      duplicates: "duplicates",
+      duplicatedBy: "is duplicated by",
+      relates: "relates to",
+    },
+    typeLabel: "Link type",
+    searchPlaceholder: "Search a ticket (key or title)…",
+    noMatch: "No ticket matches.",
+    empty: "No linked ticket.",
+    remove: "Remove this link",
+    added: "Link added.",
+    removed: "Link removed.",
+  },
+
   // Ticket deletion
   deleteTitle: "Delete this ticket?",
   deleteDescription:
