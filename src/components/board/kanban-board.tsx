@@ -422,7 +422,33 @@ export function KanbanBoard({
           onDragEnd={handleDragEnd}
           onDragCancel={() => setActiveId(null)}
         >
-          <div className="slim-scrollbar flex min-h-0 flex-1 gap-4 overflow-x-auto pb-2">
+          {/**
+           * `overflow-y-hidden` EXPLICITE, à côté de `overflow-x-auto`.
+           *
+           * ─────────────────────────────────────────────────────────────────
+           * CE QUE CETTE LIGNE RÉPARE
+           *
+           * Demander `overflow-x: auto` ne laisse pas l'autre axe tranquille :
+           * CSS interdit qu'un axe soit `visible` quand l'autre ne l'est pas,
+           * et calcule donc `overflow-y: auto`. La rangée devenait un conteneur
+           * de défilement VERTICAL sans qu'on l'ait demandé.
+           *
+           * Mesuré sur le tableau du projet QUA : rangée de 749 px annonçant
+           * 3615 px de défilement vertical, soit près de cinq hauteurs de vide.
+           * On y faisait défiler les colonnes hors de l'écran pour ne découvrir
+           * que du blanc, sans jamais rien y trouver.
+           *
+           * ─────────────────────────────────────────────────────────────────
+           * POURQUOI CELA NE CACHE RIEN
+           *
+           * Chaque colonne est bornée à la hauteur de la rangée (`h-full`) et
+           * sa liste de cartes porte son PROPRE `overflow-y-auto`. Vérifié sur
+           * les cinq colonnes : toutes à 741 px, toutes clippant leur contenu -
+           * « En revue » comprise, avec ses 4429 px de cartes. Le défilement
+           * vertical appartient donc aux listes, jamais à la rangée : ici, il
+           * ne pouvait révéler que du vide.
+           */}
+          <div className="slim-scrollbar flex min-h-0 flex-1 gap-4 overflow-x-auto overflow-y-hidden pb-2">
             {columns.map((column, index) => (
               <BoardColumn
                 key={column.id}
