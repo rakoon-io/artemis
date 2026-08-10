@@ -23,6 +23,10 @@ export function listSprintsWithTickets(projectId: string) {
     where: { projectId },
     orderBy: { createdAt: "desc" },
     include: {
+      // La VERSION dans laquelle sort ce sprint. L'information vit sur la page
+      // Versions, où on la pose ; elle doit aussi se lire ici, sinon on ne
+      // saurait pas, devant une itération, où son travail atterrit.
+      release: { select: { id: true, name: true } },
       tickets: {
         orderBy: { rank: "asc" },
         select: {
@@ -104,9 +108,46 @@ export async function deleteSprint(id: string) {
   });
 }
 
-export function assignTicketToSprint(ticketId: string, sprintId: string | null) {
+export function assignTicketToSprint(
+  ticketId: string,
+  sprintId: string | null,
+) {
   return prisma.ticket.update({
     where: { id: ticketId },
     data: { sprintId },
+  });
+}
+
+/**
+ * Rattache un sprint à une version, ou l'en détache (`releaseId` nul).
+ *
+ * Aucune donnée de ticket n'est déplacée : l'appartenance se DÉDUIT du lien
+ * (cf. `@/lib/release-scope`). Rattacher puis détacher laisse donc les tickets
+ * exactement comme ils étaient, ce qui ne serait pas vrai d'une recopie.
+ */
+export function setSprintRelease(id: string, releaseId: string | null) {
+  return prisma.sprint.update({ where: { id }, data: { releaseId } });
+}
+
+/** Sprint réduit à ce qui décide de son rattachement (garde d'accès + règle). */
+export function getSprintScope(id: string) {
+  return prisma.sprint.findUnique({
+    where: { id },
+    select: { id: true, projectId: true, releaseId: true },
+  });
+}
+
+/** Sprints du projet et leur version, pour proposer un rattachement. */
+export function listSprintsForRelease(projectId: string) {
+  return prisma.sprint.findMany({
+    where: { projectId },
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      name: true,
+      state: true,
+      releaseId: true,
+      _count: { select: { tickets: true } },
+    },
   });
 }

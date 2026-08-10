@@ -107,6 +107,11 @@ export function getLinkCandidates(projectId: string, ticketId: string) {
   return ticketLinkService.listLinkCandidates(projectId, ticketId);
 }
 
+/** Sprints du projet avec leur version : rattachement depuis la page Versions. */
+export function getSprintsForRelease(projectId: string) {
+  return sprintService.listSprintsForRelease(projectId);
+}
+
 export function getSprints(projectId: string) {
   return sprintService.listSprints(projectId);
 }

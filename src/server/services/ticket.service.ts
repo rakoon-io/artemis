@@ -78,7 +78,10 @@ export interface CreateTicketServiceInput {
  * Transaction : incrémente `ticketSeq`, calcule `number`/`key`, place en fin de
  * colonne (`rankAfter` du dernier rang), applique les labels.
  */
-export function createTicket(input: CreateTicketServiceInput, reporterId: string) {
+export function createTicket(
+  input: CreateTicketServiceInput,
+  reporterId: string,
+) {
   return prisma.$transaction(async (tx) => {
     const project = await tx.project.update({
       where: { id: input.projectId },
@@ -138,7 +141,8 @@ export function createTicket(input: CreateTicketServiceInput, reporterId: string
         orderBy: { order: "asc" },
         select: { id: true },
       });
-      if (!firstPriority) throw new Error("Le projet ne possède aucune priorité.");
+      if (!firstPriority)
+        throw new Error("Le projet ne possède aucune priorité.");
       priorityId = firstPriority.id;
     }
 
@@ -208,7 +212,10 @@ export function createTicket(input: CreateTicketServiceInput, reporterId: string
       requestedLabelIds.length > 0
         ? (
             await tx.label.findMany({
-              where: { id: { in: requestedLabelIds }, projectId: input.projectId },
+              where: {
+                id: { in: requestedLabelIds },
+                projectId: input.projectId,
+              },
               select: { id: true },
             })
           ).map((l) => l.id)
@@ -272,7 +279,10 @@ const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
 
 /** Liste paginée (tri `updatedAt desc`) avec filtres et recherche titre/description. */
-export async function listTickets(projectId: string, filters: TicketFilters = {}) {
+export async function listTickets(
+  projectId: string,
+  filters: TicketFilters = {},
+) {
   const page = Math.max(1, filters.page ?? 1);
   const pageSize = Math.min(
     MAX_PAGE_SIZE,
@@ -287,12 +297,24 @@ export async function listTickets(projectId: string, filters: TicketFilters = {}
     ...(filters.componentId ? { componentId: filters.componentId } : {}),
     ...(filters.sprintId ? { sprintId: filters.sprintId } : {}),
     ...(filters.columnId ? { columnId: filters.columnId } : {}),
-    ...(filters.labelId ? { labels: { some: { labelId: filters.labelId } } } : {}),
+    ...(filters.labelId
+      ? { labels: { some: { labelId: filters.labelId } } }
+      : {}),
     ...(filters.q
       ? {
           OR: [
-            { title: { contains: filters.q, mode: Prisma.QueryMode.insensitive } },
-            { description: { contains: filters.q, mode: Prisma.QueryMode.insensitive } },
+            {
+              title: {
+                contains: filters.q,
+                mode: Prisma.QueryMode.insensitive,
+              },
+            },
+            {
+              description: {
+                contains: filters.q,
+                mode: Prisma.QueryMode.insensitive,
+              },
+            },
           ],
         }
       : {}),
@@ -387,9 +409,21 @@ export function listBacklogTickets(projectId: string) {
  * `column.order` en plus du nom : la vue distingue ce qui est achevé du reste,
  * et se fie au rang de la colonne, jamais à son intitulé.
  */
+/**
+ * Tickets qui ne sortent dans AUCUNE version - la réserve, à droite de la page.
+ *
+ * « Sans version » ne veut plus dire « sans `releaseId` » : depuis qu'un sprint
+ * peut être rattaché à une version, ses tickets en font partie sans porter le
+ * champ. Les laisser ici les afficherait à deux endroits à la fois, dans une
+ * version ET dans ce qui reste à ranger.
+ */
 export function listTicketsWithoutRelease(projectId: string) {
   return prisma.ticket.findMany({
-    where: { projectId, releaseId: null },
+    where: {
+      projectId,
+      releaseId: null,
+      OR: [{ sprintId: null }, { sprint: { releaseId: null } }],
+    },
     orderBy: { updatedAt: "desc" },
     select: {
       id: true,
@@ -611,7 +645,9 @@ export function updateTicket(input: UpdateTicketServiceInput) {
       where: { id },
       data: {
         ...(rest.title !== undefined ? { title: rest.title } : {}),
-        ...(rest.description !== undefined ? { description: rest.description } : {}),
+        ...(rest.description !== undefined
+          ? { description: rest.description }
+          : {}),
         ...(typeId !== undefined ? { typeId } : {}),
         ...(priorityId !== undefined ? { priorityId } : {}),
         ...(componentId !== undefined ? { componentId } : {}),
@@ -657,7 +693,9 @@ export function setTicketLabels(ticketId: string, labelIds: string[]) {
  * atterrirait au milieu de la colonne, à un rang calculé entre deux bords
  * absents.
  */
-export async function lastRankInColumn(columnId: string): Promise<string | null> {
+export async function lastRankInColumn(
+  columnId: string,
+): Promise<string | null> {
   const last = await prisma.ticket.findFirst({
     where: { columnId },
     orderBy: { rank: "desc" },

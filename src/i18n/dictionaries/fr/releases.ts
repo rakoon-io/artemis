@@ -56,6 +56,17 @@ export const releases = {
 
   ticketField: "Version",
   noRelease: "Aucune version",
+  // ── Sprints rattachés ──────────────────────────────────────────────────────
+  // Rattacher un sprint fait entrer ses tickets dans la version sans qu'on les y
+  // range : le contenu hérité doit se signaler, sinon on chercherait en vain
+  // pourquoi un ticket figure là.
+  sprints: "Sprints :",
+  noSprint: "aucun",
+  attachSprint: "Rattacher un sprint",
+  detachSprint: "Détacher {name}",
+  sprintAttached: "Sprint rattaché à la version.",
+  sprintDetached: "Sprint détaché de la version.",
+  fromSprint: "Hérité du sprint {name}",
 };
 
 export type ReleasesDict = typeof releases;

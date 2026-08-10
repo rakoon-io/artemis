@@ -46,10 +46,17 @@ export const releases: ReleasesDict = {
 
   remove: "Delete",
   removeTitle: "Delete “{name}”?",
-  removeDescription:
-    "Tickets are not deleted: they simply lose their version.",
+  removeDescription: "Tickets are not deleted: they simply lose their version.",
   removed: "Version deleted.",
 
   ticketField: "Version",
   noRelease: "No version",
+  // ── Attached sprints ───────────────────────────────────────────────────────
+  sprints: "Sprints:",
+  noSprint: "none",
+  attachSprint: "Attach a sprint",
+  detachSprint: "Detach {name}",
+  sprintAttached: "Sprint attached to the version.",
+  sprintDetached: "Sprint detached from the version.",
+  fromSprint: "Inherited from sprint {name}",
 };

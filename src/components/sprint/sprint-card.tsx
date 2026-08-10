@@ -13,6 +13,7 @@ import {
   GripVertical,
   Loader2,
   Play,
+  Rocket,
   RotateCcw,
   Trash2,
 } from "lucide-react";
@@ -250,7 +251,10 @@ export function SprintTicketItem({
         />
         {ticket.priority.name}
       </span>
-      <Badge variant="outline" className="hidden shrink-0 font-normal sm:inline-flex">
+      <Badge
+        variant="outline"
+        className="hidden shrink-0 font-normal sm:inline-flex"
+      >
         {ticket.column.name}
       </Badge>
       <TicketSprintMenu
@@ -275,7 +279,8 @@ export function SprintCard({
   sprintOptions,
   currentUser,
 }: {
-  sprint: Sprint;
+  /** Le sprint, avec la version dans laquelle son travail sort (facultative). */
+  sprint: Sprint & { release?: { id: string; name: string } | null };
   tickets: SprintTicketRow[];
   projectKey: string;
   sprintOptions: SprintChoice[];
@@ -331,6 +336,15 @@ export function SprintCard({
               {tickets.length > 1 ? t.sprints.ticketOther : t.sprints.ticketOne}
             </Badge>
             <Badge variant={meta.variant}>{t.sprints[meta.labelKey]}</Badge>
+            {/* OÙ CE TRAVAIL SORT. Le rattachement se pose sur la page
+                Versions ; ne l'afficher que là-bas obligerait à y aller pour
+                savoir ce que devient une itération. */}
+            {sprint.release && (
+              <Badge variant="outline" className="gap-1 font-normal">
+                <Rocket className="size-3" aria-hidden />
+                {sprint.release.name}
+              </Badge>
+            )}
           </div>
         </div>
         {/* Nom, objectif et dates s'éditent EN PLACE, là où on les lit. Il n'y a
@@ -374,100 +388,102 @@ export function SprintCard({
         </TicketDropZone>
       </CardContent>
       <CardFooter className="gap-2">
-          {sprint.state === SprintState.PLANNED && (
-            <Button
-              type="button"
-              size="sm"
-              onClick={() =>
-                changeState(
-                  SprintState.ACTIVE,
-                  fmt(t.sprints.toastStarted, { name: sprint.name }),
-                )
-              }
-              disabled={pending}
-            >
-              {pending ? <Loader2 className="animate-spin" /> : <Play />}
-              {t.sprints.startAction}
-            </Button>
-          )}
-          {sprint.state === SprintState.ACTIVE && (
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              onClick={() =>
-                changeState(
-                  SprintState.COMPLETED,
-                  fmt(t.sprints.toastCompleted, { name: sprint.name }),
-                )
-              }
-              disabled={pending}
-            >
-              {pending ? <Loader2 className="animate-spin" /> : <Flag />}
-              {t.sprints.closeAction}
-            </Button>
-          )}
-          {sprint.state === SprintState.COMPLETED && (
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              onClick={() =>
-                changeState(
-                  SprintState.ACTIVE,
-                  fmt(t.sprints.toastReopened, { name: sprint.name }),
-                )
-              }
-              disabled={pending}
-            >
-              {pending ? <Loader2 className="animate-spin" /> : <RotateCcw />}
-              {t.sprints.reopen}
-            </Button>
-          )}
-          <Dialog
-            open={deleteOpen}
-            onOpenChange={(next) => !pending && setDeleteOpen(next)}
+        {sprint.state === SprintState.PLANNED && (
+          <Button
+            type="button"
+            size="sm"
+            onClick={() =>
+              changeState(
+                SprintState.ACTIVE,
+                fmt(t.sprints.toastStarted, { name: sprint.name }),
+              )
+            }
+            disabled={pending}
           >
-            <DialogTrigger asChild>
+            {pending ? <Loader2 className="animate-spin" /> : <Play />}
+            {t.sprints.startAction}
+          </Button>
+        )}
+        {sprint.state === SprintState.ACTIVE && (
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={() =>
+              changeState(
+                SprintState.COMPLETED,
+                fmt(t.sprints.toastCompleted, { name: sprint.name }),
+              )
+            }
+            disabled={pending}
+          >
+            {pending ? <Loader2 className="animate-spin" /> : <Flag />}
+            {t.sprints.closeAction}
+          </Button>
+        )}
+        {sprint.state === SprintState.COMPLETED && (
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={() =>
+              changeState(
+                SprintState.ACTIVE,
+                fmt(t.sprints.toastReopened, { name: sprint.name }),
+              )
+            }
+            disabled={pending}
+          >
+            {pending ? <Loader2 className="animate-spin" /> : <RotateCcw />}
+            {t.sprints.reopen}
+          </Button>
+        )}
+        <Dialog
+          open={deleteOpen}
+          onOpenChange={(next) => !pending && setDeleteOpen(next)}
+        >
+          <DialogTrigger asChild>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="ml-auto text-muted-foreground hover:text-destructive"
+              aria-label={fmt(t.sprints.deleteSprintAria, {
+                name: sprint.name,
+              })}
+            >
+              <Trash2 />
+              {t.common.delete}
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {fmt(t.sprints.deleteTitle, { name: sprint.name })}
+              </DialogTitle>
+              <DialogDescription>
+                {t.sprints.deleteDescription}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="outline" disabled={pending}>
+                  {t.common.cancel}
+                </Button>
+              </DialogClose>
               <Button
                 type="button"
-                size="sm"
-                variant="ghost"
-                className="ml-auto text-muted-foreground hover:text-destructive"
-                aria-label={fmt(t.sprints.deleteSprintAria, { name: sprint.name })}
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={pending}
               >
-                <Trash2 />
+                {pending && <Loader2 className="animate-spin" />}
                 {t.common.delete}
               </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>
-                  {fmt(t.sprints.deleteTitle, { name: sprint.name })}
-                </DialogTitle>
-                <DialogDescription>
-                  {t.sprints.deleteDescription}
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button type="button" variant="outline" disabled={pending}>
-                    {t.common.cancel}
-                  </Button>
-                </DialogClose>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={handleDelete}
-                  disabled={pending}
-                >
-                  {pending && <Loader2 className="animate-spin" />}
-                  {t.common.delete}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </CardFooter>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </CardFooter>
     </Card>
   );
 }

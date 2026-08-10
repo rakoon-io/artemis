@@ -6,6 +6,7 @@ import { getAccessibleProjectByKey } from "@/server/access";
 import {
   getColumns,
   getReleasesWithTickets,
+  getSprintsForRelease,
   getTicketsWithoutRelease,
 } from "@/server/queries";
 import { Badge } from "@/components/ui/badge";
@@ -35,10 +36,13 @@ export default async function VersionsPage({
   const project = await getAccessibleProjectByKey(session?.user, key);
   if (!project) notFound();
 
-  const [releases, columns, unassigned] = await Promise.all([
+  const [releases, columns, unassigned, sprintOptions] = await Promise.all([
     getReleasesWithTickets(project.id),
     getColumns(project.id),
     getTicketsWithoutRelease(project.id),
+    // Sprints du projet et leur version : de quoi en rattacher un, et savoir
+    // lesquels sortent déjà ailleurs.
+    getSprintsForRelease(project.id),
   ]);
 
   /**
@@ -105,6 +109,7 @@ export default async function VersionsPage({
                         release={release}
                         projectKey={project.key}
                         lastColumnOrder={lastColumnOrder}
+                        sprintOptions={sprintOptions}
                         late={release.late}
                       />
                     ))}

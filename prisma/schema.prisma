@@ -397,10 +397,21 @@ model Sprint {
   state     SprintState @default(PLANNED)
   startDate DateTime?
   endDate   DateTime?
+  // VERSION dans laquelle sort le travail de cette itération.
+  //
+  // Un sprint sort dans UNE version au plus, une version peut absorber
+  // PLUSIEURS sprints : c'est le sens ordinaire du travail, une livraison
+  // rassemblant souvent plusieurs itérations, jamais l'inverse.
+  //
+  // `SetNull` : supprimer une version ne doit pas emporter l'itération, qui a
+  // eu lieu de toute façon.
+  releaseId String?
+  release   Release?    @relation(fields: [releaseId], references: [id], onDelete: SetNull)
   createdAt DateTime    @default(now())
   tickets   Ticket[]
 
   @@index([projectId])
+  @@index([releaseId])
 }
 
 // VERSION du produit - « 1.2.0 ». Ce qu'on LIVRE, là où le sprint dit quand on
@@ -424,6 +435,9 @@ model Release {
   releasedAt  DateTime?
   createdAt   DateTime     @default(now())
   tickets     Ticket[]
+  // Itérations dont le travail sort dans cette version. Un ticket de ces
+  // sprints appartient à la version SANS avoir à y être rattaché un par un.
+  sprints     Sprint[]
 
   // Deux versions d'un même nom dans un projet n'auraient aucun sens, et
   // rendraient toute référence ambiguë.

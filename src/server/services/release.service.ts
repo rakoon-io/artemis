@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { ReleaseState } from "@prisma/client";
 import { isReleaseLate } from "@/lib/release-progress";
+import { releaseContent } from "@/lib/release-scope";
 
 /**
  * Service VERSION - accès données pur (`Release` en base, « version » à l'écran).
@@ -52,24 +53,53 @@ export async function listReleasesWithTickets(projectId: string) {
       { createdAt: "asc" },
     ],
     include: {
-      tickets: {
-        orderBy: { rank: "asc" },
+      tickets: { orderBy: { rank: "asc" }, select: TICKET_DE_VERSION },
+      // Les SPRINTS rattachés apportent leur contenu. `releaseId: null` dans le
+      // filtre applique la règle « le rattachement explicite l'emporte » au plus
+      // près de la donnée : un ticket rangé à la main ailleurs n'est jamais
+      // ramené ici, et n'a donc pas à être écarté ensuite.
+      sprints: {
+        orderBy: { createdAt: "asc" },
         select: {
           id: true,
-          key: true,
-          title: true,
-          columnId: true,
-          column: { select: { name: true, order: true } },
-          type: { select: { name: true, color: true } },
-          priority: { select: { name: true, color: true } },
-          assignee: { select: { name: true, email: true } },
+          name: true,
+          state: true,
+          tickets: {
+            where: { releaseId: null },
+            orderBy: { rank: "asc" },
+            select: TICKET_DE_VERSION,
+          },
         },
       },
     },
   });
   const now = Date.now();
-  return rows.map((release) => ({ ...release, late: isReleaseLate(release, now) }));
+  return rows.map((release) => ({
+    ...release,
+    // Le contenu réunit les deux provenances et les dédoublonne (cf. `releaseContent`).
+    tickets: releaseContent(release.tickets, release.sprints),
+    sprints: release.sprints.map(({ id, name, state, tickets }) => ({
+      id,
+      name,
+      state,
+      count: tickets.length,
+    })),
+    late: isReleaseLate(release, now),
+  }));
 }
+
+/** Ce qu'une ligne de version affiche d'un ticket, quelle que soit sa provenance. */
+const TICKET_DE_VERSION = {
+  id: true,
+  key: true,
+  title: true,
+  columnId: true,
+  releaseId: true,
+  column: { select: { name: true, order: true } },
+  type: { select: { name: true, color: true } },
+  priority: { select: { name: true, color: true } },
+  assignee: { select: { name: true, email: true } },
+} as const;
 
 /** Projet d'une version (pour la garde d'accès des actions). */
 export function getReleaseProjectId(id: string): Promise<string | null> {
@@ -104,7 +134,9 @@ export function updateRelease(data: {
     where: { id: data.id },
     data: {
       ...(data.name !== undefined ? { name: data.name } : {}),
-      ...(data.description !== undefined ? { description: data.description } : {}),
+      ...(data.description !== undefined
+        ? { description: data.description }
+        : {}),
       ...(data.dueDate !== undefined
         ? { dueDate: data.dueDate ? new Date(data.dueDate) : null }
         : {}),

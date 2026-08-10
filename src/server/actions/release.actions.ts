@@ -10,6 +10,11 @@ import {
   setReleaseState,
   updateRelease,
 } from "@/server/services/release.service";
+import {
+  getSprintScope,
+  setSprintRelease,
+} from "@/server/services/sprint.service";
+import { sprintAssignable } from "@/lib/release-scope";
 import { revalidateBoardAndList, withUser, type SessionUser } from "./helpers";
 import type { ActionResult } from "./types";
 
@@ -81,5 +86,52 @@ export async function deleteReleaseAction(
     await deleteRelease(id);
     revalidateBoardAndList();
     return { ok: true, data: { id } };
+  });
+}
+
+/**
+ * RATTACHE UN SPRINT À UNE VERSION, ou l'en détache (`releaseId` nul).
+ *
+ * Ce que cela déplace : rien. L'appartenance des tickets se DÉDUIT du lien (cf.
+ * `@/lib/release-scope`), si bien que rattacher puis détacher rend la version à
+ * son état d'avant. Une recopie des `releaseId` aurait, elle, laissé des traces
+ * qu'il aurait fallu défaire à la main.
+ *
+ * Deux refus, portés par le serveur :
+ * - le sprint et la version doivent appartenir au MÊME projet, sans quoi une
+ *   version afficherait le travail d'un projet auquel son lecteur n'a pas accès ;
+ * - un sprint déjà rattaché AILLEURS n'est pas volé en silence : on le détache
+ *   d'abord, ce qui est un geste conscient (cf. `sprintAssignable`).
+ */
+export async function setSprintReleaseAction(
+  sprintId: string,
+  releaseId: string | null,
+): Promise<ActionResult> {
+  return withUser(async (user) => {
+    const sprint = await getSprintScope(sprintId);
+    if (!sprint) return { ok: false, error: "Sprint introuvable." };
+    await assertProjectAccess(user, sprint.projectId);
+
+    if (releaseId) {
+      const projectId = await assertReleaseAccess(user, releaseId);
+      if (!projectId) return { ok: false, error: "Version introuvable." };
+      if (projectId !== sprint.projectId) {
+        return {
+          ok: false,
+          error: "Le sprint et la version doivent appartenir au même projet.",
+        };
+      }
+      if (!sprintAssignable(sprint, releaseId)) {
+        return {
+          ok: false,
+          error:
+            "Ce sprint sort déjà dans une autre version. Détachez-le d'abord.",
+        };
+      }
+    }
+
+    await setSprintRelease(sprintId, releaseId);
+    revalidateBoardAndList();
+    return { ok: true, data: undefined };
   });
 }

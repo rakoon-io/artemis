@@ -4,17 +4,38 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { CalendarDays, CheckCircle2, Loader2, RotateCcw, Trash2 } from "lucide-react";
+import {
+  CalendarDays,
+  CheckCircle2,
+  Loader2,
+  Repeat,
+  RotateCcw,
+  Trash2,
+  X,
+} from "lucide-react";
 import { ReleaseState } from "@prisma/client";
 import {
   deleteReleaseAction,
   setReleaseStateAction,
+  setSprintReleaseAction,
 } from "@/server/actions/release.actions";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from "@/components/ui/card";
 import { countDone } from "@/lib/release-progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogClose,
@@ -34,11 +55,18 @@ import {
   ReleaseNotesInline,
 } from "./release-inline-fields";
 
-/** Ticket rattaché à une version, réduit à ce que la carte affiche. */
+/** Ticket d'une version, réduit à ce que la carte affiche. */
 export interface ReleaseTicketRow {
   id: string;
   key: string;
   title: string;
+  /**
+   * D'où vient son appartenance : rangé à la main dans la version, ou hérité
+   * d'un sprint qu'on y a rattaché. Affiché, parce que c'est la première
+   * question devant une version qui contient plus que ce qu'on y a mis.
+   */
+  origin?: "DIRECT" | "SPRINT";
+  fromSprint?: { id: string; name: string };
   column: { name: string; order: number };
   type: { name: string; color: string };
   priority: { name: string; color: string };
@@ -76,6 +104,20 @@ function ProgressBar({ done, total }: { done: number; total: number }) {
   );
 }
 
+/** Sprint rattaché à une version, tel que la carte le montre. */
+export interface ReleaseSprintRow {
+  id: string;
+  name: string;
+  count: number;
+}
+
+/** Sprint du projet proposé au rattachement. */
+export interface SprintOption {
+  id: string;
+  name: string;
+  releaseId: string | null;
+}
+
 export interface ReleaseRow {
   id: string;
   name: string;
@@ -84,6 +126,7 @@ export interface ReleaseRow {
   dueDate: Date | null;
   releasedAt: Date | null;
   tickets: ReleaseTicketRow[];
+  sprints: ReleaseSprintRow[];
 }
 
 /**
@@ -101,10 +144,13 @@ export function ReleaseCard({
   release,
   projectKey,
   lastColumnOrder,
+  sprintOptions = [],
   late = false,
 }: {
   release: ReleaseRow;
   projectKey: string;
+  /** Sprints du projet, pour en rattacher un. Vide = pas de sprint dans ce projet. */
+  sprintOptions?: SprintOption[];
   /** Rang de la dernière colonne : ce qui l'atteint est achevé. */
   lastColumnOrder: number;
   /**
@@ -163,9 +209,14 @@ export function ReleaseCard({
           <span className="flex items-center gap-1.5">
             <CalendarDays className="size-4 shrink-0" aria-hidden />
             {released ? (
-              fmt(t.releases.releasedOn, { date: formatDate(release.releasedAt) })
+              fmt(t.releases.releasedOn, {
+                date: formatDate(release.releasedAt),
+              })
             ) : (
-              <ReleaseDueDateInline releaseId={release.id} value={release.dueDate} />
+              <ReleaseDueDateInline
+                releaseId={release.id}
+                value={release.dueDate}
+              />
             )}
           </span>
           {late && (
@@ -174,6 +225,16 @@ export function ReleaseCard({
             </Badge>
           )}
         </div>
+
+        {/* CE QUE LA VERSION EMBARQUE PAR ITÉRATION. Placé avec la date et
+            l'avancement, c'est-à-dire dans ce qui décrit la version, et non
+            dans son contenu : un sprint rattaché explique le contenu, il n'en
+            fait pas partie. */}
+        <ReleaseSprints
+          release={release}
+          sprintOptions={sprintOptions}
+          disabled={released}
+        />
 
         {total > 0 && <ProgressBar done={done} total={total} />}
       </CardHeader>
@@ -205,6 +266,19 @@ export function ReleaseCard({
                 >
                   {ticket.title}
                 </Link>
+                {/* Hérité d'un sprint : on le DIT, sinon on chercherait en vain
+                    pourquoi ce ticket figure là sans y avoir été rangé. */}
+                {ticket.origin === "SPRINT" && ticket.fromSprint && (
+                  <span
+                    className="hidden shrink-0 items-center gap-1 text-xs text-muted-foreground sm:inline-flex"
+                    title={fmt(t.releases.fromSprint, {
+                      name: ticket.fromSprint.name,
+                    })}
+                  >
+                    <Repeat className="size-3" aria-hidden />
+                    {ticket.fromSprint.name}
+                  </span>
+                )}
                 {/* Priorité et assigné étaient DÉJÀ chargés par la requête, et
                     jetés au rendu. Ce sont pourtant les deux questions qu'on se
                     pose devant une version qui n'avance pas : qu'est-ce qui est
@@ -270,9 +344,7 @@ function Assignee({
 }) {
   const t = useDict();
   if (!assignee) {
-    return (
-      <span className="sr-only">{t.ticketDetail.unassigned}</span>
-    );
+    return <span className="sr-only">{t.ticketDetail.unassigned}</span>;
   }
   const label = assignee.name ?? assignee.email;
   return (
@@ -310,7 +382,12 @@ function RemoveRelease({ release }: { release: ReleaseRow }) {
   return (
     <Dialog open={open} onOpenChange={(next) => !pending && setOpen(next)}>
       <DialogTrigger asChild>
-        <Button type="button" variant="ghost" size="sm" className="text-muted-foreground">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="text-muted-foreground"
+        >
           <Trash2 />
           {t.releases.remove}
         </Button>
@@ -340,5 +417,122 @@ function RemoveRelease({ release }: { release: ReleaseRow }) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * SPRINTS RATTACHÉS à une version : les voir, en ajouter, en retirer.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * POURQUOI CETTE INFORMATION EST MONTRÉE, ET PAS SEULEMENT UTILISÉE
+ *
+ * Rattacher un sprint fait entrer ses tickets dans la version sans qu'on les y
+ * range. Sans marque visible, la version se remplirait de lignes que personne
+ * n'y a mises et que personne ne saurait retirer. Le bandeau répond donc à deux
+ * questions d'un coup : d'où vient ce contenu, et comment le défaire.
+ *
+ * Une version LIVRÉE ne se remanie plus : le rattachement y est en lecture
+ * seule, comme le reste de son contenu.
+ */
+function ReleaseSprints({
+  release,
+  sprintOptions,
+  disabled,
+}: {
+  release: ReleaseRow;
+  sprintOptions: SprintOption[];
+  disabled: boolean;
+}) {
+  const t = useDict();
+  const router = useRouter();
+  const [pending, setPending] = useState<string | null>(null);
+
+  // Un sprint déjà rattaché AILLEURS n'est pas proposé : le choisir ici
+  // reviendrait à le retirer d'une autre version sans le dire (le serveur le
+  // refuse de toute façon, cf. `sprintAssignable`).
+  const libres = sprintOptions.filter((s) => s.releaseId == null);
+
+  async function set(
+    sprintId: string,
+    releaseId: string | null,
+    message: string,
+  ) {
+    setPending(sprintId);
+    const res = await setSprintReleaseAction(sprintId, releaseId);
+    setPending(null);
+    if (!res.ok) {
+      toast.error(res.error);
+      return;
+    }
+    toast.success(message);
+    router.refresh();
+  }
+
+  if (disabled && release.sprints.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-sm">
+      <span className="flex items-center gap-1.5 text-muted-foreground">
+        <Repeat className="size-4 shrink-0" aria-hidden />
+        {t.releases.sprints}
+      </span>
+
+      {release.sprints.length === 0 ? (
+        <span className="text-xs text-muted-foreground">
+          {t.releases.noSprint}
+        </span>
+      ) : (
+        release.sprints.map((sprint) => (
+          <Badge key={sprint.id} variant="secondary" className="gap-1 pr-1">
+            {sprint.name}
+            <span className="text-muted-foreground">· {sprint.count}</span>
+            {!disabled && (
+              <button
+                type="button"
+                disabled={pending === sprint.id}
+                onClick={() =>
+                  void set(sprint.id, null, t.releases.sprintDetached)
+                }
+                title={fmt(t.releases.detachSprint, { name: sprint.name })}
+                aria-label={fmt(t.releases.detachSprint, { name: sprint.name })}
+                className="rounded-sm p-0.5 text-muted-foreground transition-colors hover:bg-background hover:text-destructive"
+              >
+                {pending === sprint.id ? (
+                  <Loader2 className="size-3 animate-spin" />
+                ) : (
+                  <X className="size-3" />
+                )}
+              </button>
+            )}
+          </Badge>
+        ))
+      )}
+
+      {!disabled && libres.length > 0 && (
+        <Select
+          // Jamais de valeur retenue : ce sélecteur est un GESTE (« rattacher
+          // celui-ci »), pas un champ dont on lirait l'état. Le rattachement
+          // effectué, la liste des pastilles ci-dessus fait foi.
+          value=""
+          onValueChange={(id) =>
+            void set(id, release.id, t.releases.sprintAttached)
+          }
+        >
+          <SelectTrigger
+            className="h-7 w-auto gap-1 text-xs"
+            aria-label={t.releases.attachSprint}
+          >
+            <SelectValue placeholder={t.releases.attachSprint} />
+          </SelectTrigger>
+          <SelectContent>
+            {libres.map((sprint) => (
+              <SelectItem key={sprint.id} value={sprint.id}>
+                {sprint.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+    </div>
   );
 }
