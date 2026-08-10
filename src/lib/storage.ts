@@ -135,19 +135,35 @@ export async function deleteStored(key: string): Promise<void> {
 }
 
 /**
- * Écrit dans le stockage en vigueur.
+ * Le disque est-il un choix ASSUMÉ, et non un repli subi ?
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * POURQUOI LE REPLI DISQUE EST INTERDIT EN PRODUCTION
+ * LA DISTINCTION QUI COMPTE
  *
- * Le repli écrit dans `.uploads`, à l'intérieur du conteneur. Or le conteneur
- * applicatif n'a AUCUN volume : ce qui y est écrit disparaît au déploiement
- * suivant. Une variable `S3_*` oubliée ou mal orthographiée ferait donc basculer
- * le dépôt sur un disque éphémère, sans erreur, et les fichiers s'évanouiraient
- * plus tard - au pire moment, et sans que personne puisse dire quand.
+ * Écrire sur le disque du conteneur est parfaitement valable SI ce disque est un
+ * volume monté : c'est même le déploiement le plus simple, un seul service, un
+ * seul volume. Cela devient une perte de données silencieuse si le disque est
+ * celui, éphémère, d'un conteneur sans volume - ce qui arrive dès qu'une variable
+ * `S3_*` est oubliée ou mal orthographiée. Le dépôt réussit, et les fichiers
+ * disparaissent au déploiement suivant, sans erreur et sans que personne puisse
+ * dire quand.
  *
- * On refuse donc d'écrire plutôt que d'écrire là où ça ne tient pas. En
- * développement, le repli reste commode et sans enjeu.
+ * `LOCAL_UPLOAD_DIR` tranche entre les deux : le renseigner, c'est déclarer un
+ * chemin persistant choisi exprès. Son absence en production signale au contraire
+ * une configuration incomplète, et l'écriture est refusée.
+ *
+ * Fonction pure et exportée : elle porte la règle, et se teste sans disque
+ * (cf. `storage-policy.test.ts`).
+ */
+export function localStorageAllowed(
+  nodeEnv: string | undefined,
+  localUploadDir: string | undefined,
+): boolean {
+  return nodeEnv !== "production" || Boolean(localUploadDir?.trim());
+}
+
+/**
+ * Écrit dans le stockage en vigueur : objet si `S3_*` est configuré, disque sinon.
  */
 export async function writeStored(
   key: string,
@@ -158,9 +174,11 @@ export async function writeStored(
     await writeObject(key, data, contentType);
     return;
   }
-  if (process.env.NODE_ENV === "production") {
+  if (!localStorageAllowed(process.env.NODE_ENV, process.env.LOCAL_UPLOAD_DIR)) {
     throw new Error(
-      "Stockage objet non configuré : le dépôt local n'est pas persistant en production. Renseignez S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY_ID et S3_SECRET_ACCESS_KEY.",
+      "Stockage non configuré : renseignez les variables S3_* pour un stockage objet, " +
+        "ou LOCAL_UPLOAD_DIR pointant vers un volume monté pour un dépôt sur disque. " +
+        "Sans l'un des deux, les fichiers déposés seraient perdus au prochain déploiement.",
     );
   }
   await writeLocal(key, data);

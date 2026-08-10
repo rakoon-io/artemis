@@ -20,7 +20,7 @@ Internet ──HTTPS──> Traefik (dokploy-traefik, :80/:443)
                       ▼
         artemis (Next.js « next start », :3000)
              ├──► artemis-db     (postgres:16)     vol: artemis-db-data
-             └──► artemis-minio  (S3-compatible)   vol: artemis-minio-data
+             └──► artemis-minio  (S3-compatible)   vol: artemis-minio-data   [option, cf. §3.1]
                         réseau overlay « dokploy-network »
 ```
 
@@ -44,11 +44,44 @@ accès SSH root/sudo.
 | `AUTH_SECRET` | | Secret Auth.js (`openssl rand -base64 32`) |
 | `AUTH_URL` | | `https://artemis.apps.rakoon.io` |
 | `AUTH_TRUST_HOST` | | `true` (derrière le proxy Traefik) |
-| `S3_ENDPOINT` | | Endpoint stockage pièces jointes (`http://artemis-minio:9000`) |
+| `LOCAL_UPLOAD_DIR` | | Répertoire des pièces jointes sur un **volume monté** (ex. `/data/uploads`) |
+| `S3_ENDPOINT` | | Endpoint stockage objet (`http://artemis-minio:9000`) |
 | `S3_BUCKET` | | Bucket des pièces jointes (`artemis-attachments`) |
 | `S3_ACCESS_KEY_ID` | | Clé d'accès au stockage objet |
 | `S3_SECRET_ACCESS_KEY` | | Clé secrète du stockage objet |
 | `S3_REGION` | | Région du bucket (`us-east-1` par défaut, même avec MinIO) |
+
+### 3.1 - Deux stockages possibles pour les pièces jointes
+
+Dans les deux cas, **les octets transitent par l'application** : le navigateur ne
+joint jamais le stockage, qui n'a donc pas à être exposé.
+
+| Mode | Quand | Configuration |
+|---|---|---|
+| **Disque** | Déploiement autocontenu : un seul service, un seul volume | `LOCAL_UPLOAD_DIR` vers un volume monté, et **aucune** variable `S3_*` |
+| **Objet** | Stockage partagé, ou plusieurs instances de l'application | les cinq variables `S3_*` |
+
+Les variables `S3_*` l'emportent dès qu'elles sont présentes.
+
+> ⚠️ Le mode disque **exige `LOCAL_UPLOAD_DIR`** en production. Sans lui, l'écriture
+> est refusée plutôt que d'atterrir dans un conteneur sans volume, où les fichiers
+> disparaîtraient au déploiement suivant, sans erreur. Le mode disque n'admet
+> qu'**une seule instance** : un répertoire local ne se partage pas.
+
+### 3.2 - Passer d'un stockage à l'autre
+
+Les deux stockages doivent être configurés **pendant** la copie ; on ne retire les
+variables de celui que l'on abandonne qu'ensuite, une fois le résultat vérifié.
+
+```bash
+npm run storage:migrate -- --to=local           # simulation
+npm run storage:migrate -- --to=local --write   # copie réellement
+```
+
+Le script parcourt les lignes `Attachment` et `WikiAttachment`, pas le contenu du
+stockage : un objet orphelin n'est pas recopié, une ligne sans objet est signalée.
+Il est idempotent et **ne supprime jamais la source** : tant qu'elle est intacte,
+le retour arrière ne coûte rien.
 
 ## 4. Dockerfile (multi-stage)
 
@@ -77,7 +110,10 @@ docker run -d --name artemis-db --restart unless-stopped \
 # DATABASE_URL = postgresql://tracker:$DBPW@artemis-db:5432/tracker?schema=public
 ```
 
-### 5.2 - Stockage S3-compatible (MinIO) pour les pièces jointes
+### 5.2 - Stockage S3-compatible (MinIO) pour les pièces jointes, en option
+
+> Inutile en mode disque (cf. §3.1) : monter un volume sur l'application suffit.
+
 ```bash
 MINIO_PW=$(openssl rand -hex 20)
 docker run -d --name artemis-minio --restart unless-stopped \
