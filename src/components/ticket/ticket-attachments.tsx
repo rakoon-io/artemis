@@ -58,16 +58,27 @@ export interface TicketAttachment {
   filename: string;
   contentType: string;
   size: number;
+  /**
+   * Ce lecteur-ci peut-il retirer CETTE pièce ? Tranché côté serveur, par
+   * `canRemoveAttachment`, et non recalculé ici : la règle dépend du déposant
+   * ET de la propriété du ticket, deux choses que le navigateur n'a pas à
+   * réunir pour en juger.
+   */
+  canRemove: boolean;
 }
 
 export function TicketAttachments({
   ticketId,
   attachments,
-  canEdit,
+  canAttach,
 }: {
   ticketId: string;
   attachments: TicketAttachment[];
-  canEdit: boolean;
+  /**
+   * DÉPOSER, et non éditer. Tout membre du projet en a le droit - c'est le
+   * geste du commentaire, pas celui de l'édition (cf. `canAttachToTicket`).
+   */
+  canAttach: boolean;
 }) {
   const t = useDict();
   const router = useRouter();
@@ -81,7 +92,7 @@ export function TicketAttachments({
    */
   const depth = useRef(0);
 
-  useStrayFileDropGuard(canEdit);
+  useStrayFileDropGuard(canAttach);
 
   const images = attachments.filter((a) => a.contentType.startsWith("image/"));
   const fichiers = attachments.filter(
@@ -124,7 +135,7 @@ export function TicketAttachments({
                       className="aspect-square w-full bg-muted object-cover transition-transform group-hover/att:scale-105"
                     />
                   </a>
-                  {canEdit && (
+                  {att.canRemove && (
                     <RetirerPiece
                       attachment={att}
                       onDone={() => router.refresh()}
@@ -153,7 +164,7 @@ export function TicketAttachments({
                       {formatBytes(att.size)}
                     </span>
                   </a>
-                  {canEdit && (
+                  {att.canRemove && (
                     <RetirerPiece
                       attachment={att}
                       onDone={() => router.refresh()}
@@ -165,14 +176,14 @@ export function TicketAttachments({
           )}
         </div>
       ) : (
-        !canEdit && (
+        !canAttach && (
           <p className="text-sm text-muted-foreground">
             {t.ticketDetail.noAttachments}
           </p>
         )
       )}
 
-      {canEdit && (
+      {canAttach && (
         <div
           /**
            * Le cadre pointillé est là EN PERMANENCE : n'apparaître qu'au survol

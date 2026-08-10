@@ -3,6 +3,8 @@ import { Role } from "@prisma/client";
 import {
   isAdmin,
   can,
+  canAttachToTicket,
+  canRemoveAttachment,
   canAccessProject,
   canCreateTicket,
   canEditComment,
@@ -93,4 +95,46 @@ describe("policies (RBAC)", () => {
     expect(canEditComment(null, mine)).toBe(false);
     expect(canEditComment(undefined, mine)).toBe(false);
   });
+
+  it("JOINDRE un fichier est ouvert à tout membre du projet", () => {
+    /**
+     * Le point de la règle. Le dépôt était réservé au rapporteur, à l'assigné
+     * et aux administrateurs : un collègue qui reproduisait le défaut ne
+     * pouvait pas verser sa capture d'écran. C'est la personne la mieux placée
+     * pour documenter que l'on faisait taire.
+     *
+     * Joindre n'est pas modifier : la pièce s'ajoute, signée de son déposant,
+     * sans toucher à ce qu'un autre a écrit. C'est le geste du commentaire.
+     */
+    expect(canAttachToTicket(other)).toBe(true);
+    expect(canAttachToTicket(reporter)).toBe(true);
+    expect(canAttachToTicket(admin)).toBe(true);
+    // L'accès au PROJET reste exigé séparément, par `assertProjectAccess`.
+    expect(canAttachToTicket(null)).toBe(false);
+    expect(canAttachToTicket(undefined)).toBe(false);
+  });
+
+  it("RETIRER reste au déposant, ou à qui répond du ticket", () => {
+    // Le ticket est celui de `reporter` ; `other` n'y est rien.
+    const ticket = { reporterId: reporter.id, assigneeId: null };
+    const deposeeParAutre = { uploadedById: other.id };
+    const deposeeParReporter = { uploadedById: reporter.id };
+
+    // Chacun est maître de ce qu'il a déposé…
+    expect(canRemoveAttachment(other, deposeeParAutre, ticket)).toBe(true);
+    // …et de rien d'autre : le dépôt s'ouvre, l'effacement non.
+    expect(canRemoveAttachment(other, deposeeParReporter, ticket)).toBe(false);
+
+    // Ceux qui répondent du ticket font le ménage.
+    expect(canRemoveAttachment(reporter, deposeeParAutre, ticket)).toBe(true);
+    expect(canRemoveAttachment(admin, deposeeParAutre, ticket)).toBe(true);
+
+    expect(canRemoveAttachment(null, deposeeParAutre, ticket)).toBe(false);
+  });
+
+  it("l'assigné aussi retire, comme il édite", () => {
+    const ticket = { reporterId: admin.id, assigneeId: other.id };
+    expect(canRemoveAttachment(other, { uploadedById: admin.id }, ticket)).toBe(true);
+  });
 });
+

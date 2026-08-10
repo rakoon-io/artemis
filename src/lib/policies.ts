@@ -97,6 +97,54 @@ export function canEditTicket(
   return ticket.reporterId === user.id || ticket.assigneeId === user.id;
 }
 
+/**
+ * JOINDRE UN FICHIER À UN TICKET : contribuer, et non modifier.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * POURQUOI CE N'EST PAS `canEditTicket`
+ *
+ * Le dépôt était réservé au rapporteur du ticket, à son assigné et aux
+ * administrateurs. Un collègue qui reproduisait le défaut ne pouvait donc pas
+ * y verser sa capture d'écran : il lui restait à la décrire en toutes lettres,
+ * ou à demander à quelqu'un d'autre de la déposer. C'est précisément la
+ * personne la mieux placée pour documenter que l'on faisait taire.
+ *
+ * Or joindre un fichier ne MODIFIE rien de ce qu'un autre a écrit : cela ajoute
+ * une pièce, signée de son déposant (`uploadedById`), à côté du reste. C'est le
+ * geste du commentaire, pas celui de l'édition - et le commentaire, lui, est
+ * ouvert à tout membre du projet depuis toujours (`canComment`).
+ *
+ * L'accès au PROJET reste exigé, et il l'est séparément, par
+ * `assertProjectAccess` chez tous les appelants : cette fonction-ci ne répond
+ * qu'à « ce rôle a-t-il le droit de contribuer ? ».
+ */
+export function canAttachToTicket(user: PolicyUser | null | undefined): boolean {
+  return !!user;
+}
+
+/**
+ * RETIRER une pièce jointe : son déposant, ou qui peut éditer le ticket.
+ *
+ * Le dépôt s'ouvre, le retrait non. Ce sont deux gestes de nature opposée :
+ * l'un ajoute et se signe, l'autre efface définitivement le travail d'un tiers
+ * - et depuis que la suppression emporte aussi les octets (cf. `forgetObjects`),
+ * il n'y a plus de fichier à retrouver dans le seau après coup.
+ *
+ * Chacun reste donc maître de ce qu'il a déposé, et ceux qui répondent du
+ * ticket - rapporteur, assigné, administrateur - peuvent faire le ménage. La
+ * symétrie avec les commentaires est voulue : on écrit chez les autres, on
+ * n'efface que chez soi.
+ */
+export function canRemoveAttachment(
+  user: PolicyUser | null | undefined,
+  attachment: { uploadedById: string },
+  ticket: TicketOwnership,
+): boolean {
+  if (!user) return false;
+  if (attachment.uploadedById === user.id) return true;
+  return canEditTicket(user, ticket);
+}
+
 /** Déplacement Kanban : mêmes règles que l'édition. */
 export function canMoveTicket(
   user: PolicyUser | null | undefined,

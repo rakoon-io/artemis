@@ -2,7 +2,7 @@ import { declaredTooLarge, keyLooksIssued, localUploadDisabled } from "@/lib/upl
 import { clientIp, isRateLimited, recordFailure } from "@/lib/rate-limit";
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/session";
-import { canEditTicket } from "@/lib/policies";
+import { canAttachToTicket } from "@/lib/policies";
 import { canAccess } from "@/server/access";
 import { getTicketOwnership } from "@/server/services/ticket.service";
 import { createAttachment } from "@/server/services/attachment.service";
@@ -83,7 +83,7 @@ export async function PUT(request: Request): Promise<NextResponse> {
   if (!ticket) {
     return NextResponse.json({ error: "Ticket introuvable." }, { status: 404 });
   }
-  if (!(await canAccess(user, ticket.projectId)) || !canEditTicket(user, ticket)) {
+  if (!(await canAccess(user, ticket.projectId)) || !canAttachToTicket(user)) {
     return NextResponse.json({ error: "Non autorisé sur ce ticket." }, { status: 403 });
   }
 

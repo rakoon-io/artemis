@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { isDangerousContentType } from "@/lib/attachments";
-import { assert, canEditTicket } from "@/lib/policies";
+import { assert, canAttachToTicket, canRemoveAttachment } from "@/lib/policies";
 import { assertProjectAccess } from "@/server/access";
 import { getTicketOwnership } from "@/server/services/ticket.service";
 import {
@@ -17,7 +17,13 @@ import type { ActionResult } from "./types";
 /**
  * Actions Pièce jointe - confirme l'enregistrement d'une PJ déjà téléversée en S3
  * (via URL presignée) et supprime une PJ. Autorisation : mêmes règles que l'édition
- * du ticket (`canEditTicket`). « L'UI masque, le serveur impose. »
+ * du ticket.
+ *
+ * DEUX AUTORISATIONS DISTINCTES, et c'est le fond de l'affaire : DÉPOSER est
+ * ouvert à tout membre du projet (`canAttachToTicket`), comme commenter -
+ * joindre une capture au ticket d'un collègue est une contribution, pas une
+ * modification. RETIRER reste au déposant, ou à qui répond du ticket
+ * (`canRemoveAttachment`). « L'UI masque, le serveur impose. »
  */
 
 const confirmAttachmentSchema = z.object({
@@ -65,7 +71,7 @@ export async function confirmAttachmentAction(
     if (!ticket) return { ok: false, error: "Ticket introuvable." };
     await assertProjectAccess(user, ticket.projectId);
     assert(
-      canEditTicket(user, ticket),
+      canAttachToTicket(user),
       "Ajout de pièce jointe non autorisé sur ce ticket.",
     );
     const attachment = await createAttachment({
@@ -90,8 +96,8 @@ export async function deleteAttachmentAction(id: string): Promise<ActionResult> 
     if (!ticket) return { ok: false, error: "Ticket introuvable." };
     await assertProjectAccess(user, ticket.projectId);
     assert(
-      canEditTicket(user, ticket),
-      "Suppression de pièce jointe non autorisée.",
+      canRemoveAttachment(user, attachment, ticket),
+      "Seul le déposant d'une pièce jointe, ou qui répond du ticket, peut la retirer.",
     );
     await deleteAttachment(id);
     revalidatePath("/tickets");

@@ -14,7 +14,12 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { DialogTitle } from "@/components/ui/dialog";
 import { currentUser } from "@/lib/session";
-import { can, canEditTicket } from "@/lib/policies";
+import {
+  can,
+  canAttachToTicket,
+  canEditTicket,
+  canRemoveAttachment,
+} from "@/lib/policies";
 import { cn, formatDateTime, initials } from "@/lib/utils";
 import { getAccessibleProjectByKey } from "@/server/access";
 import {
@@ -92,12 +97,16 @@ export async function TicketDetail({
   // Accès refusé ou ticket d'un autre projet : indistinguable d'un ticket absent.
   if (!project || !ticket || ticket.projectId !== project.id) notFound();
 
-  // Les images sont présentées en vignettes ; les autres fichiers en liste.
-
-  const canEdit = canEditTicket(user, {
+  /**
+   * De qui relève ce ticket. Nommé plutôt qu'écrit deux fois sur place : les
+   * pièces jointes s'en servent aussi, et deux littéraux auraient fini par
+   * différer d'un champ.
+   */
+  const ownership = {
     reporterId: ticket.reporterId,
     assigneeId: ticket.assigneeId,
-  });
+  };
+  const canEdit = canEditTicket(user, ownership);
   const canDelete = can(user, "delete_ticket");
 
   // Module effectif : celui du composant s'il y en a un, sinon celui du ticket.
@@ -311,8 +320,9 @@ export async function TicketDetail({
                   filename: att.filename,
                   contentType: att.contentType,
                   size: att.size,
+                  canRemove: canRemoveAttachment(user, att, ownership),
                 }))}
-                canEdit={canEdit}
+                canAttach={canAttachToTicket(user)}
               />
             </CardContent>
           </Card>
