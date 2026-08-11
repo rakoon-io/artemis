@@ -390,7 +390,7 @@ export function listBacklogTickets(projectId: string) {
       // déplacement ne doit apparaître qu'à qui le serveur laissera faire.
       reporterId: true,
       assigneeId: true,
-      column: { select: { name: true } },
+      column: { select: { name: true, order: true } },
       type: { select: { name: true, color: true } },
       priority: { select: { name: true, color: true } },
       assignee: { select: { name: true, email: true } },

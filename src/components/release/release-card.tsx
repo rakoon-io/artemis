@@ -28,7 +28,7 @@ import {
   CardFooter,
   CardHeader,
 } from "@/components/ui/card";
-import { countDone } from "@/lib/release-progress";
+import { countDone, isTicketDone, undoneFirst } from "@/lib/release-progress";
 import {
   Select,
   SelectContent,
@@ -170,6 +170,12 @@ export function ReleaseCard({
   // Le même décompte que celui du service : un `filter` recopié à la main aurait
   // fini par diverger de la règle qu'il applique.
   const done = countDone(release.tickets, lastColumnOrder);
+  /**
+   * CE QUI RESTE EN HAUT. L'achevé descend sans disparaître : il dit ce que la
+   * version a déjà emporté, et le masquer donnerait l'illusion d'un lot plus
+   * petit qu'il n'est. Même règle et même fonction que la page Sprints.
+   */
+  const ordonnes = undoneFirst(release.tickets, lastColumnOrder);
   async function toggleState() {
     setPending(true);
     const res = await setReleaseStateAction(release.id, !released);
@@ -246,7 +252,7 @@ export function ReleaseCard({
           </p>
         ) : (
           <ul className="divide-y rounded-lg border">
-            {release.tickets.map((ticket) => (
+            {ordonnes.map((ticket) => (
               <li
                 key={ticket.id}
                 className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-sm"
@@ -262,7 +268,14 @@ export function ReleaseCard({
                 />
                 <Link
                   href={`/projects/${projectKey}/tickets/${ticket.id}`}
-                  className="min-w-0 flex-1 truncate hover:underline"
+                  /* ACHEVÉ : barré et atténué. Le barré porte le sens,
+                     l'atténuation l'appuie - seule, elle se confondrait avec un
+                     texte secondaire. */
+                  className={cn(
+                    "min-w-0 flex-1 truncate hover:underline",
+                    isTicketDone(ticket, lastColumnOrder) &&
+                      "text-muted-foreground line-through decoration-muted-foreground/60",
+                  )}
                 >
                   {ticket.title}
                 </Link>

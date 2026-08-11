@@ -5,8 +5,10 @@ import { auth } from "@/auth";
 import { getAccessibleProjectByKey } from "@/server/access";
 import {
   getBacklogTickets,
+  getColumns,
   getSprintsWithTickets,
 } from "@/server/queries";
+import { isTicketDone, undoneFirst } from "@/lib/release-progress";
 import { getDictionary } from "@/i18n/server";
 import { Badge } from "@/components/ui/badge";
 import { CreateSprintDialog } from "@/components/sprint/create-sprint-dialog";
@@ -39,10 +41,20 @@ export default async function SprintsPage({
   const project = await getAccessibleProjectByKey(session?.user, key);
   if (!project) notFound();
 
-  const [sprints, backlog] = await Promise.all([
+  const [sprints, backlog, columns] = await Promise.all([
     getSprintsWithTickets(project.id),
     getBacklogTickets(project.id),
+    getColumns(project.id),
   ]);
+
+  /**
+   * Rang de la DERNIÈRE colonne : c'est lui qui dit ce qui est achevé. On ne se
+   * fie jamais au nom « Terminé » - un projet renomme ses colonnes, en ajoute,
+   * les traduit. Même calcul que sur la page Versions, même règle.
+   */
+  const lastColumnOrder = columns.length
+    ? Math.max(...columns.map((column) => column.order))
+    : Number.MAX_SAFE_INTEGER;
   const sprintOptions = sprints.map((s) => ({ id: s.id, name: s.name }));
 
   const isEmpty = sprints.length === 0 && backlog.length === 0;
@@ -51,10 +63,14 @@ export default async function SprintsPage({
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">{t.sprints.title}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {t.sprints.title}
+          </h1>
           <p className="max-w-prose text-sm text-muted-foreground">
             {t.sprints.subtitleLead}{" "}
-            <strong className="font-medium text-foreground">{t.sprints.lot}</strong>{" "}
+            <strong className="font-medium text-foreground">
+              {t.sprints.lot}
+            </strong>{" "}
             {t.sprints.subtitleTail}
           </p>
         </div>
@@ -78,80 +94,82 @@ export default async function SprintsPage({
         <SprintDndProvider
           sprintNames={Object.fromEntries(sprints.map((s) => [s.id, s.name]))}
         >
-        <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-          <div className="space-y-8">
-          {GROUPS.map((group) => {
-            const items = sprints.filter((s) => s.state === group.state);
-            if (items.length === 0) return null;
-            return (
-              <section key={group.state} className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                    {t.sprints[group.labelKey]}
-                  </h2>
-                  <Badge variant="outline">{items.length}</Badge>
-                </div>
-                {/* Pleine largeur de la colonne : les tickets d'un sprint se
+          <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+            <div className="space-y-8">
+              {GROUPS.map((group) => {
+                const items = sprints.filter((s) => s.state === group.state);
+                if (items.length === 0) return null;
+                return (
+                  <section key={group.state} className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                        {t.sprints[group.labelKey]}
+                      </h2>
+                      <Badge variant="outline">{items.length}</Badge>
+                    </div>
+                    {/* Pleine largeur de la colonne : les tickets d'un sprint se
                     lisent en lignes, pas en vignettes. */}
-                <div className="space-y-4">
-                  {items.map((sprint) => (
-                    <SprintCard
-                      key={sprint.id}
-                      sprint={sprint}
-                      tickets={sprint.tickets}
-                      projectKey={project.key}
-                      sprintOptions={sprintOptions}
-                      currentUser={session?.user ?? null}
-                    />
-                  ))}
-                </div>
-              </section>
-            );
-          })}
-          </div>
-
-          {/**
-           * La réserve reste visible pendant qu'on remplit les sprints - et se
-           * range sous eux dès que l'écran ne peut plus les mettre côte à côte.
-           *
-           * `top-16` et non `top-4` : la barre du haut est elle-même collante et
-           * haute de 57 pixels. À seize, la réserve venait se coller SOUS elle -
-           * quarante et un pixels avalés, mesurés, dont son propre intitulé. Elle
-           * paraissait ne pas tenir alors qu'elle tenait, mais trop haut.
-           */}
-          <section className="space-y-3 xl:sticky xl:top-16">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                {t.sprints.backlog}
-              </h2>
-              <Badge variant="outline">{backlog.length}</Badge>
-              <span className="text-xs text-muted-foreground">
-                {t.sprints.ticketsWithoutSprint}
-              </span>
+                    <div className="space-y-4">
+                      {items.map((sprint) => (
+                        <SprintCard
+                          key={sprint.id}
+                          sprint={sprint}
+                          tickets={sprint.tickets}
+                          projectKey={project.key}
+                          sprintOptions={sprintOptions}
+                          lastColumnOrder={lastColumnOrder}
+                          currentUser={session?.user ?? null}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                );
+              })}
             </div>
-            <TicketDropZone sprintId={null}>
-              {backlog.length === 0 ? (
-                <p className="rounded-md border border-dashed px-3 py-4 text-sm text-muted-foreground">
-                  {t.sprints.backlogEmpty}
-                </p>
-              ) : (
-                <ul className="slim-scrollbar max-h-[calc(100dvh-16rem)] divide-y overflow-y-auto rounded-lg border [&>li:empty]:hidden">
-                  {backlog.map((ticket) => (
-                    <li key={ticket.id}>
-                      <SprintTicketItem
-                        ticket={ticket}
-                        projectKey={project.key}
-                        currentSprintId={null}
-                        sprintOptions={sprintOptions}
-                        currentUser={session?.user ?? null}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </TicketDropZone>
-          </section>
-        </div>
+
+            {/**
+             * La réserve reste visible pendant qu'on remplit les sprints - et se
+             * range sous eux dès que l'écran ne peut plus les mettre côte à côte.
+             *
+             * `top-16` et non `top-4` : la barre du haut est elle-même collante et
+             * haute de 57 pixels. À seize, la réserve venait se coller SOUS elle -
+             * quarante et un pixels avalés, mesurés, dont son propre intitulé. Elle
+             * paraissait ne pas tenir alors qu'elle tenait, mais trop haut.
+             */}
+            <section className="space-y-3 xl:sticky xl:top-16">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  {t.sprints.backlog}
+                </h2>
+                <Badge variant="outline">{backlog.length}</Badge>
+                <span className="text-xs text-muted-foreground">
+                  {t.sprints.ticketsWithoutSprint}
+                </span>
+              </div>
+              <TicketDropZone sprintId={null}>
+                {backlog.length === 0 ? (
+                  <p className="rounded-md border border-dashed px-3 py-4 text-sm text-muted-foreground">
+                    {t.sprints.backlogEmpty}
+                  </p>
+                ) : (
+                  <ul className="slim-scrollbar max-h-[calc(100dvh-16rem)] divide-y overflow-y-auto rounded-lg border [&>li:empty]:hidden">
+                    {undoneFirst(backlog, lastColumnOrder).map((ticket) => (
+                      <li key={ticket.id}>
+                        <SprintTicketItem
+                          ticket={ticket}
+                          projectKey={project.key}
+                          currentSprintId={null}
+                          sprintOptions={sprintOptions}
+                          done={isTicketDone(ticket, lastColumnOrder)}
+                          currentUser={session?.user ?? null}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </TicketDropZone>
+            </section>
+          </div>
         </SprintDndProvider>
       )}
     </div>

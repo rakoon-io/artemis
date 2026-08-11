@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { fmt } from "@/i18n";
 import { useDict } from "@/i18n/provider";
+import { countDone, isTicketDone, undoneFirst } from "@/lib/release-progress";
 import {
   Check,
   Flag,
@@ -68,7 +69,8 @@ export interface SprintTicketRow {
   /** Propriété du ticket : de quoi trancher qui peut le déplacer. */
   reporterId: string;
   assigneeId: string | null;
-  column: { name: string };
+  /** `order` autant que `name` : le rang dit ce qui est achevé, le nom l'affiche. */
+  column: { name: string; order: number };
   type: { name: string; color: string };
   priority: { name: string; color: string };
   assignee: { name: string | null; email: string } | null;
@@ -182,12 +184,21 @@ export function SprintTicketItem({
   projectKey,
   currentSprintId,
   sprintOptions,
+  done = false,
   currentUser,
 }: {
   ticket: SprintTicketRow;
   projectKey: string;
   currentSprintId: string | null;
   sprintOptions: SprintChoice[];
+  /**
+   * Ticket achevé, tranché par l'APPELANT.
+   *
+   * Il connaît le rang de la dernière colonne, pas cette ligne : le lui faire
+   * chercher aurait demandé de descendre la même donnée deux fois, et rien ne
+   * garantirait que les deux chemins disent la même chose.
+   */
+  done?: boolean;
   currentUser: PolicyUser | null;
 }) {
   const t = useDict();
@@ -230,7 +241,13 @@ export function SprintTicketItem({
       )}
       <Link
         href={`/projects/${projectKey}/tickets/${ticket.id}`}
-        className="flex min-w-0 flex-1 items-center gap-2 transition-colors hover:text-primary"
+        /* ACHEVÉ : barré et atténué. Le barré porte le sens, l'atténuation
+           l'appuie - seule, elle se confondrait avec un texte secondaire. */
+        className={cn(
+          "flex min-w-0 flex-1 items-center gap-2 transition-colors hover:text-primary",
+          done &&
+            "text-muted-foreground line-through decoration-muted-foreground/60",
+        )}
       >
         <span className="w-16 shrink-0 truncate font-mono text-xs text-muted-foreground">
           {ticket.key}
@@ -277,6 +294,7 @@ export function SprintCard({
   tickets,
   projectKey,
   sprintOptions,
+  lastColumnOrder,
   currentUser,
 }: {
   /** Le sprint, avec la version dans laquelle son travail sort (facultative). */
@@ -284,6 +302,8 @@ export function SprintCard({
   tickets: SprintTicketRow[];
   projectKey: string;
   sprintOptions: SprintChoice[];
+  /** Rang de la dernière colonne : ce qui l'atteint est achevé. */
+  lastColumnOrder: number;
   currentUser: PolicyUser | null;
 }) {
   const t = useDict();
@@ -292,6 +312,13 @@ export function SprintCard({
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   const meta = STATE_META[sprint.state];
+  /**
+   * CE QUI RESTE EN HAUT. L'achevé n'est pas masqué - il dit ce que l'itération
+   * a produit -, mais il descend : c'est le reste qui est le travail.
+   * Même règle et même fonction que la page Versions.
+   */
+  const ordonnes = undoneFirst(tickets, lastColumnOrder);
+  const done = countDone(tickets, lastColumnOrder);
 
   async function changeState(next: SprintState, message: string) {
     setPending(true);
@@ -360,6 +387,18 @@ export function SprintCard({
             canEdit
           />
         </div>
+        {/* AVANCEMENT DE L'ITÉRATION, comme sur une version : la barre se
+            compare d'un coup d'œil là où « 3 sur 12 » demande une division. Le
+            chiffre reste, car « 1 sur 4 » et « 25 sur 100 » ont la même barre et
+            ne représentent pas le même travail. */}
+        {tickets.length > 0 && (
+          <div className="space-y-1 pt-1">
+            <SprintProgress done={done} total={tickets.length} />
+            <p className="text-xs text-muted-foreground">
+              {fmt(t.releases.progress, { done, total: tickets.length })}
+            </p>
+          </div>
+        )}
       </CardHeader>
       <CardContent className="flex-1">
         <TicketDropZone sprintId={sprint.id}>
@@ -372,13 +411,14 @@ export function SprintCard({
             </p>
           ) : (
             <ul className="divide-y rounded-md border [&>li:empty]:hidden">
-              {tickets.map((ticket) => (
+              {ordonnes.map((ticket) => (
                 <li key={ticket.id}>
                   <SprintTicketItem
                     ticket={ticket}
                     projectKey={projectKey}
                     currentSprintId={sprint.id}
                     sprintOptions={sprintOptions}
+                    done={isTicketDone(ticket, lastColumnOrder)}
                     currentUser={currentUser}
                   />
                 </li>
@@ -485,5 +525,32 @@ export function SprintCard({
         </Dialog>
       </CardFooter>
     </Card>
+  );
+}
+
+/**
+ * Avancement d'un sprint, en une barre.
+ *
+ * Volontairement identique à celle d'une version : les deux répondent à la même
+ * question et doivent se lire de la même façon. Deux dessins différents pour un
+ * même sens obligeraient à réapprendre l'écran d'à côté.
+ */
+function SprintProgress({ done, total }: { done: number; total: number }) {
+  const t = useDict();
+  const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+  return (
+    <div
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={total}
+      aria-valuenow={done}
+      aria-label={fmt(t.releases.progress, { done, total })}
+      className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
+    >
+      <div
+        className="h-full rounded-full bg-primary transition-[width]"
+        style={{ width: `${pct}%` }}
+      />
+    </div>
   );
 }

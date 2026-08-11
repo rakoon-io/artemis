@@ -37,7 +37,9 @@ export function listSprintsWithTickets(projectId: string) {
           // les mêmes champs que l'autorisation serveur.
           reporterId: true,
           assigneeId: true,
-          column: { select: { name: true } },
+          // `order` autant que `name` : le rang dit ce qui est ACHEVÉ (dernière
+          // colonne), le nom ne sert qu'à l'afficher.
+          column: { select: { name: true, order: true } },
           type: { select: { name: true, color: true } },
           priority: { select: { name: true, color: true } },
           assignee: { select: { name: true, email: true } },
