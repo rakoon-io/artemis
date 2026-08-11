@@ -106,6 +106,8 @@ export const fr = {
     recentFirst: "Du plus récent au plus ancien.",
     empty: "Rien ne vous est assigné et personne ne vous cite pour le moment.",
     more: "+ {count} de plus",
+    // « 20 + » : un plancher, quand on est cité au-delà de ce qui est suivi.
+    atLeast: "{count} +",
     // Nom du bouton de pli, pour ne pas lire tout le bloc d'un trait.
     toggleAria: "Mon activité : afficher ou masquer le détail",
     // Lu à voix haute à la place de la barre, qu'un lecteur d'écran ne voit pas.

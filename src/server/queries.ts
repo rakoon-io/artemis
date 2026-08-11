@@ -60,6 +60,9 @@ export async function getAccessibleProjectsWithStats(
  * une session ouverte avant un changement d'adresse en garderait l'ancienne -
  * on chercherait alors les citations de quelqu'un qui n'existe plus.
  *
+ * Seules les citations les plus récentes sont suivies (cf. `MAX_CITATIONS`) ;
+ * `hasMore` remonte jusqu'à la légende pour que le plafond se voie.
+ *
  * Quatre requêtes au plus, quel que soit le nombre de projets ; une seule si la
  * personne n'est membre de rien, auquel cas il n'y a rien à montrer.
  */
@@ -72,14 +75,16 @@ export async function getMyActivity(user: PolicyUser | null | undefined) {
   if (projectIds && projectIds.length === 0) return emptyActivity();
 
   const compte = await userService.getUserById(user.id);
-  const [tickets, bounds, pages] = await Promise.all([
+  const [tickets, bounds, citations] = await Promise.all([
     ticketService.listTicketsAssignedTo(user.id, projectIds),
     columnService.listColumnBounds(projectIds),
     compte?.email
       ? wikiService.listPagesMentioning(compte.email, projectIds)
-      : Promise.resolve([]),
+      : Promise.resolve({ pages: [], hasMore: false }),
   ]);
-  return buildActivity(tickets, bounds, pages);
+  return buildActivity(tickets, bounds, citations.pages, {
+    citationsTruncated: citations.hasMore,
+  });
 }
 
 export function getProjectByKey(key: string) {

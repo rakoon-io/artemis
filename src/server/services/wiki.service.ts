@@ -1,7 +1,12 @@
 import { prisma } from "@/lib/db";
 import { forgetObjects, wikiSubtreeKeys } from "./stored-objects.service";
 import { datePrefix, slugForTitle } from "@/lib/slug";
-import { mentionNeedle, mentionsEmail } from "@/lib/my-activity";
+import {
+  keepMostRecent,
+  mentionNeedle,
+  mentionsEmail,
+  MAX_CITATIONS,
+} from "@/lib/my-activity";
 import {
   buildSearchText,
   buildSnippet,
@@ -819,23 +824,31 @@ export function listPagesDocumenting(subjects: {
  * de pages - et ce serait à revoir (index trigramme `pg_trgm`, ou table de
  * citations tenue à l'écriture) si le wiki grossissait d'un ordre de grandeur.
  *
- * `LIMITE_CITATIONS` est un garde-fou contre l'emballement, pas une pagination.
- * Il porte sur les CANDIDATS, donc avant la seconde passe : au pire, quelqu'un
- * cité sur plus de pages que cette limite n'en verrait pas les plus anciennes -
- * jamais les plus récentes, qui sont l'objet du bloc. La marge est large pour
- * que le cas ne se présente pas.
+ * ─────────────────────────────────────────────────────────────────────────────
+ * DEUX BORNES, QU'IL NE FAUT PAS CONFONDRE
+ *
+ * `MAX_CITATIONS` (20) est la règle métier : on ne suit que les citations les
+ * plus récentes. Elle s'applique APRÈS la correspondance exacte - l'appliquer
+ * à la requête rendrait 19 citations dès qu'une page citant une adresse dont la
+ * nôtre est le préfixe se glisserait dans les 20 premières, et rien ne le
+ * signalerait.
+ *
+ * `LIMITE_CANDIDATS` n'est qu'un garde-fou de lecture, sans valeur métier : il
+ * borne ce que la base rapporte. Il est pris large devant `MAX_CITATIONS` pour
+ * absorber les fausses correspondances de la première passe ; l'atteindre est
+ * traité comme « il y en a d'autres », qui est la réponse prudente.
  *
  * `projectIds` borne la lecture aux projets accessibles ; `undefined` ne borne
  * rien (administrateur).
  */
-const LIMITE_CITATIONS = 300;
+const LIMITE_CANDIDATS = 200;
 
 export async function listPagesMentioning(
   email: string,
   projectIds?: string[],
 ) {
   const adresse = email.trim().toLowerCase();
-  if (!adresse) return [];
+  if (!adresse) return { pages: [], hasMore: false };
 
   const candidates = await prisma.wikiPage.findMany({
     where: {
@@ -843,7 +856,7 @@ export async function listPagesMentioning(
       content: { contains: mentionNeedle(adresse), mode: "insensitive" },
     },
     orderBy: { updatedAt: "desc" },
-    take: LIMITE_CITATIONS,
+    take: LIMITE_CANDIDATS,
     select: {
       id: true,
       title: true,
@@ -855,9 +868,17 @@ export async function listPagesMentioning(
   });
 
   // `content` a servi à trancher ; il n'a rien à faire dans ce qu'on renvoie.
-  return candidates
+  const exactes = candidates
     .filter((page) => mentionsEmail(page.content, adresse))
     .map(({ content: _content, ...page }) => page);
+
+  const { kept, hasMore } = keepMostRecent(exactes, MAX_CITATIONS);
+  return {
+    pages: kept,
+    // Garde-fou atteint : on ignore ce qu'il y a derrière, donc on ne prétend
+    // pas avoir tout vu.
+    hasMore: hasMore || candidates.length === LIMITE_CANDIDATS,
+  };
 }
 
 /**

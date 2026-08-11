@@ -96,6 +96,7 @@ export const en: Messages = {
     recentFirst: "Most recent first.",
     empty: "Nothing is assigned to you and nobody mentions you at the moment.",
     more: "+ {count} more",
+    atLeast: "{count}+",
     toggleAria: "My activity: show or hide the details",
     chartAria: "My activity breakdown: {detail}.",
   },

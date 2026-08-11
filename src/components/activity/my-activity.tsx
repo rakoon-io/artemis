@@ -58,7 +58,7 @@ const MAX_LIGNES = 12;
 
 export async function MyActivity({ activity }: { activity: Activity }) {
   const t = await getDictionary();
-  const { counts, entries } = activity;
+  const { counts, entries, citationsTruncated } = activity;
 
   const libelles: Record<ActivityCategory, string> = {
     todo: t.activity.todo,
@@ -66,6 +66,15 @@ export async function MyActivity({ activity }: { activity: Activity }) {
     done: t.activity.done,
     wiki: t.activity.wiki,
   };
+
+  /**
+   * Le nombre d'une catégorie, tel qu'on peut l'écrire sans mentir : au-delà du
+   * plafond des citations, « 20 » deviendrait faux - on écrit « 20 + ».
+   */
+  const chiffre = (c: ActivityCategory) =>
+    c === "wiki" && citationsTruncated
+      ? fmt(t.activity.atLeast, { count: counts[c] })
+      : String(counts[c]);
 
   if (counts.total === 0) {
     return (
@@ -105,14 +114,25 @@ export async function MyActivity({ activity }: { activity: Activity }) {
               aria-hidden
             />
             <h2 className="text-sm font-medium">{t.activity.title}</h2>
+            {/* Le total hérite du plafond : si les citations sont bornées, il
+                l'est aussi, et se lit « 24 + au total ». */}
             <span className="text-sm text-muted-foreground">
-              {fmt(t.activity.total, { count: counts.total })}
+              {fmt(t.activity.total, {
+                count: citationsTruncated
+                  ? fmt(t.activity.atLeast, { count: counts.total })
+                  : counts.total,
+              })}
             </span>
           </div>
 
-          <RepartitionBar counts={counts} libelles={libelles} t={t} />
+          <RepartitionBar
+            counts={counts}
+            libelles={libelles}
+            chiffre={chiffre}
+            t={t}
+          />
 
-          <Legende counts={counts} libelles={libelles} />
+          <Legende counts={counts} libelles={libelles} chiffre={chiffre} />
         </summary>
 
         <div className="border-t px-6 py-4">
@@ -146,10 +166,12 @@ type Dict = Awaited<ReturnType<typeof getDictionary>>;
 function RepartitionBar({
   counts,
   libelles,
+  chiffre,
   t,
 }: {
   counts: Activity["counts"];
   libelles: Record<ActivityCategory, string>;
+  chiffre: (c: ActivityCategory) => string;
   t: Dict;
 }) {
   // Une catégorie vide n'a pas de segment : un filet de 2 px ne se lit pas, et
@@ -157,7 +179,7 @@ function RepartitionBar({
   const segments = ACTIVITY_CATEGORIES.filter((c) => counts[c] > 0);
 
   const resume = segments
-    .map((c) => `${counts[c]} ${libelles[c].toLowerCase()}`)
+    .map((c) => `${chiffre(c)} ${libelles[c].toLowerCase()}`)
     .join(", ");
 
   return (
@@ -177,7 +199,7 @@ function RepartitionBar({
              Aucun texte pour les lecteurs d'écran ici : `role="img"` fait de la
              barre une FEUILLE, dont les enfants ne sont pas lus - c'est
              `aria-label` qui parle pour elle. */
-          title={`${counts[c]} ${libelles[c]}`}
+          title={`${chiffre(c)} ${libelles[c]}`}
         />
       ))}
     </div>
@@ -192,9 +214,11 @@ function RepartitionBar({
 function Legende({
   counts,
   libelles,
+  chiffre,
 }: {
   counts: Activity["counts"];
   libelles: Record<ActivityCategory, string>;
+  chiffre: (c: ActivityCategory) => string;
 }) {
   return (
     <ul className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
@@ -209,7 +233,7 @@ function Legende({
             aria-hidden
           />
           <span className="text-muted-foreground">{libelles[c]}</span>
-          <span className="font-medium tabular-nums">{counts[c]}</span>
+          <span className="font-medium tabular-nums">{chiffre(c)}</span>
         </li>
       ))}
     </ul>

@@ -5,6 +5,8 @@ import {
   buildActivity,
   emptyActivity,
   mentionNeedle,
+  keepMostRecent,
+  MAX_CITATIONS,
   mentionsEmail,
   pickVisible,
   ticketActivityState,
@@ -229,6 +231,73 @@ describe("emptyActivity", () => {
   it("ne compte rien", () => {
     expect(emptyActivity().counts.total).toBe(0);
     expect(emptyActivity().entries).toEqual([]);
+  });
+});
+
+describe("keepMostRecent", () => {
+  const p = (id: string, iso: string) => ({ id, updatedAt: at(iso) });
+
+  it("garde les plus récents, du plus frais au plus ancien", () => {
+    const { kept, hasMore } = keepMostRecent(
+      [p("vieux", "2026-01-01"), p("frais", "2026-03-01"), p("moyen", "2026-02-01")],
+      2,
+    );
+    expect(kept.map((x) => x.id)).toEqual(["frais", "moyen"]);
+    expect(hasMore).toBe(true);
+  });
+
+  it("ne signale rien quand tout tient", () => {
+    const { kept, hasMore } = keepMostRecent([p("a", "2026-01-01")], 20);
+    expect(kept).toHaveLength(1);
+    expect(hasMore).toBe(false);
+  });
+
+  it("n'annonce pas de reste quand le compte tombe juste", () => {
+    const items = [p("a", "2026-01-01"), p("b", "2026-01-02")];
+    expect(keepMostRecent(items, 2).hasMore).toBe(false);
+  });
+
+  it("ne modifie pas le tableau reçu", () => {
+    const items = [p("a", "2026-01-01"), p("b", "2026-03-01")];
+    const copie = [...items];
+    keepMostRecent(items, 1);
+    expect(items).toEqual(copie);
+  });
+
+  it("traite une limite nulle comme « rien, mais il y en avait »", () => {
+    expect(keepMostRecent([p("a", "2026-01-01")], 0)).toEqual({
+      kept: [],
+      hasMore: true,
+    });
+    expect(keepMostRecent([], 0)).toEqual({ kept: [], hasMore: false });
+  });
+
+  it("suit le plafond métier des citations", () => {
+    expect(MAX_CITATIONS).toBe(20);
+    const pages = Array.from({ length: 25 }, (_, i) =>
+      p(`p${i}`, `2026-01-${String(i + 1).padStart(2, "0")}`),
+    );
+    const { kept, hasMore } = keepMostRecent(pages, MAX_CITATIONS);
+    expect(kept).toHaveLength(20);
+    expect(hasMore).toBe(true);
+    // Les cinq plus anciennes sont celles qu'on laisse.
+    expect(kept.map((x) => x.id)).not.toContain("p0");
+    expect(kept.map((x) => x.id)).toContain("p24");
+  });
+});
+
+describe("buildActivity — plafond des citations", () => {
+  it("ne signale rien par défaut", () => {
+    expect(buildActivity([], new Map(), []).citationsTruncated).toBe(false);
+    expect(emptyActivity().citationsTruncated).toBe(false);
+  });
+
+  it("porte le drapeau quand on le lui donne", () => {
+    const a = buildActivity([], new Map(), [wiki("w", "2026-01-01")], {
+      citationsTruncated: true,
+    });
+    expect(a.citationsTruncated).toBe(true);
+    expect(a.counts.wiki).toBe(1);
   });
 });
 

@@ -108,6 +108,38 @@ export function mentionNeedle(email: string): string {
   return `mailto:${email.trim().toLowerCase()}`;
 }
 
+/**
+ * COMBIEN DE CITATIONS ON SUIT.
+ *
+ * Une citation vieille de six mois ne dit plus rien de ce qu'on a à faire : ce
+ * bloc regarde le présent. On garde donc les 20 plus récentes, et l'on cesse de
+ * compter au-delà - un nombre qui grossirait sans fin ferait de la barre une
+ * mesure d'ancienneté plutôt que d'activité.
+ *
+ * Ce plafond se pose APRÈS la correspondance exacte, jamais avant : appliqué aux
+ * candidats, une page qui cite `bob@x.io.uk` mangerait la place d'une vraie
+ * citation de `bob@x.io`, et l'on en rendrait 19 sans que rien ne le signale.
+ */
+export const MAX_CITATIONS = 20;
+
+/**
+ * Les `max` éléments les plus récents, et s'il en restait.
+ *
+ * `hasMore` n'est pas cosmétique : sans lui, la légende afficherait « 20 » à
+ * quelqu'un qui est cité sur trente pages, et ce nombre serait faux. Avec lui,
+ * elle peut dire « 20 + » - le plafond devient une information, pas un mensonge.
+ */
+export function keepMostRecent<T extends { updatedAt: Date }>(
+  items: readonly T[],
+  max: number,
+): { kept: T[]; hasMore: boolean } {
+  if (max <= 0) return { kept: [], hasMore: items.length > 0 };
+  const tries = [...items].sort(
+    (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
+  );
+  return { kept: tries.slice(0, max), hasMore: tries.length > max };
+}
+
 /** Neutralise ce qui, dans une adresse, aurait un sens en expression régulière. */
 function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -169,6 +201,11 @@ export interface Activity {
   counts: ActivityCounts;
   /** Tout, mêlé, du plus récemment touché au plus ancien. */
   entries: ActivityEntry[];
+  /**
+   * Vrai quand on est cité au-delà de ce qu'on suit (cf. `MAX_CITATIONS`) : le
+   * compte des citations est alors un plancher, et s'affiche « 20 + ».
+   */
+  citationsTruncated: boolean;
 }
 
 /** Ce que la couche base fournit pour un ticket assigné. */
@@ -206,6 +243,7 @@ export function buildActivity(
   tickets: readonly TicketSource[],
   boundsByProject: ReadonlyMap<string, ColumnBounds>,
   wikiPages: readonly WikiSource[],
+  options: { citationsTruncated?: boolean } = {},
 ): Activity {
   const entries: ActivityEntry[] = [];
   const counts: ActivityCounts = {
@@ -250,7 +288,11 @@ export function buildActivity(
   entries.sort(
     (a, b) => b.at.getTime() - a.at.getTime() || a.id.localeCompare(b.id),
   );
-  return { counts, entries };
+  return {
+    counts,
+    entries,
+    citationsTruncated: options.citationsTruncated ?? false,
+  };
 }
 
 /** Une activité vide - de quoi répondre sans interroger la base. */
@@ -258,6 +300,7 @@ export function emptyActivity(): Activity {
   return {
     counts: { todo: 0, doing: 0, done: 0, wiki: 0, total: 0 },
     entries: [],
+    citationsTruncated: false,
   };
 }
 
