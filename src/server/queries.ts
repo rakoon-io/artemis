@@ -1,4 +1,5 @@
 import { isAdmin, type PolicyUser } from "@/lib/policies";
+import { groupByActivity, type Activity } from "@/lib/my-activity";
 import * as columnService from "./services/column.service";
 import * as releaseService from "./services/release.service";
 import * as wikiAttachmentService from "./services/wiki-attachment.service";
@@ -44,6 +45,37 @@ export async function getAccessibleProjectsWithStats(
   const ids = await membershipService.listAccessibleProjectIds(user.id);
   return projectService.listProjectsWithStats(ids);
 }
+
+/**
+ * MON ACTIVITÉ : mes tickets, répartis en « à faire / en cours / terminé ».
+ *
+ * La lecture est bornée aux projets accessibles (un administrateur les voit
+ * tous), puis les tickets sont situés d'après les rangs de colonnes de LEUR
+ * projet - la règle vit dans `@/lib/my-activity`, pure et testée.
+ *
+ * Deux requêtes, quel que soit le nombre de projets ; aucune si la personne
+ * n'est membre de rien, auquel cas il n'y a rien à montrer.
+ */
+export async function getMyActivity(user: PolicyUser | null | undefined) {
+  const vide: Activity<AssignedTicket> = { todo: [], doing: [], done: [] };
+  if (!user) return vide;
+
+  const projectIds = isAdmin(user)
+    ? undefined
+    : await membershipService.listAccessibleProjectIds(user.id);
+  if (projectIds && projectIds.length === 0) return vide;
+
+  const [tickets, bounds] = await Promise.all([
+    ticketService.listTicketsAssignedTo(user.id, projectIds),
+    columnService.listColumnBounds(projectIds),
+  ]);
+  return groupByActivity(tickets, bounds);
+}
+
+/** Un ticket tel que « Mon activité » le lit. */
+export type AssignedTicket = Awaited<
+  ReturnType<typeof ticketService.listTicketsAssignedTo>
+>[number];
 
 export function getProjectByKey(key: string) {
   return projectService.getProjectByKey(key);

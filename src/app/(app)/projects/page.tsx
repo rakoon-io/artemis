@@ -4,7 +4,8 @@ import { CalendarRange, CircleCheck, Ticket } from "lucide-react";
 import { auth } from "@/auth";
 import { isAdmin } from "@/lib/policies";
 import { getDictionary } from "@/i18n/server";
-import { getAccessibleProjectsWithStats } from "@/server/queries";
+import { getAccessibleProjectsWithStats, getMyActivity } from "@/server/queries";
+import { MyActivity } from "@/components/activity/my-activity";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -19,7 +20,12 @@ export const metadata: Metadata = { title: "Projets" };
 
 export default async function ProjectsPage() {
   const session = await auth();
-  const projects = await getAccessibleProjectsWithStats(session?.user);
+  // Les deux lectures sont indépendantes : les mener de front évite d'attendre
+  // la seconde après la première pour un affichage qui les montre ensemble.
+  const [projects, activity] = await Promise.all([
+    getAccessibleProjectsWithStats(session?.user),
+    getMyActivity(session?.user),
+  ]);
   const admin = isAdmin(session?.user);
   const t = await getDictionary();
 
@@ -34,6 +40,10 @@ export default async function ProjectsPage() {
         </div>
         {admin ? <CreateProjectDialog /> : null}
       </div>
+
+      {/* MON TRAVAIL D'ABORD, le catalogue des projets ensuite : on arrive ici
+          pour savoir ce qu'on a à faire, pas pour inventorier l'existant. */}
+      <MyActivity activity={activity} />
 
       {projects.length === 0 ? (
         <Card className="flex flex-col items-center justify-center gap-4 border-dashed py-16 text-center">

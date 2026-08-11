@@ -24,6 +24,34 @@ export function listColumns(projectId: string) {
   });
 }
 
+/**
+ * Rangs extrêmes des colonnes, par projet : l'entrée du workflow et sa fin.
+ *
+ * Situer un ticket demande de savoir où commence et où s'arrête le tableau de
+ * SON projet. Les charger colonne par colonne ferait une requête par projet
+ * pour n'en retenir que deux nombres ; une agrégation en rend l'essentiel d'un
+ * seul appel, quel que soit le nombre de projets.
+ *
+ * `projectIds` restreint la lecture ; `undefined` prend tous les projets.
+ * Un projet sans colonne n'apparaît tout simplement pas dans le résultat.
+ */
+export async function listColumnBounds(
+  projectIds?: string[],
+): Promise<Map<string, { first: number; last: number }>> {
+  const groups = await prisma.column.groupBy({
+    by: ["projectId"],
+    ...(projectIds ? { where: { projectId: { in: projectIds } } } : {}),
+    _min: { order: true },
+    _max: { order: true },
+  });
+  const bounds = new Map<string, { first: number; last: number }>();
+  for (const g of groups) {
+    if (g._min.order == null || g._max.order == null) continue;
+    bounds.set(g.projectId, { first: g._min.order, last: g._max.order });
+  }
+  return bounds;
+}
+
 export interface CreateColumnServiceInput {
   projectId: string;
   name: string;

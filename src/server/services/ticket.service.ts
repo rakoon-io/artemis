@@ -377,6 +377,40 @@ export function listBoardTickets(projectId: string) {
   });
 }
 
+/**
+ * Tickets assignés à une personne, TOUS PROJETS CONFONDUS, du plus récemment
+ * modifié au plus ancien - la matière de « Mon activité », sur l'accueil.
+ *
+ * `projectIds` borne la lecture aux projets auxquels la personne a accès ;
+ * `undefined` ne borne rien (administrateur). Une assignation peut survivre au
+ * retrait d'un membre : sans ce garde-fou, l'accueil montrerait le titre d'un
+ * ticket d'un projet devenu interdit.
+ *
+ * `projectId` est sélectionné en plus de `project` : c'est la clef qui relie
+ * chaque ticket aux rangs de colonnes de son projet (cf. `@/lib/my-activity`).
+ */
+export function listTicketsAssignedTo(userId: string, projectIds?: string[]) {
+  return prisma.ticket.findMany({
+    where: {
+      assigneeId: userId,
+      ...(projectIds ? { projectId: { in: projectIds } } : {}),
+    },
+    orderBy: { updatedAt: "desc" },
+    select: {
+      id: true,
+      key: true,
+      title: true,
+      updatedAt: true,
+      projectId: true,
+      project: { select: { key: true, name: true } },
+      // `order` situe (entrée / milieu / fin), `name` affiche le statut réel.
+      column: { select: { name: true, order: true } },
+      type: { select: { name: true, color: true } },
+      priority: { select: { name: true, color: true } },
+    },
+  });
+}
+
 /** Tickets du projet sans sprint (backlog), pour la vue Sprints. */
 export function listBacklogTickets(projectId: string) {
   return prisma.ticket.findMany({
