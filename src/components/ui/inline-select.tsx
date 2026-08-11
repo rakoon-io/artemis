@@ -80,13 +80,29 @@ export function InlineSelect({
   const [editing, setEditing] = useState(false);
   const [pending, setPending] = useState(false);
 
+  const courant = options.find((o) => o.value === value);
   const display =
     children ?? (
       <span className={value === emptyValue ? "text-muted-foreground" : undefined}>
-        {options.find((o) => o.value === value)?.label ?? emptyLabel}
+        {courant?.label ?? emptyLabel}
       </span>
     );
   const clearable = emptyValue !== undefined;
+
+  /**
+   * L'INTITULÉ DIT AUSSI LA VALEUR.
+   *
+   * `aria-label` REMPLACE le contenu du bouton dans le nom accessible : réduit à
+   * « Modifier Statut », il aurait dit ce que le bouton fait sans jamais dire ce
+   * qu'il montre - le badge « Terminé », lu par tous, redevenait muet. La valeur
+   * y est donc reprise, et le rendu visuel n'est pas touché.
+   *
+   * Un champ vide n'a rien à annoncer : on retombe alors sur le seul verbe.
+   */
+  const valeurLue = courant?.label ?? (value === emptyValue ? emptyLabel : undefined);
+  const intitule = valeurLue
+    ? fmt(t.common.inline.editAriaValue, { field, value: valeurLue })
+    : fmt(t.common.inline.editAria, { field });
 
   if (disabled) return <span className="mt-0.5 block">{display}</span>;
 
@@ -173,8 +189,8 @@ export function InlineSelect({
     <button
       type="button"
       onClick={() => setEditing(true)}
-      title={fmt(t.common.inline.editAria, { field })}
-      aria-label={fmt(t.common.inline.editAria, { field })}
+      title={intitule}
+      aria-label={intitule}
       className={cn(
         "group/inline flex items-center gap-1.5 rounded-md text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         /* La lecture réserve la hauteur du déclencheur : passer de l'une à

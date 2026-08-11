@@ -33,6 +33,7 @@ export const en: Messages = {
     // `editAria` interpole {field} via `fmt`.
     inline: {
       editAria: "Edit {field}",
+      editAriaValue: "Edit {field}: {value}",
       hint: "Enter to save, Esc to cancel",
       hintMultiline: "⌘/Ctrl + Enter to save, Esc to cancel",
       empty: "Add…",

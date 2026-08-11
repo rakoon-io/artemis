@@ -36,6 +36,9 @@ export const fr = {
     // `editAria` interpole {field} via `fmt`.
     inline: {
       editAria: "Modifier {field}",
+      // Idem, quand le champ a une valeur : elle est reprise dans l'intitulé,
+      // que `aria-label` remplacerait sinon (cf. `InlineSelect`).
+      editAriaValue: "Modifier {field} : {value}",
       hint: "Entrée pour valider, Échap pour annuler",
       hintMultiline: "⌘/Ctrl + Entrée pour valider, Échap pour annuler",
       empty: "Ajouter…",
