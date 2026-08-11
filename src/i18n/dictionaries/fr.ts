@@ -92,19 +92,21 @@ export const fr = {
     sprintOne: "sprint",
     sprintOther: "sprints",
   },
-  // Bandeau « Mon activité », en tête de l'accueil : mes tickets par état.
+  // Bandeau « Mon activité », en tête de l'accueil : replié, la répartition ;
+  // déplié, la chronologie. Les citations du wiki y comptent comme le reste.
   activity: {
     title: "Mon activité",
-    subtitle: "Les tickets qui vous sont assignés, tous projets confondus.",
+    total: "· {count} au total",
     todo: "À faire",
     doing: "En cours",
     done: "Terminés",
-    empty: "Aucun ticket ne vous est assigné pour le moment.",
-    emptyTodo: "Rien en attente.",
-    emptyDoing: "Rien en cours.",
-    emptyDone: "Rien de terminé.",
-    more: "+ {count} autre(s)",
-    updated: "Mis à jour le {date}",
+    wiki: "Citations",
+    wikiBadge: "Wiki",
+    recentFirst: "Les plus récentes en premier.",
+    empty: "Rien ne vous est assigné et personne ne vous cite pour le moment.",
+    more: "+ {count} de plus",
+    // Lu à voix haute à la place de la barre, qu'un lecteur d'écran ne voit pas.
+    chartAria: "Répartition de mon activité : {total} éléments — {detail}.",
   },
   account,
   board,

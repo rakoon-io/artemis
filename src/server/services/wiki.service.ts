@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { forgetObjects, wikiSubtreeKeys } from "./stored-objects.service";
 import { datePrefix, slugForTitle } from "@/lib/slug";
+import { mentionNeedle, mentionsEmail } from "@/lib/my-activity";
 import {
   buildSearchText,
   buildSnippet,
@@ -790,6 +791,66 @@ export function listPagesDocumenting(subjects: {
     },
     orderBy: { title: "asc" },
   });
+}
+
+/**
+ * Pages où une personne est CITÉE, du plus récemment modifié au plus ancien.
+ *
+ * L'autre sens de lecture du wiki : non plus « qu'est-ce qui est écrit sur cette
+ * brique ? » mais « où attend-on quelque chose de moi ? ».
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * POURQUOI DEUX ÉTAPES
+ *
+ * Une citation n'est enregistrée nulle part : c'est un lien `[@Nom](mailto:…)`
+ * dans le corps de la page, et l'adresse en est le seul identifiant (elle est
+ * unique en base). Il faut donc chercher dans le texte.
+ *
+ * 1. La base ramène les pages qui CONTIENNENT l'adresse. Filtre large, fait par
+ *    Postgres, qui rate peu ;
+ * 2. `mentionsEmail` tranche exactement, en mémoire, sur les quelques pages
+ *    rapportées : sans cette seconde passe, `bob@x.io` remonterait les pages qui
+ *    ne citent que `bob@x.io.uk`, dont la première est un préfixe.
+ *
+ * La première passe est un balayage (aucun index ne porte sur `content` : celui
+ * de la recherche indexe des MOTS, et une adresse y est découpée en morceaux).
+ * C'est tenable parce qu'elle ne ramène que les pages contenant cette adresse-là
+ * - en pratique une poignée. `LIMITE_CITATIONS` n'est qu'un garde-fou contre un
+ * emballement, jamais atteint dans un usage normal.
+ *
+ * `projectIds` borne la lecture aux projets accessibles ; `undefined` ne borne
+ * rien (administrateur).
+ */
+const LIMITE_CITATIONS = 100;
+
+export async function listPagesMentioning(
+  email: string,
+  projectIds?: string[],
+) {
+  const adresse = email.trim().toLowerCase();
+  if (!adresse) return [];
+
+  const candidates = await prisma.wikiPage.findMany({
+    where: {
+      ...(projectIds ? { projectId: { in: projectIds } } : {}),
+      content: { contains: mentionNeedle(adresse), mode: "insensitive" },
+    },
+    orderBy: { updatedAt: "desc" },
+    take: LIMITE_CITATIONS,
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      updatedAt: true,
+      content: true,
+      project: { select: { key: true } },
+    },
+  });
+
+  // `content` a servi à trancher ; il n'a rien à faire dans ce qu'on renvoie.
+  return candidates
+    .filter((page) => mentionsEmail(page.content, adresse))
+    .map(({ content: _content, ...page }) => page);
 }
 
 /**

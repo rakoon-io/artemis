@@ -1,8 +1,15 @@
 import { describe, it, expect } from "vitest";
 import {
-  groupByActivity,
+  ACTIVITY_CATEGORIES,
+  ACTIVITY_COLORS,
+  buildActivity,
+  emptyActivity,
+  mentionNeedle,
+  mentionsEmail,
   ticketActivityState,
   type ColumnBounds,
+  type TicketSource,
+  type WikiSource,
 } from "./my-activity";
 
 /** Workflow par défaut : Backlog(0) … Terminé(4). */
@@ -44,48 +51,182 @@ describe("ticketActivityState", () => {
   });
 });
 
-describe("groupByActivity", () => {
-  it("répartit les tickets dans les trois états", () => {
-    const bounds = new Map([["p", defaut]]);
-    const activity = groupByActivity(
-      [t("p", 0), t("p", 2), t("p", 4)],
-      bounds,
+describe("palette", () => {
+  it("donne une couleur à chaque catégorie, sans doublon", () => {
+    const couleurs = ACTIVITY_CATEGORIES.map((c) => ACTIVITY_COLORS[c]);
+    expect(couleurs).toHaveLength(4);
+    expect(couleurs.every((c) => /^#[0-9a-f]{6}$/i.test(c))).toBe(true);
+    expect(new Set(couleurs).size).toBe(4);
+  });
+
+  it("garde l'ordre de lecture : à faire, en cours, terminé, citations", () => {
+    expect([...ACTIVITY_CATEGORIES]).toEqual(["todo", "doing", "done", "wiki"]);
+  });
+});
+
+describe("mentionNeedle", () => {
+  it("cherche l'adresse sous sa forme de lien", () => {
+    expect(mentionNeedle("Ada@Rakoon.io")).toBe("mailto:ada@rakoon.io");
+  });
+  it("ignore les espaces autour", () => {
+    expect(mentionNeedle("  ada@rakoon.io ")).toBe("mailto:ada@rakoon.io");
+  });
+});
+
+describe("mentionsEmail", () => {
+  const page = "Voir avec [@Ada L](mailto:ada@rakoon.io) pour la suite.";
+
+  it("reconnaît une citation", () => {
+    expect(mentionsEmail(page, "ada@rakoon.io")).toBe(true);
+  });
+
+  it("ne confond pas une adresse dont l'autre est le préfixe", () => {
+    const autre = "[@Ada](mailto:ada@rakoon.io.uk)";
+    expect(mentionsEmail(autre, "ada@rakoon.io")).toBe(false);
+  });
+
+  it("reste insensible à la casse", () => {
+    expect(mentionsEmail("(mailto:Ada@Rakoon.IO)", "ada@rakoon.io")).toBe(true);
+    expect(mentionsEmail(page, "ADA@RAKOON.IO")).toBe(true);
+  });
+
+  it("traite les points et le plus comme des caractères, pas des motifs", () => {
+    // Sans échappement, « a.a@x.io » accepterait « aXa@x.io ».
+    expect(mentionsEmail("(mailto:aXa@x.io)", "a.a@x.io")).toBe(false);
+    expect(mentionsEmail("(mailto:a.a@x.io)", "a.a@x.io")).toBe(true);
+    expect(mentionsEmail("(mailto:a+b@x.io)", "a+b@x.io")).toBe(true);
+  });
+
+  it("ne dit rien d'une page qui ne cite personne", () => {
+    expect(mentionsEmail("Une page sans lien.", "ada@rakoon.io")).toBe(false);
+  });
+
+  it("refuse une adresse vide plutôt que de tout accepter", () => {
+    expect(mentionsEmail(page, "   ")).toBe(false);
+  });
+
+  it("reconnaît la citation d'un nom échappé", () => {
+    expect(mentionsEmail("[@Ana \\[DSI\\]](mailto:ana@x.io)", "ana@x.io")).toBe(
+      true,
     );
-    expect(activity.todo.map((x) => x.key)).toEqual(["p-0"]);
-    expect(activity.doing.map((x) => x.key)).toEqual(["p-2"]);
-    expect(activity.done.map((x) => x.key)).toEqual(["p-4"]);
+  });
+});
+
+// ─── chronologie ─────────────────────────────────────────────────────────────
+
+const at = (iso: string) => new Date(iso);
+
+const ticket = (
+  id: string,
+  order: number,
+  iso: string,
+  projectId = "p",
+): TicketSource => ({
+  id,
+  key: `P-${id}`,
+  title: `Ticket ${id}`,
+  projectId,
+  updatedAt: at(iso),
+  project: { key: "P" },
+  column: { name: `col${order}`, order },
+});
+
+const wiki = (id: string, iso: string, slug: string | null = null): WikiSource => ({
+  id,
+  title: `Page ${id}`,
+  slug,
+  updatedAt: at(iso),
+  project: { key: "P" },
+});
+
+const bounds = new Map([["p", defaut]]);
+
+describe("buildActivity", () => {
+  it("compte chaque catégorie et le total", () => {
+    const a = buildActivity(
+      [
+        ticket("1", 0, "2026-01-01"),
+        ticket("2", 2, "2026-01-02"),
+        ticket("3", 4, "2026-01-03"),
+      ],
+      bounds,
+      [wiki("w1", "2026-01-04")],
+    );
+    expect(a.counts).toEqual({ todo: 1, doing: 1, done: 1, wiki: 1, total: 4 });
+  });
+
+  it("mêle tickets et pages, du plus récent au plus ancien", () => {
+    const a = buildActivity(
+      [ticket("1", 0, "2026-01-01"), ticket("2", 2, "2026-01-05")],
+      bounds,
+      [wiki("w1", "2026-01-03")],
+    );
+    expect(a.entries.map((e) => e.id)).toEqual(["2", "w1", "1"]);
+  });
+
+  it("départage deux dates identiques de façon déterministe", () => {
+    const a = buildActivity(
+      [ticket("b", 0, "2026-01-01"), ticket("a", 0, "2026-01-01")],
+      bounds,
+      [],
+    );
+    expect(a.entries.map((e) => e.id)).toEqual(["a", "b"]);
+  });
+
+  it("porte le nom réel de la colonne sur chaque ticket", () => {
+    const a = buildActivity([ticket("1", 3, "2026-01-01")], bounds, []);
+    const e = a.entries[0];
+    expect(e.kind).toBe("ticket");
+    if (e.kind === "ticket") {
+      expect(e.status).toBe("col3");
+      expect(e.category).toBe("doing");
+      expect(e.projectKey).toBe("P");
+    }
+  });
+
+  it("prend le slug d'une page, ou son identifiant à défaut", () => {
+    const a = buildActivity([], bounds, [
+      wiki("w1", "2026-01-02", "reunion-du-2"),
+      wiki("w2", "2026-01-01", null),
+    ]);
+    const handles = a.entries.map((e) => (e.kind === "wiki" ? e.handle : ""));
+    expect(handles).toEqual(["reunion-du-2", "w2"]);
   });
 
   it("applique à chaque projet SES propres rangs", () => {
-    // Même rang 1, deux verdicts : fin du workflow court, milieu du long.
-    const bounds = new Map([
+    const deuxProjets = new Map([
       ["court", { first: 0, last: 1 }],
       ["long", defaut],
     ]);
-    const activity = groupByActivity([t("court", 1), t("long", 1)], bounds);
-    expect(activity.done.map((x) => x.projectId)).toEqual(["court"]);
-    expect(activity.doing.map((x) => x.projectId)).toEqual(["long"]);
-  });
-
-  it("conserve l'ordre d'entrée dans chaque groupe", () => {
-    const bounds = new Map([["p", defaut]]);
-    const activity = groupByActivity(
-      [t("p", 2, "a"), t("p", 0, "b"), t("p", 3, "c"), t("p", 1, "d")],
-      bounds,
+    const a = buildActivity(
+      [ticket("c", 1, "2026-01-02", "court"), ticket("l", 1, "2026-01-01", "long")],
+      deuxProjets,
+      [],
     );
-    expect(activity.doing.map((x) => x.key)).toEqual(["a", "c", "d"]);
+    expect(a.counts.done).toBe(1);
+    expect(a.counts.doing).toBe(1);
   });
 
   it("ignore un ticket dont le projet n'a aucune colonne connue", () => {
-    const activity = groupByActivity([t("inconnu", 0)], new Map());
-    expect(activity).toEqual({ todo: [], doing: [], done: [] });
+    const a = buildActivity([ticket("x", 0, "2026-01-01", "inconnu")], bounds, []);
+    expect(a.entries).toEqual([]);
+    expect(a.counts.total).toBe(0);
   });
 
-  it("renvoie trois groupes vides sans ticket", () => {
-    expect(groupByActivity([], new Map())).toEqual({
-      todo: [],
-      doing: [],
-      done: [],
-    });
+  it("rend une activité vide sans rien", () => {
+    expect(buildActivity([], new Map(), [])).toEqual(emptyActivity());
+  });
+
+  it("tient une activité faite uniquement de citations", () => {
+    const a = buildActivity([], new Map(), [wiki("w1", "2026-01-01")]);
+    expect(a.counts).toEqual({ todo: 0, doing: 0, done: 0, wiki: 1, total: 1 });
+    expect(a.entries[0].kind).toBe("wiki");
+  });
+});
+
+describe("emptyActivity", () => {
+  it("ne compte rien", () => {
+    expect(emptyActivity().counts.total).toBe(0);
+    expect(emptyActivity().entries).toEqual([]);
   });
 });
