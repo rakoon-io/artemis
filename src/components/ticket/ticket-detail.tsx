@@ -19,6 +19,7 @@ import { cn, formatDateTime, initials } from "@/lib/utils";
 import { getAccessibleProjectByKey } from "@/server/access";
 import {
   getAssignableUsers,
+  getColumns,
   getComponents,
   getLabels,
   getModules,
@@ -51,6 +52,7 @@ import {
   TicketPriorityInline,
   TicketReleaseInline,
   TicketSprintInline,
+  TicketStatusInline,
   TicketTitleInline,
   TicketTypeInline,
 } from "@/components/ticket/ticket-inline-fields";
@@ -160,6 +162,8 @@ export async function TicketDetail({
     components: Awaited<ReturnType<typeof getComponents>>;
     modules: Awaited<ReturnType<typeof getModules>>;
     releases: Awaited<ReturnType<typeof getReleases>>;
+    // Les colonnes du projet : les statuts entre lesquels le ticket peut aller.
+    columns: Awaited<ReturnType<typeof getColumns>>;
   } | null = null;
   if (canEdit) {
     const [
@@ -171,6 +175,7 @@ export async function TicketDetail({
       components,
       modules,
       releases,
+      columns,
     ] = await Promise.all([
       getAssignableUsers(ticket.projectId),
       getSprints(ticket.projectId),
@@ -180,6 +185,7 @@ export async function TicketDetail({
       getComponents(ticket.projectId),
       getModules(ticket.projectId),
       getReleases(ticket.projectId),
+      getColumns(ticket.projectId),
     ]);
     editData = {
       members,
@@ -190,6 +196,7 @@ export async function TicketDetail({
       components,
       modules,
       releases,
+      columns,
     };
   }
 
@@ -278,7 +285,28 @@ export async function TicketDetail({
                 kindLabel={t.taxonomy.componentKinds[ticket.component.kind]}
               />
             )}
-            <Badge variant="secondary">{ticket.column.name}</Badge>
+            {/**
+             * LE STATUT SE CHANGE ICI, et non plus seulement au tableau.
+             *
+             * Il s'affichait en pastille morte : clore un ticket obligeait à
+             * quitter son détail pour aller le glisser sur le Kanban - or c'est
+             * en le lisant qu'on décide qu'il est terminé. La modale, qui n'a
+             * pas de tableau derrière elle, rendait le geste impossible.
+             *
+             * Même chemin que le glisser-déposer (`moveTicketAction`) : un
+             * statut EST une colonne. Sans position déclarée, le ticket se pose
+             * à la fin de la colonne visée, comme depuis la liste.
+             */}
+            <span className="inline-flex">
+              <TicketStatusInline
+                ticketId={ticket.id}
+                value={ticket.columnId}
+                columns={editData?.columns ?? []}
+                canEdit={canEdit}
+              >
+                <Badge variant="secondary">{ticket.column.name}</Badge>
+              </TicketStatusInline>
+            </span>
           </div>
         </div>
         {(canEdit || canDelete) && (
