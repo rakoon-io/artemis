@@ -260,3 +260,41 @@ export function emptyActivity(): Activity {
     entries: [],
   };
 }
+
+/**
+ * CE QU'ON MONTRE QUAND TOUT NE TIENT PAS.
+ *
+ * Couper simplement les `max` premiers serait un piège : terminer un ticket le
+ * fait remonter en tête (sa date de modification change), si bien qu'une
+ * matinée productive chasserait de la liste TOUT ce qui reste à faire. La
+ * légende annoncerait « À faire 5 » au-dessus d'une liste n'en montrant aucun -
+ * exactement la question à laquelle ce bloc doit répondre.
+ *
+ * On réserve donc d'abord une place à chaque catégorie présente (la plus
+ * récente de chacune), puis on complète par ordre de fraîcheur. Ce qui est
+ * annoncé dans la légende est ainsi toujours représenté dans la liste, et
+ * l'ordre d'affichage reste la chronologie.
+ */
+export function pickVisible(
+  entries: readonly ActivityEntry[],
+  max: number,
+): ActivityEntry[] {
+  if (max <= 0) return [];
+  if (entries.length <= max) return [...entries];
+
+  const retenus = new Set<ActivityEntry>();
+  // 1. Une place garantie par catégorie présente - `entries` étant déjà trié,
+  //    la première rencontrée est la plus récente de sa catégorie.
+  for (const categorie of ACTIVITY_CATEGORIES) {
+    if (retenus.size >= max) break;
+    const premier = entries.find((e) => e.category === categorie);
+    if (premier) retenus.add(premier);
+  }
+  // 2. Le reste des places va aux plus récents, sans distinction.
+  for (const entry of entries) {
+    if (retenus.size >= max) break;
+    retenus.add(entry);
+  }
+  // 3. On rend l'ordre chronologique : `entries` le porte déjà.
+  return entries.filter((e) => retenus.has(e));
+}

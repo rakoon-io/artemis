@@ -402,11 +402,9 @@ export function listTicketsAssignedTo(userId: string, projectIds?: string[]) {
       title: true,
       updatedAt: true,
       projectId: true,
-      project: { select: { key: true, name: true } },
+      project: { select: { key: true } },
       // `order` situe (entrée / milieu / fin), `name` affiche le statut réel.
       column: { select: { name: true, order: true } },
-      type: { select: { name: true, color: true } },
-      priority: { select: { name: true, color: true } },
     },
   });
 }

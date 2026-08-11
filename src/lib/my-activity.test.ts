@@ -6,6 +6,7 @@ import {
   emptyActivity,
   mentionNeedle,
   mentionsEmail,
+  pickVisible,
   ticketActivityState,
   type ColumnBounds,
   type TicketSource,
@@ -228,5 +229,86 @@ describe("emptyActivity", () => {
   it("ne compte rien", () => {
     expect(emptyActivity().counts.total).toBe(0);
     expect(emptyActivity().entries).toEqual([]);
+  });
+});
+
+describe("pickVisible", () => {
+  /** Chronologie : 12 tickets terminés tout frais, 5 « à faire » plus anciens. */
+  const chargee = buildActivity(
+    [
+      ...Array.from({ length: 12 }, (_, i) =>
+        ticket(`done${i}`, 4, `2026-02-${String(i + 10).padStart(2, "0")}`),
+      ),
+      ...Array.from({ length: 5 }, (_, i) =>
+        ticket(`todo${i}`, 0, `2026-01-0${i + 1}`),
+      ),
+    ],
+    bounds,
+    [],
+  ).entries;
+
+  it("rend tout quand tout tient", () => {
+    const a = buildActivity([ticket("1", 0, "2026-01-01")], bounds, []).entries;
+    expect(pickVisible(a, 12)).toHaveLength(1);
+  });
+
+  it("ne dépasse jamais la limite", () => {
+    expect(pickVisible(chargee, 12)).toHaveLength(12);
+    expect(pickVisible(chargee, 3)).toHaveLength(3);
+  });
+
+  it("montre toujours au moins un élément de chaque catégorie annoncée", () => {
+    // Le piège : les 12 terminés sont tous plus récents que les « à faire ».
+    const vus = pickVisible(chargee, 12);
+    const categories = new Set(vus.map((e) => e.category));
+    expect(categories.has("done")).toBe(true);
+    expect(categories.has("todo")).toBe(true);
+  });
+
+  it("garde l'ordre chronologique de la sélection", () => {
+    const vus = pickVisible(chargee, 12);
+    const dates = vus.map((e) => e.at.getTime());
+    expect([...dates].sort((a, b) => b - a)).toEqual(dates);
+  });
+
+  it("privilégie la fraîcheur une fois chaque catégorie servie", () => {
+    const vus = pickVisible(chargee, 12);
+    // 1 place réservée au plus récent « à faire », 11 aux terminés les plus frais.
+    expect(vus.filter((e) => e.category === "todo")).toHaveLength(1);
+    expect(vus.filter((e) => e.category === "done")).toHaveLength(11);
+  });
+
+  it("sert les catégories dans l'ordre de lecture quand les places manquent", () => {
+    const vus = pickVisible(chargee, 1);
+    expect(vus).toHaveLength(1);
+    expect(vus[0].category).toBe("todo");
+  });
+
+  it("ne rend rien pour une limite nulle ou négative", () => {
+    expect(pickVisible(chargee, 0)).toEqual([]);
+    expect(pickVisible(chargee, -3)).toEqual([]);
+  });
+
+  it("ne duplique jamais un élément", () => {
+    const vus = pickVisible(chargee, 12);
+    expect(new Set(vus.map((e) => e.id)).size).toBe(vus.length);
+  });
+
+  it("représente les quatre catégories quand elles coexistent", () => {
+    const melange = buildActivity(
+      [
+        ...Array.from({ length: 10 }, (_, i) =>
+          ticket(`d${i}`, 4, `2026-03-${String(i + 10).padStart(2, "0")}`),
+        ),
+        ticket("t", 0, "2026-01-01"),
+        ticket("g", 2, "2026-01-02"),
+      ],
+      bounds,
+      [wiki("w", "2026-01-03")],
+    ).entries;
+    const vus = pickVisible(melange, 5);
+    expect(new Set(vus.map((e) => e.category))).toEqual(
+      new Set(["todo", "doing", "done", "wiki"]),
+    );
   });
 });

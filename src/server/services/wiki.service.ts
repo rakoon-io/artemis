@@ -812,16 +812,23 @@ export function listPagesDocumenting(subjects: {
  *    rapportées : sans cette seconde passe, `bob@x.io` remonterait les pages qui
  *    ne citent que `bob@x.io.uk`, dont la première est un préfixe.
  *
- * La première passe est un balayage (aucun index ne porte sur `content` : celui
+ * La première passe est un BALAYAGE : aucun index ne porte sur `content` (celui
  * de la recherche indexe des MOTS, et une adresse y est découpée en morceaux).
- * C'est tenable parce qu'elle ne ramène que les pages contenant cette adresse-là
- * - en pratique une poignée. `LIMITE_CITATIONS` n'est qu'un garde-fou contre un
- * emballement, jamais atteint dans un usage normal.
+ * Postgres lit donc toutes les pages accessibles à chaque affichage de
+ * l'accueil. C'est tenable à l'échelle d'un wiki de projet - quelques centaines
+ * de pages - et ce serait à revoir (index trigramme `pg_trgm`, ou table de
+ * citations tenue à l'écriture) si le wiki grossissait d'un ordre de grandeur.
+ *
+ * `LIMITE_CITATIONS` est un garde-fou contre l'emballement, pas une pagination.
+ * Il porte sur les CANDIDATS, donc avant la seconde passe : au pire, quelqu'un
+ * cité sur plus de pages que cette limite n'en verrait pas les plus anciennes -
+ * jamais les plus récentes, qui sont l'objet du bloc. La marge est large pour
+ * que le cas ne se présente pas.
  *
  * `projectIds` borne la lecture aux projets accessibles ; `undefined` ne borne
  * rien (administrateur).
  */
-const LIMITE_CITATIONS = 100;
+const LIMITE_CITATIONS = 300;
 
 export async function listPagesMentioning(
   email: string,

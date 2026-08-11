@@ -7,6 +7,7 @@ import {
   ACTIVITY_COLORS,
   type Activity,
   type ActivityCategory,
+  pickVisible,
   type ActivityEntry,
 } from "@/lib/my-activity";
 import { cn, formatDate } from "@/lib/utils";
@@ -79,7 +80,9 @@ export async function MyActivity({ activity }: { activity: Activity }) {
     );
   }
 
-  const visibles = entries.slice(0, MAX_LIGNES);
+  // Pas un simple `slice` : cf. `pickVisible`, qui garantit que chaque
+  // catégorie annoncée par la légende figure bien dans la liste.
+  const visibles = pickVisible(entries, MAX_LIGNES);
   const reste = entries.length - visibles.length;
 
   return (
@@ -87,7 +90,15 @@ export async function MyActivity({ activity }: { activity: Activity }) {
       {/* `open` par défaut serait un contresens : le pli n'aurait plus lieu
           d'être si l'on montrait tout d'entrée. */}
       <details className="group/activite">
-        <summary className="flex cursor-pointer list-none flex-col gap-3 px-6 py-5 [&::-webkit-details-marker]:hidden">
+        {/* `aria-label` : sans lui, le nom du bouton de pli serait la
+            CONCATÉNATION de tout ce qu'il contient - titre, description de la
+            barre, puis les quatre entrées de légende. Annoncé d'un trait, c'est
+            illisible ; le détail reste lu à sa place, dans la barre et la
+            légende. */}
+        <summary
+          aria-label={t.activity.toggleAria}
+          className="flex cursor-pointer list-none flex-col gap-3 px-6 py-5 [&::-webkit-details-marker]:hidden"
+        >
           <div className="flex items-center gap-2">
             <ChevronRight
               className="size-4 shrink-0 text-muted-foreground transition-transform group-open/activite:rotate-90"
@@ -152,10 +163,7 @@ function RepartitionBar({
   return (
     <div
       role="img"
-      aria-label={fmt(t.activity.chartAria, {
-        total: counts.total,
-        detail: resume,
-      })}
+      aria-label={fmt(t.activity.chartAria, { detail: resume })}
       className="flex h-2.5 w-full gap-0.5 overflow-hidden rounded-full"
     >
       {segments.map((c) => (
@@ -164,14 +172,13 @@ function RepartitionBar({
           // `flex-basis: 0` : la largeur vient ENTIÈREMENT du prorata, sinon le
           // contenu (vide) fausserait le partage.
           style={{ flexGrow: counts[c], flexBasis: 0, backgroundColor: ACTIVITY_COLORS[c] }}
-          className="first:rounded-l-full last:rounded-r-full"
-        >
-          {/* Le survol natif : lisible sans JavaScript, et à l'impression le
-              texte reste dans la légende de toute façon. */}
-          <span className="sr-only">
-            {counts[c]} {libelles[c]}
-          </span>
-        </div>
+          /* Infobulle native : au survol, sans JavaScript. Rien d'essentiel n'y
+             est caché - la légende juste dessous porte déjà les mêmes nombres.
+             Aucun texte pour les lecteurs d'écran ici : `role="img"` fait de la
+             barre une FEUILLE, dont les enfants ne sont pas lus - c'est
+             `aria-label` qui parle pour elle. */
+          title={`${counts[c]} ${libelles[c]}`}
+        />
       ))}
     </div>
   );
@@ -191,16 +198,13 @@ function Legende({
 }) {
   return (
     <ul className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+      {/* Une catégorie vide garde un texte PLEINEMENT lisible : l'atténuer
+          ferait tomber le contraste sous le seuil, pour ne dire que ce que le
+          « 0 » dit déjà. Seule la pastille s'efface. */}
       {ACTIVITY_CATEGORIES.map((c) => (
-        <li
-          key={c}
-          className={cn(
-            "flex items-center gap-1.5 text-xs",
-            counts[c] === 0 && "opacity-50",
-          )}
-        >
+        <li key={c} className="flex items-center gap-1.5 text-xs">
           <span
-            className="size-2 shrink-0 rounded-full"
+            className={cn("size-2 shrink-0 rounded-full", counts[c] === 0 && "opacity-40")}
             style={{ backgroundColor: ACTIVITY_COLORS[c] }}
             aria-hidden
           />
@@ -221,44 +225,62 @@ function Ligne({ entry, t }: { entry: ActivityEntry; t: Dict }) {
 
   return (
     <li className="py-2">
+      {/**
+       * DEUX LIGNES SUR UN TÉLÉPHONE, UNE SEULE AU LARGE.
+       *
+       * Tout sur une ligne, le titre était le seul élément élastique : la clé,
+       * le statut et le projet, tous incompressibles, le réduisaient à une
+       * quinzaine de pixels sur un écran étroit - une ligne sans titre, donc
+       * sans moyen de distinguer deux tickets. Sous `sm`, le titre prend donc
+       * sa propre ligne et les repères passent dessous.
+       */}
       <Link
         href={href}
-        className="group flex flex-wrap items-baseline gap-x-2 gap-y-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="group flex flex-col gap-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-2"
       >
-        <span
-          className="size-2 shrink-0 translate-y-px rounded-full"
-          style={{ backgroundColor: ACTIVITY_COLORS[entry.category] }}
-          aria-hidden
-        />
-        {entry.kind === "ticket" ? (
-          <span className="shrink-0 text-xs font-medium tabular-nums text-muted-foreground">
-            {entry.key}
-          </span>
-        ) : (
-          <FileText className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
-        )}
-        <span
-          className={cn(
-            "min-w-0 flex-1 truncate text-sm group-hover:underline",
-            /* ACHEVÉ : barré et atténué, comme sur les sprints et les versions. */
-            entry.category === "done" &&
-              "text-muted-foreground line-through decoration-muted-foreground/60",
+        <span className="flex min-w-0 items-baseline gap-2 sm:contents">
+          <span
+            className="size-2 shrink-0 translate-y-px rounded-full"
+            style={{ backgroundColor: ACTIVITY_COLORS[entry.category] }}
+            aria-hidden
+          />
+          {entry.kind === "ticket" ? (
+            <span className="shrink-0 text-xs font-medium tabular-nums text-muted-foreground">
+              {entry.key}
+            </span>
+          ) : (
+            <FileText
+              className="size-3.5 shrink-0 translate-y-0.5 text-muted-foreground"
+              aria-hidden
+            />
           )}
-        >
-          {entry.title}
+          <span
+            /* `title` : le survol rend le titre entier quand il est tronqué. */
+            title={entry.title}
+            className={cn(
+              "min-w-0 flex-1 truncate text-sm group-hover:underline",
+              /* ACHEVÉ : barré et atténué, comme sur les sprints et les versions. */
+              entry.category === "done" &&
+                "text-muted-foreground line-through decoration-muted-foreground/60",
+            )}
+          >
+            {entry.title}
+          </span>
         </span>
-        <Badge variant="outline" className="shrink-0 text-[11px] font-normal">
-          {entry.kind === "ticket" ? entry.status : t.activity.wikiBadge}
-        </Badge>
-        <span className="shrink-0 text-[11px] text-muted-foreground">
-          {entry.projectKey}
+        <span className="flex shrink-0 items-center gap-2 pl-4 sm:contents sm:pl-0">
+          <Badge variant="outline" className="shrink-0 text-[11px] font-normal">
+            {entry.kind === "ticket" ? entry.status : t.activity.wikiBadge}
+          </Badge>
+          <span className="shrink-0 text-[11px] text-muted-foreground">
+            {entry.projectKey}
+          </span>
+          <time
+            dateTime={entry.at.toISOString()}
+            className="shrink-0 text-[11px] tabular-nums text-muted-foreground"
+          >
+            {formatDate(entry.at)}
+          </time>
         </span>
-        <time
-          dateTime={entry.at.toISOString()}
-          className="shrink-0 text-[11px] tabular-nums text-muted-foreground"
-        >
-          {formatDate(entry.at)}
-        </time>
       </Link>
     </li>
   );

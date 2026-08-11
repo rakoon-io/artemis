@@ -102,11 +102,15 @@ export const fr = {
     done: "Terminés",
     wiki: "Citations",
     wikiBadge: "Wiki",
-    recentFirst: "Les plus récentes en premier.",
+    // Neutre : la liste mêle des tickets (masculin) et des pages (féminin).
+    recentFirst: "Du plus récent au plus ancien.",
     empty: "Rien ne vous est assigné et personne ne vous cite pour le moment.",
     more: "+ {count} de plus",
+    // Nom du bouton de pli, pour ne pas lire tout le bloc d'un trait.
+    toggleAria: "Mon activité : afficher ou masquer le détail",
     // Lu à voix haute à la place de la barre, qu'un lecteur d'écran ne voit pas.
-    chartAria: "Répartition de mon activité : {total} éléments — {detail}.",
+    // Aucun nom accordé au nombre : `{detail}` porte déjà « 3 en cours », etc.
+    chartAria: "Répartition de mon activité : {detail}.",
   },
   account,
   board,
