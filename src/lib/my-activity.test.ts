@@ -257,6 +257,17 @@ describe("keepMostRecent", () => {
     expect(keepMostRecent(items, 2).hasMore).toBe(false);
   });
 
+  it("tranche de façon déterministe à date égale", () => {
+    // Prisma horodate à la milliseconde : un import en lot peut coller la même
+    // date à plusieurs pages. Deux appels, le même verdict, quel que soit
+    // l'ordre d'arrivée.
+    const meme = "2026-01-01";
+    const a = keepMostRecent([p("c", meme), p("a", meme), p("b", meme)], 2);
+    const b = keepMostRecent([p("b", meme), p("c", meme), p("a", meme)], 2);
+    expect(a.kept.map((x) => x.id)).toEqual(["a", "b"]);
+    expect(b.kept.map((x) => x.id)).toEqual(["a", "b"]);
+  });
+
   it("ne modifie pas le tableau reçu", () => {
     const items = [p("a", "2026-01-01"), p("b", "2026-03-01")];
     const copie = [...items];

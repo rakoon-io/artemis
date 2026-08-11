@@ -129,13 +129,18 @@ export const MAX_CITATIONS = 20;
  * quelqu'un qui est cité sur trente pages, et ce nombre serait faux. Avec lui,
  * elle peut dire « 20 + » - le plafond devient une information, pas un mensonge.
  */
-export function keepMostRecent<T extends { updatedAt: Date }>(
+export function keepMostRecent<T extends { id: string; updatedAt: Date }>(
   items: readonly T[],
   max: number,
 ): { kept: T[]; hasMore: boolean } {
   if (max <= 0) return { kept: [], hasMore: items.length > 0 };
   const tries = [...items].sort(
-    (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
+    // Départage par identifiant à date égale, comme la chronologie : Prisma
+    // horodate à la milliseconde, si bien qu'un import en lot peut donner la
+    // même date à plusieurs pages. Sans ce second critère, laquelle tombe au
+    // 21e rang dépendrait de l'ordre où la base les rend - deux affichages
+    // successifs pourraient différer sans que rien n'ait changé.
+    (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime() || a.id.localeCompare(b.id),
   );
   return { kept: tries.slice(0, max), hasMore: tries.length > max };
 }
