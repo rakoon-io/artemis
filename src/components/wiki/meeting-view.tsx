@@ -119,7 +119,7 @@ export async function MeetingView({
           key={theme.letter}
           id={`${prefixe}${themeHeadings[index]?.anchor ?? ""}`}
           open
-          className="group/theme scroll-mt-20 space-y-2"
+          className="group/theme scroll-mt-28 space-y-2 lg:scroll-mt-20"
         >
           <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2 text-base font-semibold tracking-tight [&::-webkit-details-marker]:hidden">
             <ChevronRight
@@ -181,11 +181,17 @@ export async function MeetingView({
                       <td className="px-3 py-2">
                         {/* Rendu Markdown : les citations « RKN-123 » d'un compte
                             rendu deviennent des liens, comme partout ailleurs. */}
+                        {/* `anchorPrefix` ici aussi : un titre Markdown écrit
+                            dans un point de compte rendu produit une ancre, et
+                            sans préfixe elle se dupliquerait d'une réunion à
+                            l'autre dans un export multi-pages. C'était le seul
+                            des sept rendus de ce fichier à ne pas le recevoir. */}
                         <WikiContent
                           content={item.text}
                           projectKey={projectKey}
                           ticketMap={ticketMap}
-                        ticketHints={ticketHints}
+                          ticketHints={ticketHints}
+                          anchorPrefix={anchorPrefix}
                         />
                       </td>
                     </tr>
@@ -207,7 +213,7 @@ export async function MeetingView({
         </details>
       ))}
 
-      <section id={ancreActions} className="space-y-2 scroll-mt-20">
+      <section id={ancreActions} className="space-y-2 scroll-mt-28 lg:scroll-mt-20">
         <h3 className="flex items-center gap-2 text-base font-semibold tracking-tight">
           <ListChecks className="size-4 shrink-0" aria-hidden />
           {t.wiki.meeting.actionsTitle}

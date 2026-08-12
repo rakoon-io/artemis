@@ -40,6 +40,73 @@ export interface OutlineHeading {
   line: number;
 }
 
+/**
+ * Un titre et ce qu'il coiffe. C'est la forme dont a besoin un sommaire
+ * REPLIABLE : la liste plate dit la profondeur de chacun, elle ne dit pas qui
+ * disparaît quand on replie.
+ */
+export interface OutlineNode {
+  head: OutlineHeading;
+  children: OutlineNode[];
+}
+
+/**
+ * Reconstruit la hiérarchie d'un sommaire à partir de la liste plate.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * CE QUE LA PROFONDEUR NE SUFFIT PAS À DIRE
+ *
+ * `extractOutline` annote chaque titre de sa profondeur, ce qui suffit à
+ * l'INDENTER. Replier demande davantage : il faut savoir que replier « 3. Deux
+ * écarts » emporte ses trois sous-titres et s'arrête au titre suivant de même
+ * rang. C'est une relation de parenté, et elle ne se lit pas dans un nombre.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * LES SAUTS DE NIVEAU SONT LA RÈGLE, PAS L'EXCEPTION
+ *
+ * Un document écrit à la main passe de `##` à `####` sans prévenir. La pile
+ * traite ce cas sans invention : le `####` devient enfant du `##`, parce que
+ * c'est le dernier titre plus haut que lui. On ne fabrique pas de niveau
+ * intermédiaire vide, et l'on ne remonte pas non plus le titre d'un cran - les
+ * deux mentiraient sur ce que l'auteur a écrit.
+ *
+ * Un titre plus profond que tout ce qui précède - le tout premier du document,
+ * si l'auteur commence par un `###` après un `#` - se rattache à la racine :
+ * aucun titre ne peut être orphelin, sans quoi il disparaîtrait du sommaire.
+ */
+export function outlineTree(headings: readonly OutlineHeading[]): OutlineNode[] {
+  const racines: OutlineNode[] = [];
+  // Pile des ancêtres ouverts, du moins profond au plus profond.
+  const pile: OutlineNode[] = [];
+
+  for (const head of headings) {
+    const noeud: OutlineNode = { head, children: [] };
+    while (pile.length > 0 && pile[pile.length - 1].head.depth >= head.depth) {
+      pile.pop();
+    }
+    const parent = pile[pile.length - 1];
+    if (parent) parent.children.push(noeud);
+    else racines.push(noeud);
+    pile.push(noeud);
+  }
+  return racines;
+}
+
+/** Ancres des titres qui coiffent au moins un sous-titre - les seuls repliables. */
+export function collapsibleAnchors(nodes: readonly OutlineNode[]): string[] {
+  const out: string[] = [];
+  const walk = (liste: readonly OutlineNode[]) => {
+    for (const n of liste) {
+      if (n.children.length > 0) {
+        out.push(n.head.anchor);
+        walk(n.children);
+      }
+    }
+  };
+  walk(nodes);
+  return out;
+}
+
 /** Titre ATX, avec ses fermetures optionnelles (`## Titre ##`). */
 const HEADING_RE = /^ {0,3}(#{1,6})\s+(.+?)\s*#*\s*$/;
 /** Ouverture / fermeture d'un bloc de code clôturé. */

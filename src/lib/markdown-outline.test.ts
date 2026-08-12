@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   anchorFor,
+  collapsibleAnchors,
   extractOutline,
+  outlineTree,
   SECTION_ANCHOR_PREFIX,
 } from "./markdown-outline";
 
@@ -118,5 +120,70 @@ describe("extractOutline", () => {
       anchorFor(title, seen),
     );
     expect(extractOutline(doc).map((h) => h.anchor)).toEqual(manual);
+  });
+});
+
+describe("outlineTree", () => {
+  /** Raccourci : construit un sommaire depuis du Markdown, comme le fait la page. */
+  const arbre = (markdown: string) => outlineTree(extractOutline(markdown));
+  /** Aplatit l'arbre en « titre(enfants…) » pour lire sa forme d'un coup d'œil. */
+  const forme = (nodes: ReturnType<typeof outlineTree>): string =>
+    nodes
+      .map((n) =>
+        n.children.length ? `${n.head.title}(${forme(n.children)})` : n.head.title,
+      )
+      .join(" ");
+
+  it("range chaque sous-titre sous le titre qui le coiffe", () => {
+    expect(
+      forme(arbre("# A\n## A1\n## A2\n# B\n## B1")),
+    ).toBe("A(A1 A2) B(B1)");
+  });
+
+  it("emboîte sur trois niveaux", () => {
+    expect(forme(arbre("# A\n## A1\n### A1a\n## A2"))).toBe("A(A1(A1a) A2)");
+  });
+
+  it("un saut de niveau ne fabrique pas d'échelon vide", () => {
+    // « #### » après « ## » : l'auteur a sauté un cran. On le rattache au
+    // dernier titre plus haut que lui, sans inventer de niveau intermédiaire
+    // ni le remonter d'un rang - les deux mentiraient sur le document.
+    expect(forme(arbre("# A\n## A1\n#### A1x\n## A2"))).toBe("A(A1(A1x) A2)");
+  });
+
+  it("referme les niveaux en remontant", () => {
+    expect(forme(arbre("# A\n## A1\n### A1a\n# B"))).toBe("A(A1(A1a)) B");
+  });
+
+  it("des titres tous de même rang restent tous à la racine", () => {
+    expect(forme(arbre("## A\n## B\n## C"))).toBe("A B C");
+  });
+
+  it("aucun titre n'est perdu, quelle que soit la forme", () => {
+    // L'invariant qui compte : un sommaire qui escamote un titre est pire
+    // qu'un sommaire plat.
+    const md = "# A\n#### X\n## B\n###### Y\n# C\n## D\n### E";
+    const compte = (nodes: ReturnType<typeof outlineTree>): number =>
+      nodes.reduce((n, x) => n + 1 + compte(x.children), 0);
+    expect(compte(arbre(md))).toBe(extractOutline(md).length);
+  });
+
+  it("un sommaire vide donne un arbre vide", () => {
+    expect(outlineTree([])).toEqual([]);
+  });
+});
+
+describe("collapsibleAnchors", () => {
+  it("ne retient que les titres qui coiffent quelque chose", () => {
+    const noeuds = outlineTree(extractOutline("# A\n## A1\n### A1a\n# B"));
+    const ancres = collapsibleAnchors(noeuds);
+    // A et A1 ont des enfants ; A1a et B n'en ont pas.
+    expect(ancres).toHaveLength(2);
+    expect(ancres[0]).toContain("-a");
+    expect(ancres[1]).toContain("a1");
+  });
+
+  it("rend une liste vide sur un sommaire tout plat", () => {
+    expect(collapsibleAnchors(outlineTree(extractOutline("## A\n## B")))).toEqual([]);
   });
 });

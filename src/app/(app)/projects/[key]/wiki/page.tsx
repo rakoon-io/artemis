@@ -541,16 +541,22 @@ export default async function WikiPage({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {t.wiki.title}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {t.wiki.index.subtitle}
-          </p>
-        </div>
+    <div className="space-y-4">
+      {/* LE TITRE « WIKI » A DISPARU, et avec lui son sous-titre.
+          L'onglet « Wiki » de la barre de projet est juste au-dessus, actif et
+          souligné : le `<h1>` ne faisait que le redire, deux lignes plus bas et
+          en plus gros. Mesuré, cette redite coûtait 96 pixels entre le bas de
+          l'en-tête et la première ligne utile - sur un écran de portable, c'est
+          un dixième de la hauteur donné à un mot déjà écrit.
+          Les deux commandes, elles, restent : ce sont les seules choses de cette
+          rangée que la barre de projet ne dit pas. Elles se rangent à droite,
+          et la rangée se réduit à leur hauteur.
+          Un titre de page reste nécessaire pour les lecteurs d'écran, qui ne
+          voient pas le soulignement d'un onglet : il est donc conservé, hors
+          écran (`sr-only`). Supprimer le repère au lieu de le déplacer aurait
+          fait payer l'espace gagné par ceux qui en ont le plus besoin. */}
+      <h1 className="sr-only">{t.wiki.title}</h1>
+      <div className="flex flex-wrap items-center justify-end gap-2">
         {createButton}
       </div>
 

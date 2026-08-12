@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { auth } from "@/auth";
-import { formatDate, formatDateTime } from "@/lib/utils";
+import { cn, formatDate, formatDateTime } from "@/lib/utils";
 import { readingOrder } from "@/lib/wiki-tree";
 import { anchorFor, extractOutline } from "@/lib/markdown-outline";
 import { getAccessibleProjectByKey } from "@/server/access";
@@ -237,7 +237,17 @@ export default async function ImprimerWikiPage({
           // Chaque page repart en haut d'une feuille, sauf la première qui suit
           // la page de garde. Un chapitre qui commence à trois lignes du bas se
           // lit mal, et le document perd la structure qu'il annonce.
-          className={index > 0 ? "space-y-3 print:break-before-page" : "space-y-3"}
+          /**
+           * `scroll-mt` : à l'écran, cette page est une PRÉVISUALISATION sous
+           * l'en-tête collé de l'application - `print:hidden` ne le retire
+           * qu'au média `print`. Sans marge, un titre atteint depuis le
+           * sommaire du document atterrissait entièrement derrière lui. Sur
+           * papier, `scroll-margin` n'a aucun effet : rien n'y défile.
+           */
+          className={cn(
+            "space-y-3 scroll-mt-28 lg:scroll-mt-20",
+            index > 0 && "print:break-before-page",
+          )}
         >
           {/* Le titre et le chemin ne sont rappelés que pour un document à
               plusieurs pages : seule, la page a déjà son titre en couverture. */}

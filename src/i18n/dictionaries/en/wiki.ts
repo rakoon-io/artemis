@@ -145,6 +145,12 @@ export const wiki: WikiDict = {
     title: "Contents",
     ariaLabel: "Page contents",
     empty: "This page has no sections.",
+    // Folding levels : a forty-section outline becomes legible again once
+    // closed onto its top-level headings.
+    collapse: "Collapse this section",
+    expand: "Expand this section",
+    collapseAll: "Collapse all",
+    expandAll: "Expand all",
   },
 
   // Subpages : the subtree of the page being read. The outline navigates

@@ -1,5 +1,6 @@
 import { ChevronRight, List } from "lucide-react";
 import { extractOutline, type OutlineHeading } from "@/lib/markdown-outline";
+import { OutlineTree } from "./outline-tree";
 import { getDictionary } from "@/i18n/server";
 
 /**
@@ -43,43 +44,11 @@ export async function PageOutline({
         <List className="size-4 shrink-0 text-muted-foreground" aria-hidden />
         {title ?? t.wiki.outline.title}
       </summary>
-      <nav
-        aria-label={t.wiki.outline.ariaLabel}
-        /**
-         * Borné à la hauteur RESTANTE sous l'en-tête collé et le décalage de la
-         * colonne : un sommaire de trente sections dépasserait sinon l'écran et
-         * deviendrait inatteignable par le bas. C'est ce plafond qui rend le
-         * collage utilisable - sans lui, un long sommaire collé déborderait par
-         * le bas sans jamais pouvoir être parcouru.
-         *
-         * `9rem` = 144 px : les 80 px du décalage (`lg:top-20`), le `<summary>`
-         * du volet, et de quoi ne pas raser le bas de l'écran.
-         *
-         * `dvh` et non `vh` : sur un téléphone, `vh` compte la fenêtre BARRE
-         * D'URL RÉTRACTÉE, hauteur que l'on n'a pas tant qu'on n'a pas fait
-         * défiler. Le sommaire mobile - celui rendu au-dessus de l'article,
-         * seul visible sous `lg` - dépassait donc l'écran à l'arrivée sur la
-         * page. C'est la valeur qu'emploie déjà le backlog des sprints ; ce
-         * volet-ci était le seul à s'en écarter.
-         */
-        className="flex max-h-[calc(100dvh-9rem)] flex-col gap-0.5 overflow-y-auto px-3 pb-3"
-      >
-        {outline.map((head) => (
-          <a
-            key={head.anchor}
-            href={`#${head.anchor}`}
-            // L'indentation dit la hiérarchie ; bornée à trois crans, au-delà
-            // desquels une page se lit de toute façon mal.
-            style={{ paddingLeft: `${Math.min(head.depth, 3) * 16 + 8}px` }}
-            // Le texte PASSE À LA LIGNE au lieu d'être coupé : un sommaire dont
-            // les intitulés se terminent par « … » ne renseigne plus sur rien, et
-            // c'est justement sur les titres longs qu'on en a besoin.
-            className="break-words rounded-md py-1 pr-2 text-sm leading-snug text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
-          >
-            {head.title}
-          </a>
-        ))}
-      </nav>
+      {/* L'arbre est CLIENT : replier demande de distinguer un clic sur le
+          chevron d'un clic sur le titre, ce qu'un `<summary>` natif ne sait pas
+          faire - il ferait les deux d'un coup. Le reste du volet demeure servi,
+          i18n comprise. */}
+      <OutlineTree headings={outline} ariaLabel={t.wiki.outline.ariaLabel} />
     </details>
   );
 }

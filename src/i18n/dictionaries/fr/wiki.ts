@@ -147,6 +147,12 @@ export const wiki = {
     title: "Sommaire",
     ariaLabel: "Sommaire de la page",
     empty: "Cette page ne comporte aucune section.",
+    // Repli des niveaux : un plan de quarante sections redevient lisible une
+    // fois refermé sur ses titres de premier rang.
+    collapse: "Replier cette section",
+    expand: "Déplier cette section",
+    collapseAll: "Tout replier",
+    expandAll: "Tout déplier",
   },
 
   // Sous-pages : le sous-arbre de la page lue. Le sommaire navigue DANS la

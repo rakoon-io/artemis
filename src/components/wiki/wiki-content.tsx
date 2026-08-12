@@ -97,11 +97,18 @@ export function WikiContent({
          * invisible.
          *
          * Le défaut existait déjà ; le sommaire collant le rend permanent, car
-         * il met ces liens à portée en permanence. Quatre-vingts pixels, comme
-         * le décalage de la colonne (`lg:top-20`) et comme le fait déjà la
-         * lecture d'une version publiée.
+         * il met ces liens à portée en permanence.
+         *
+         * DEUX VALEURS, parce que l'en-tête n'a pas une seule hauteur. Mesuré :
+         * 57 px à partir de 1024 px de large, mais 65 px à 900, et 87 à 89 px
+         * en dessous de 768 - la barre de projet passe à la ligne et prend
+         * 44 px de plus. Une valeur unique de 80 px laissait donc le titre
+         * caché sur téléphone, exactement le défaut qu'on prétendait fermer.
+         * Le seuil retenu est `lg`, le même que celui où la colonne devient
+         * collante : au-dessus 80 px, en dessous 112. Les deux laissent au
+         * moins 23 px d'air sous l'en-tête.
          */
-        <Tag id={line ? anchorByLine.get(line) : undefined} className="scroll-mt-20">
+        <Tag id={line ? anchorByLine.get(line) : undefined} className="scroll-mt-28 lg:scroll-mt-20">
           {children}
         </Tag>
       );

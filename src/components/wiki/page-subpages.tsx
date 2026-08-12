@@ -64,9 +64,12 @@ export async function PageSubpages({ items }: { items: SubpageItem[] }) {
       </summary>
       <nav
         aria-label={t.wiki.subpages.ariaLabel}
-        // Bornée comme le sommaire : une section de quarante comptes rendus
-        // repousserait sinon le texte hors de l'écran.
-        className="flex max-h-[calc(100vh-9rem)] flex-col gap-0.5 overflow-y-auto px-3 pb-3"
+        // Bornée comme le sommaire, à la même unité près : `svh`, la petite
+        // fenêtre. `vh` comptait la fenêtre barre d'URL rétractée - hauteur
+        // qu'on n'a pas en arrivant sur la page -, et ce volet est rendu AU
+        // DESSUS de l'article : un plafond trop haut, ou variable, décale le
+        // texte pendant qu'on défile.
+        className="slim-scrollbar flex max-h-[calc(100svh-9rem)] flex-col gap-0.5 overflow-y-auto px-3 pb-3"
       >
         {items.map((item) => (
           <Link
