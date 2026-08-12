@@ -1204,18 +1204,46 @@ export default async function WikiPage({
             )}
           </div>
 
-          {/* Colonne du sommaire : collante, elle suit le défilement du texte.
-              Masquée sous `lg`, où elle est rendue au-dessus de l'article. */}
+          {/* COLONNE DU SOMMAIRE : collante, elle suit le défilement du texte.
+              Masquée sous `lg`, où elle est rendue au-dessus de l'article.
+
+              ─────────────────────────────────────────────────────────────────
+              LE COLLANT EST SUR L'ASIDE, ET C'EST TOUT LE SUJET
+
+              Il vivait sur un `<div>` À L'INTÉRIEUR de cet `<aside>`. Le CSS
+              l'acceptait - `position: sticky` était bien calculé -, et pourtant
+              le sommaire défilait comme n'importe quel bloc.
+
+              Un élément collant ne se déplace que DANS SON BLOC CONTENEUR. Le
+              bloc conteneur d'un enfant, c'est l'`<aside>` ; or celui-ci n'a pas
+              de hauteur propre et, depuis que la rangée porte `md:items-start`,
+              il ne s'étire plus : il fait exactement la hauteur du sommaire.
+              Mesuré : aside 515 px, sommaire 515 px, donc zéro pixel
+              d'amplitude. Le collage était actif et n'avait nulle part où
+              glisser - le haut du bloc passait de 153 px à -3847 px après
+              4000 px de défilement.
+
+              Posé sur le FLEX ITEM lui-même, le bloc conteneur devient la boîte
+              de contenu de la rangée, qui garde la hauteur de sa plus haute
+              colonne - l'article, plusieurs écrans. `items-start` réduit la
+              boîte de l'item, jamais celle du conteneur : les deux cohabitent.
+              C'est exactement ce que fait déjà la fiche d'un ticket
+              (`ticket-detail.tsx`, `lg:sticky lg:top-16` sur son panneau
+              latéral) dans une rangée `lg:items-start`.
+
+              `lg:` et non pas nu : sous ce point de rupture l'en-tête grandit -
+              la barre de projet passe à la ligne -, et un décalage calibré sur
+              57 px n'y voudrait plus rien dire. La colonne y est de toute façon
+              masquée.
+
+              `top-20` et non `top-16` (la valeur courante ailleurs) : l'en-tête
+              collé fait 57 px, et ce bloc-ci commence par un intitulé encadré.
+              À seize, le titre du sommaire venait raser l'en-tête ; les huit
+              pixels de plus lui laissent son cadre. `scroll-mt-20` sur les
+              cibles d'ancre est accordé à cette même valeur. */}
           {outlineHeadings.length > 1 && (
-            <aside className="hidden shrink-0 lg:block lg:w-64 xl:w-72">
-              {/* `top-20` et non `top-6` : l'en-tête de l'application est
-                  lui-même collé en haut (`sticky top-0`, 57 px). Se coller plus
-                  haut ferait glisser le titre du sommaire DERRIÈRE lui dès le
-                  premier défilement - la liste restait lisible, mais son
-                  intitulé disparaissait. */}
-              <div className="sticky top-20">
-                <PageOutline headings={outlineHeadings} title={outlineTitle} />
-              </div>
+            <aside className="hidden shrink-0 lg:sticky lg:top-20 lg:block lg:w-64 xl:w-72">
+              <PageOutline headings={outlineHeadings} title={outlineTitle} />
             </aside>
           )}
         </div>

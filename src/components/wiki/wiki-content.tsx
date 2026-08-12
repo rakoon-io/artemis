@@ -88,7 +88,20 @@ export function WikiContent({
     }) {
       const line = node?.position?.start?.line;
       return (
-        <Tag id={line ? anchorByLine.get(line) : undefined} className="scroll-mt-6">
+        /**
+         * `scroll-mt-20` et non `scroll-mt-6` : l'en-tête de l'application est
+         * collé en haut et haut de 57 px. À vingt-quatre, un titre atteint
+         * depuis le sommaire s'arrêtait 33 PIXELS DERRIÈRE lui - mesuré : le
+         * haut du titre à 24 px, le bas de l'en-tête à 57. On cliquait « 4. Le
+         * point sensible » et l'on tombait sur son premier paragraphe, le titre
+         * invisible.
+         *
+         * Le défaut existait déjà ; le sommaire collant le rend permanent, car
+         * il met ces liens à portée en permanence. Quatre-vingts pixels, comme
+         * le décalage de la colonne (`lg:top-20`) et comme le fait déjà la
+         * lecture d'une version publiée.
+         */
+        <Tag id={line ? anchorByLine.get(line) : undefined} className="scroll-mt-20">
           {children}
         </Tag>
       );

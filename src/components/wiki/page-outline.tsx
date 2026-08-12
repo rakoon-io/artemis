@@ -45,10 +45,24 @@ export async function PageOutline({
       </summary>
       <nav
         aria-label={t.wiki.outline.ariaLabel}
-        // Borné à la hauteur RESTANTE sous l'en-tête collé et le décalage de la
-        // colonne : un sommaire de trente sections dépasserait sinon l'écran et
-        // deviendrait inatteignable par le bas.
-        className="flex max-h-[calc(100vh-9rem)] flex-col gap-0.5 overflow-y-auto px-3 pb-3"
+        /**
+         * Borné à la hauteur RESTANTE sous l'en-tête collé et le décalage de la
+         * colonne : un sommaire de trente sections dépasserait sinon l'écran et
+         * deviendrait inatteignable par le bas. C'est ce plafond qui rend le
+         * collage utilisable - sans lui, un long sommaire collé déborderait par
+         * le bas sans jamais pouvoir être parcouru.
+         *
+         * `9rem` = 144 px : les 80 px du décalage (`lg:top-20`), le `<summary>`
+         * du volet, et de quoi ne pas raser le bas de l'écran.
+         *
+         * `dvh` et non `vh` : sur un téléphone, `vh` compte la fenêtre BARRE
+         * D'URL RÉTRACTÉE, hauteur que l'on n'a pas tant qu'on n'a pas fait
+         * défiler. Le sommaire mobile - celui rendu au-dessus de l'article,
+         * seul visible sous `lg` - dépassait donc l'écran à l'arrivée sur la
+         * page. C'est la valeur qu'emploie déjà le backlog des sprints ; ce
+         * volet-ci était le seul à s'en écarter.
+         */
+        className="flex max-h-[calc(100dvh-9rem)] flex-col gap-0.5 overflow-y-auto px-3 pb-3"
       >
         {outline.map((head) => (
           <a
