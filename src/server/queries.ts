@@ -279,8 +279,13 @@ export function getSpecPackageByRootPage(rootPageId: string) {
 }
 
 /** Le paquet auquel appartient une page, qu'elle en soit la racine ou non. */
-export function getSpecPackageForPage(projectId: string, pageId: string) {
-  return specService.findSpecPackageForPage(projectId, pageId);
+export function getSpecPackageForPage(
+  projectId: string,
+  pageId: string,
+  /** L'arborescence déjà chargée par l'appelant, pour ne pas la relire. */
+  connues?: Array<{ id: string; title: string; parentId: string | null }>,
+) {
+  return specService.findSpecPackageForPage(projectId, pageId, connues);
 }
 
 export function getSpecVersions(packageId: string) {

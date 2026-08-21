@@ -17,6 +17,7 @@ import {
   groupBySection,
   orderedTree,
   parentOptions,
+  nestedTree,
   readingOrder,
   sectionOfPage,
 } from "@/lib/wiki-tree";
@@ -60,6 +61,7 @@ import {
 import { MeetingView } from "@/components/wiki/meeting-view";
 import { PageOutline } from "@/components/wiki/page-outline";
 import { PageSubpages } from "@/components/wiki/page-subpages";
+import { WikiPlan, type PlanItem } from "@/components/wiki/wiki-plan";
 import { ExportPageMenu } from "@/components/wiki/export-page-menu";
 import { MeetingSection } from "@/components/wiki/meeting-editor";
 import { SpecVersionView } from "@/components/wiki/spec-version-view";
@@ -240,7 +242,7 @@ export default async function WikiPage({
   // la racine ? Les versions ne sont chargées que dans ce dernier cas - c'est là
   // seulement qu'elles se publient et se consultent.
   const pack = current
-    ? await getSpecPackageForPage(project.id, current.id)
+    ? await getSpecPackageForPage(project.id, current.id, allPages)
     : null;
   const isSpecRoot = !!pack && pack.rootPageId === current?.id;
   const [specVersions, revisions, readRevision] = await Promise.all([
@@ -260,6 +262,11 @@ export default async function WikiPage({
 
   // Fil d'Ariane de la page courante.
   const trail = current ? ancestorsOf(allPages, current.id) : [];
+  /**
+   * Les parents de la page lue, qu'un repli ne doit jamais escamoter. Le fil
+   * d'Ariane les calcule déjà : on réemploie sa chaîne plutôt que de la refaire.
+   */
+  const ancetresDeLaPageLue = trail.map((page) => page.id);
 
   // PLAN RANGÉ PAR SECTION. L'appartenance n'est stockée nulle part : elle se
   // lit en remontant les ancêtres jusqu'à une racine de section. Les pages
@@ -451,41 +458,91 @@ export default async function WikiPage({
    *   une seule ligne coûte un clic pour ne rien gagner.
    */
   const MEETINGS_SHOWN = 6;
+
+  /**
+   * Convertit une liste plate en arbre EMBOÎTÉ pour le plan repliable.
+   *
+   * `groupBySection` rend `{ page, depth }[]` : de quoi indenter, pas de quoi
+   * replier - une profondeur ne dit pas qui disparaît quand on referme un
+   * parent. `nestedTree` refait la parenté à partir de `parentId`, que chaque
+   * page porte déjà.
+   *
+   * La racine de section est ABSENTE du sous-ensemble : les pages de premier
+   * niveau y perdent leur parent et deviennent donc des racines locales, avec
+   * la profondeur zéro que la section leur donnait déjà.
+   */
+  const enArbre = (
+    nodes: ReturnType<typeof orderedTree<(typeof allPages)[number]>>,
+  ): PlanItem[] => {
+    const convertir = (
+      liste: ReturnType<typeof nestedTree<(typeof allPages)[number]>>,
+    ): PlanItem[] =>
+      liste.map((n) => ({
+        id: n.page.id,
+        title: n.page.title,
+        href: pageHref(n.page.id),
+        active: n.page.id === current?.id,
+        depth: n.depth,
+        meetingDate: n.page.meetingDate ? formatDate(n.page.meetingDate) : null,
+        children: convertir(n.children),
+      }));
+    return convertir(nestedTree(nodes.map((n) => n.page)));
+  };
+
   const sectionBody = (
     kind: string,
     nodes: ReturnType<typeof orderedTree<(typeof allPages)[number]>>,
   ) => {
     const ordered = orderedSection(kind, nodes);
-    const foldable =
-      kind === "MEETING" &&
-      ordered.length > MEETINGS_SHOWN + 1 &&
-      !ordered.some((node) => node.depth > 0);
-    if (!foldable)
-      return ordered.map((node) => pageLink(node.page, node.depth));
+    const plate = !ordered.some((node) => node.depth > 0);
 
-    const older = ordered.slice(MEETINGS_SHOWN);
-    return (
-      <>
-        {ordered
-          .slice(0, MEETINGS_SHOWN)
-          .map((node) => pageLink(node.page, node.depth))}
-        <details
-          open={older.some((node) => node.page.id === current?.id)}
-          className="group/older"
-        >
-          <summary
-            title={t.wiki.sections.olderMeetingsHint}
-            className="flex cursor-pointer list-none items-center gap-1 rounded-md px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden"
+    /**
+     * LES RÉUNIONS GARDENT LEUR TRAITEMENT.
+     *
+     * Une section de comptes rendus est plate par nature et se lit du plus
+     * récent au plus ancien - `orderedSection` la retrie par date, ce qu'un
+     * arbre par parenté écraserait. Son propre pli (« les N plus anciennes »)
+     * répond déjà au besoin de hauteur. On ne remplace donc que ce qui est
+     * VRAIMENT arborescent.
+     */
+    const foldable =
+      kind === "MEETING" && plate && ordered.length > MEETINGS_SHOWN + 1;
+    if (foldable) {
+      const older = ordered.slice(MEETINGS_SHOWN);
+      return (
+        <>
+          {ordered
+            .slice(0, MEETINGS_SHOWN)
+            .map((node) => pageLink(node.page, node.depth))}
+          <details
+            open={older.some((node) => node.page.id === current?.id)}
+            className="group/older"
           >
-            <ChevronRight
-              className="size-3.5 shrink-0 transition-transform group-open/older:rotate-90"
-              aria-hidden
-            />
-            {fmt(t.wiki.sections.olderMeetings, { count: older.length })}
-          </summary>
-          {older.map((node) => pageLink(node.page, node.depth))}
-        </details>
-      </>
+            <summary
+              title={t.wiki.sections.olderMeetingsHint}
+              className="flex cursor-pointer list-none items-center gap-1 rounded-md px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden"
+            >
+              <ChevronRight
+                className="size-3.5 shrink-0 transition-transform group-open/older:rotate-90"
+                aria-hidden
+              />
+              {fmt(t.wiki.sections.olderMeetings, { count: older.length })}
+            </summary>
+            {older.map((node) => pageLink(node.page, node.depth))}
+          </details>
+        </>
+      );
+    }
+
+    // Section plate et courte : rien à replier, la liste suffit.
+    if (plate) return ordered.map((node) => pageLink(node.page, node.depth));
+
+    return (
+      <WikiPlan
+        projectKey={`${project.key}:${kind}`}
+        items={enArbre(ordered)}
+        forceOpen={ancetresDeLaPageLue}
+      />
     );
   };
 

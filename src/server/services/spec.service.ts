@@ -59,10 +59,23 @@ export function getSpecPackage(id: string) {
  * descendante quelconque. C'est ce qui permet, depuis n'importe quel chapitre,
  * de savoir qu'on lit une spécification et laquelle.
  */
-export async function findSpecPackageForPage(projectId: string, pageId: string) {
+export async function findSpecPackageForPage(
+  projectId: string,
+  pageId: string,
+  /**
+   * L'arborescence, quand l'appelant l'a DÉJÀ en main.
+   *
+   * La page du wiki lit toutes les pages du projet dès son premier `Promise.all`
+   * pour bâtir son plan, puis appelait ceci, qui les relisait intégralement -
+   * la même requête, deux fois par affichage, pour un wiki qui peut en compter
+   * trois cents. Le paramètre est facultatif : les appelants qui n'ont rien à
+   * offrir gardent le comportement d'avant.
+   */
+  connues?: Array<{ id: string; title: string; parentId: string | null }>,
+) {
   const [packages, pages] = await Promise.all([
     listSpecPackages(projectId),
-    listWikiPages(projectId),
+    connues ?? listWikiPages(projectId),
   ]);
   for (const pack of packages) {
     if (readingOrder(pages, pack.rootPageId).some((e) => e.page.id === pageId)) {

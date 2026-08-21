@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
+  ancestorIds,
   ancestorsOf,
+  foldablePageIds,
+  nestedTree,
   descendantIds,
   groupBySection,
   orderedTree,
@@ -276,5 +279,79 @@ describe("readingOrder", () => {
     expect(readingOrder(shuffled, "spec").map((e) => e.page.id)).toEqual(
       readingOrder(PAGES_SPEC, "spec").map((e) => e.page.id),
     );
+  });
+});
+
+describe("nestedTree", () => {
+  const forme = (nodes: ReturnType<typeof nestedTree>): string =>
+    nodes
+      .map((n) => (n.children.length ? `${n.page.id}(${forme(n.children)})` : n.page.id))
+      .join(" ");
+
+  it("emboîte les pages sous leur parente, frères triés par titre", () => {
+    // Guide > (Installation, Usage > Avance) ; Reference à part.
+    expect(forme(nestedTree(PAGES))).toBe("g(i u(a)) r");
+  });
+
+  it("annote la profondeur comme l'arbre aplati", () => {
+    const parId = new Map<string, number>();
+    const walk = (ns: ReturnType<typeof nestedTree>) => {
+      for (const n of ns) { parId.set(n.page.id, n.depth); walk(n.children); }
+    };
+    walk(nestedTree(PAGES));
+    for (const plat of orderedTree(PAGES)) {
+      expect(parId.get(plat.page.id)).toBe(plat.depth);
+    }
+  });
+
+  it("rend exactement les mêmes pages, dans le même ordre, qu'orderedTree", () => {
+    // L'invariant qui lie les deux : le plan replié et le plan déplié doivent
+    // raconter la même suite, sans quoi replier réordonnerait le wiki.
+    const aplati: string[] = [];
+    const walk = (ns: ReturnType<typeof nestedTree>) => {
+      for (const n of ns) { aplati.push(n.page.id); walk(n.children); }
+    };
+    walk(nestedTree(PAGES));
+    expect(aplati).toEqual(orderedTree(PAGES).map((n) => n.page.id));
+  });
+
+  it("rattache une orpheline à la racine plutôt que de la perdre", () => {
+    const ids = forme(nestedTree([{ id: "x", title: "Orpheline", parentId: "inconnu" }]));
+    expect(ids).toBe("x");
+  });
+
+  it("ne perd aucune page sur un cycle", () => {
+    const cycle: FlatPage[] = [
+      { id: "a", title: "A", parentId: "b" },
+      { id: "b", title: "B", parentId: "a" },
+      { id: "c", title: "C", parentId: null },
+    ];
+    const vus: string[] = [];
+    const walk = (ns: ReturnType<typeof nestedTree>) => {
+      for (const n of ns) { vus.push(n.page.id); walk(n.children); }
+    };
+    walk(nestedTree(cycle));
+    expect(new Set(vus)).toEqual(new Set(["a", "b", "c"]));
+  });
+});
+
+describe("foldablePageIds", () => {
+  it("ne retient que les pages qui en abritent d'autres", () => {
+    expect(foldablePageIds(nestedTree(PAGES))).toEqual(["g", "u"]);
+  });
+
+  it("rend une liste vide quand rien n'est emboîté", () => {
+    expect(foldablePageIds(nestedTree([{ id: "a", title: "A", parentId: null }]))).toEqual([]);
+  });
+});
+
+describe("ancestorIds", () => {
+  it("donne les parents à garder ouverts pour que la page reste visible", () => {
+    // « Avance » est sous « Usage », lui-même sous « Guide ».
+    expect(ancestorIds(PAGES, "a")).toEqual(new Set(["g", "u"]));
+  });
+
+  it("une page racine n'a aucun ancêtre", () => {
+    expect(ancestorIds(PAGES, "g")).toEqual(new Set());
   });
 });

@@ -15,6 +15,96 @@ export interface TreeNode<T extends FlatPage = FlatPage> {
   depth: number;
 }
 
+/**
+ * Une page et celles qu'elle abrite. C'est la forme dont a besoin un plan
+ * REPLIABLE : la liste aplatie dit la profondeur de chacune, elle ne dit pas
+ * lesquelles disparaissent quand on referme un parent.
+ */
+export interface NestedPage<T extends FlatPage = FlatPage> {
+  page: T;
+  depth: number;
+  children: NestedPage<T>[];
+}
+
+/**
+ * Le même arbre qu'`orderedTree`, mais EMBOÎTÉ plutôt qu'aplati.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * PAR `parentId`, ET NON PAR PROFONDEUR
+ *
+ * Le sommaire d'un document doit deviner sa hiérarchie à partir des niveaux de
+ * titre : c'est tout ce qu'un Markdown lui donne. Un plan de wiki, lui, la
+ * CONNAÎT - chaque page nomme sa parente. Reconstruire l'emboîtement à partir
+ * de la profondeur affichée serait redériver, avec des approximations, ce que
+ * la base énonce déjà.
+ *
+ * L'ordre et les garde-fous sont ceux d'`orderedTree`, dont cette fonction
+ * partage la marche : frères triés par titre, orphelines rattachées à la
+ * racine, cycles neutralisés. Les deux fonctions doivent rendre les mêmes
+ * pages dans le même ordre - c'est vérifié par un test.
+ */
+export function nestedTree<T extends FlatPage>(pages: T[]): NestedPage<T>[] {
+  const childrenOf = new Map<string | null, T[]>();
+  const ids = new Set(pages.map((p) => p.id));
+  for (const page of pages) {
+    const key = page.parentId && ids.has(page.parentId) ? page.parentId : null;
+    const list = childrenOf.get(key) ?? [];
+    list.push(page);
+    childrenOf.set(key, list);
+  }
+  for (const list of childrenOf.values()) list.sort(byTitle);
+
+  const visited = new Set<string>();
+  const build = (parentKey: string | null, depth: number): NestedPage<T>[] => {
+    const out: NestedPage<T>[] = [];
+    for (const page of childrenOf.get(parentKey) ?? []) {
+      if (visited.has(page.id)) continue; // garde-fou anti-cycle
+      visited.add(page.id);
+      out.push({ page, depth, children: build(page.id, depth + 1) });
+    }
+    return out;
+  };
+
+  const racines = build(null, 0);
+  // Filet de sécurité : une page prise dans un cycle n'a pas été visitée et
+  // disparaîtrait du plan. On la rattache à la racine plutôt que de la perdre.
+  for (const page of pages) {
+    if (!visited.has(page.id)) {
+      visited.add(page.id);
+      racines.push({ page, depth: 0, children: [] });
+    }
+  }
+  return racines;
+}
+
+/** Identifiants des pages qui en abritent d'autres - les seules repliables. */
+export function foldablePageIds<T extends FlatPage>(
+  nodes: readonly NestedPage<T>[],
+): string[] {
+  const out: string[] = [];
+  const walk = (liste: readonly NestedPage<T>[]) => {
+    for (const n of liste) {
+      if (n.children.length > 0) {
+        out.push(n.page.id);
+        walk(n.children);
+      }
+    }
+  };
+  walk(nodes);
+  return out;
+}
+
+/**
+ * Identifiants des ancêtres d'une page, elle exclue - ceux qu'il faut garder
+ * OUVERTS pour que la page reste visible dans le plan.
+ *
+ * Sans cela, replier un parent escamoterait la page qu'on est en train de lire,
+ * et l'on perdrait le seul repère qui dit où l'on se trouve.
+ */
+export function ancestorIds(pages: FlatPage[], id: string): Set<string> {
+  return new Set(ancestorsOf(pages, id).map((page) => page.id));
+}
+
 /** Compare deux titres pour un ordre stable (insensible à la casse/accents). */
 function byTitle(a: FlatPage, b: FlatPage): number {
   return a.title.localeCompare(b.title, "fr", { sensitivity: "base" });
