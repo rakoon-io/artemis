@@ -34,6 +34,27 @@
   --border: oklch(0.84 0 0);
   --input: oklch(0.81 0 0);
   --ring: oklch(0.505 0.175 285);
+
+  /*
+   * RAMPE D'AVANCEMENT (zone « Mon activité »).
+   *
+   * « À faire → en cours → terminé » est une progression ORDONNÉE, pas un jeu
+   * d'identités : échanger deux étapes changerait le sens. Elle prend donc UNE
+   * seule teinte par paliers de clarté - la couleur dit l'ordre - et non trois
+   * teintes distinctes, qui suggéreraient trois natures sans rapport.
+   *
+   * Dérivée de `--primary` par `color-mix` : la rampe suit chaque palette de
+   * l'application, sombre comprise, sans valeur écrite en dur nulle part.
+   *
+   * Mesuré sur la palette par défaut (surface = carte) : contrastes 2,71 / 4,05
+   * / 6,28, chroma 0,105 / 0,140 / 0,175, clarté strictement décroissante. Le
+   * palier le plus clair passe le seuil de 2:1 exigé d'une rampe ordinale, sans
+   * atteindre 3:1 : c'est pourquoi le graphique porte TOUJOURS ses libellés
+   * chiffrés, et non la couleur seule.
+   */
+  --progress-todo: color-mix(in oklch, var(--primary) 60%, var(--card));
+  --progress-doing: color-mix(in oklch, var(--primary) 80%, var(--card));
+  --progress-done: var(--primary);
 }
 
 /* Base sombre - partagée par toutes les palettes sombres (surchargée ensuite). */
@@ -69,6 +90,16 @@
   --border: oklch(1 0 0 / 20%);
   --input: oklch(1 0 0 / 26%);
   --ring: oklch(0.63 0.16 287);
+
+  /*
+   * Rampe d'avancement, version sombre. Sur fond sombre, un mélange vers la
+   * surface ASSOMBRIT : les proportions ne sont donc pas celles du mode clair,
+   * sous peine de voir le premier palier s'éteindre. Mesuré : 2,94 / 3,85 /
+   * 4,99 de contraste, chroma 0,112 / 0,136 / 0,160.
+   */
+  --progress-todo: color-mix(in oklch, var(--primary) 70%, var(--card));
+  --progress-doing: color-mix(in oklch, var(--primary) 85%, var(--card));
+  --progress-done: var(--primary);
 }
 
 /* Artemis Nuit - palette sombre signature : neutres teintés crépuscule (indigo). */

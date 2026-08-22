@@ -79,13 +79,28 @@ export async function listProjectsWithStats(projectIds?: string[]) {
   ]);
 
   // Tickets « terminés » = ceux de la colonne d'ordre le plus élevé (dernière).
+  //
+  // SAUF si le projet n'a qu'UNE colonne : il n'y a alors pas de flux, donc
+  // rien à achever, et compter tout pour terminé afficherait « 3 / 3, 100 % »
+  // sur un projet où rien n'a avancé. Même lecture que la zone « Mon activité »,
+  // qui annonce ces mêmes tickets sur la même page.
   const doneByProject = new Map<string, number>();
   const lastOrderByProject = new Map<string, number>();
+  const firstOrderByProject = new Map<string, number>();
   for (const c of columns) {
+    const first = firstOrderByProject.get(c.projectId);
+    if (first === undefined || c.order < first) {
+      firstOrderByProject.set(c.projectId, c.order);
+    }
     const prev = lastOrderByProject.get(c.projectId);
     if (prev === undefined || c.order > prev) {
       lastOrderByProject.set(c.projectId, c.order);
       doneByProject.set(c.projectId, c._count.tickets);
+    }
+  }
+  for (const [projectId, last] of lastOrderByProject) {
+    if (firstOrderByProject.get(projectId) === last) {
+      doneByProject.set(projectId, 0);
     }
   }
 

@@ -348,6 +348,12 @@ model Ticket {
   @@unique([projectId, number])
   @@index([projectId, columnId])
   @@index([sprintId])
+  // « Mes tâches » (zone Mon activité) lit les tickets d'une personne à chaque
+  // affichage de la page d'accueil : sans cet index, c'est un parcours complet.
+  @@index([assigneeId])
+  // Le fil d'activité prend les derniers tickets ouverts D'UN PÉRIMÈTRE de
+  // projets : la date seule ne suffirait pas à couvrir le filtre.
+  @@index([projectId, createdAt])
   @@index([releaseId])
   @@index([typeId])
   @@index([priorityId])
@@ -386,6 +392,8 @@ model TicketLink {
   @@unique([sourceId, targetId])
   @@index([sourceId])
   @@index([targetId])
+  // Derniers liens créés (fil d'activité).
+  @@index([createdAt])
 }
 
 model Sprint {
@@ -478,6 +486,8 @@ model Attachment {
   createdAt    DateTime @default(now())
 
   @@index([ticketId])
+  // Derniers fichiers joints, tous tickets confondus (fil d'activité).
+  @@index([createdAt])
 }
 
 model Comment {
@@ -494,6 +504,12 @@ model Comment {
   editedAt  DateTime?
 
   @@index([ticketId])
+  // Le fil d'activité prend les derniers commentaires triés par date. Les DEUX
+  // index servent, et à des lecteurs différents : `createdAt` seul au tri global
+  // (l'administrateur, qui ne filtre sur rien), `(ticketId, createdAt)` au tri
+  // restreint à un périmètre de projets, qui passe par le ticket.
+  @@index([createdAt])
+  @@index([ticketId, createdAt])
 }
 
 // Page de wiki d'un projet - documentation libre, avec citations de tickets (RKN-123).
@@ -616,6 +632,9 @@ model WikiRevision {
   createdAt DateTime @default(now())
 
   @@index([pageId, createdAt])
+  // Tri GLOBAL du fil : l'index par page ne peut pas y servir, son premier
+  // terme n'étant pas la date.
+  @@index([createdAt])
 }
 
 // PAQUET DE SPÉCIFICATIONS : un sous-arbre du wiki traité comme un document

@@ -1,4 +1,5 @@
 import { account } from "./fr/account";
+import { activity } from "./fr/activity";
 import { board } from "./fr/board";
 import { tickets } from "./fr/tickets";
 import { ticketForm } from "./fr/ticketForm";
@@ -93,6 +94,7 @@ export const fr = {
     sprintOther: "sprints",
   },
   account,
+  activity,
   board,
   tickets,
   ticketForm,

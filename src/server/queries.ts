@@ -1,4 +1,6 @@
+import { cache } from "react";
 import { isAdmin, type PolicyUser } from "@/lib/policies";
+import * as activityService from "./services/activity.service";
 import * as columnService from "./services/column.service";
 import * as releaseService from "./services/release.service";
 import * as wikiAttachmentService from "./services/wiki-attachment.service";
@@ -41,8 +43,70 @@ export async function getAccessibleProjectsWithStats(
 ) {
   if (isAdmin(user)) return projectService.listProjectsWithStats();
   if (!user) return [];
-  const ids = await membershipService.listAccessibleProjectIds(user.id);
+  const ids = await readAccessibleIds(user.id);
   return projectService.listProjectsWithStats(ids);
+}
+
+/**
+ * Périmètre mémoïsé le temps d'un rendu. La zone « Mon activité » le demande
+ * trois fois (tâches, citations, fil) et la liste des projets une quatrième :
+ * sans cela, la même lecture d'appartenance partait quatre fois par affichage.
+ *
+ * La clé est l'IDENTIFIANT, jamais l'objet utilisateur : `auth()` en rend une
+ * instance neuve à chaque appel, et `cache()` s'indexe par identité - la
+ * mémoïsation n'y ferait jamais mouche (même raison qu'en `server/access.ts`).
+ */
+const readAccessibleIds = cache((userId: string) =>
+  membershipService.listAccessibleProjectIds(userId),
+);
+
+/**
+ * Périmètre des lectures transverses : `undefined` pour un administrateur (tous
+ * les projets), la liste de ses projets pour un membre, `[]` pour un visiteur.
+ * C'est LE point où l'accès est imposé pour la zone « Mon activité » : les
+ * services qui suivent ne décident jamais de leur périmètre.
+ */
+async function accessibleScope(
+  user: PolicyUser | null | undefined,
+): Promise<string[] | undefined> {
+  if (isAdmin(user)) return undefined;
+  if (!user) return [];
+  return readAccessibleIds(user.id);
+}
+
+/** Tâches assignées à l'utilisateur, dans les seuls projets qu'il peut voir. */
+export async function getMyTickets(
+  user: PolicyUser | null | undefined,
+): Promise<activityService.MyTickets> {
+  if (!user) {
+    return { rows: [], counts: { todo: 0, doing: 0, done: 0, total: 0 } };
+  }
+  return activityService.listMyTickets(user.id, await accessibleScope(user));
+}
+
+/** Citations visant l'utilisateur, les plus récentes d'abord. */
+export async function getMyMentions(
+  user: (PolicyUser & { email: string }) | null | undefined,
+  limit?: number,
+) {
+  // La garde passe AVANT le périmètre : sans adresse, il n'y a rien à chercher,
+  // et la lecture d'appartenance partait pour rien.
+  if (!user?.email?.trim()) return [];
+  return activityService.listMyMentions(
+    user.id,
+    user.email,
+    await accessibleScope(user),
+    limit,
+  );
+}
+
+/** Ce qui a bougé récemment dans les projets accessibles à l'utilisateur. */
+export async function getRecentActivity(
+  user: PolicyUser | null | undefined,
+  limit?: number,
+) {
+  if (!user) return [];
+  return activityService.listRecentActivity(await accessibleScope(user), limit);
 }
 
 export function getProjectByKey(key: string) {

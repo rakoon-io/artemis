@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CalendarRange, CircleCheck, Ticket } from "lucide-react";
@@ -14,6 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { CreateProjectDialog } from "@/components/project/create-project-dialog";
+import { ActivitySkeleton, MyActivity } from "@/components/activity/my-activity";
 
 export const metadata: Metadata = { title: "Projets" };
 
@@ -34,6 +36,18 @@ export default async function ProjectsPage() {
         </div>
         {admin ? <CreateProjectDialog /> : null}
       </div>
+
+      {/*
+        Ce qui me concerne AVANT le catalogue des projets : on arrive ici pour
+        reprendre son travail, pas pour contempler la liste.
+
+        SOUS `Suspense` : la zone interroge une dizaine de tables, le catalogue
+        deux. Attendre l'une pour montrer l'autre retarderait le geste courant -
+        ouvrir un projet - au profit d'un rappel qu'on ne lit pas toujours.
+      */}
+      <Suspense fallback={<ActivitySkeleton />}>
+        <MyActivity />
+      </Suspense>
 
       {projects.length === 0 ? (
         <Card className="flex flex-col items-center justify-center gap-4 border-dashed py-16 text-center">

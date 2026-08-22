@@ -1,5 +1,6 @@
 import type { Messages } from "./fr";
 import { account } from "./en/account";
+import { activity } from "./en/activity";
 import { board } from "./en/board";
 import { tickets } from "./en/tickets";
 import { ticketForm } from "./en/ticketForm";
@@ -86,6 +87,7 @@ export const en: Messages = {
     sprintOther: "sprints",
   },
   account,
+  activity,
   board,
   tickets,
   ticketForm,
